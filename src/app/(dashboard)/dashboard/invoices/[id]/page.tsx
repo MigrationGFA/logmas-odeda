@@ -1,0 +1,601 @@
+"use client";
+import React, { useState } from "react";
+import { toast } from "sonner";
+import { PageHeader, StatusBadge } from "@/components/dashboard/shared";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { QRCodeSVG } from "@/components/dashboard/qr-code";
+import {
+  ArrowLeft,
+  Copy,
+  Send,
+  CreditCard,
+  Banknote,
+  Receipt as ReceiptIcon,
+  Printer,
+  Phone,
+  Mail,
+  MessageCircle,
+  Wallet,
+  Link2,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
+import {
+  useInvoiceDetails,
+  useInvoicePayment,
+} from "@/hooks/queries/useInvoices";
+
+import { tokenManager } from "@/services/apiAuth";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+export default function InvoiceDetail({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: invoiceId } = React.use(params);
+  const user = tokenManager.getUser();
+
+  const userRole = user?.role;
+
+  const isOfficer = userRole === "field_officer";
+
+  // Use real API hooks
+  const { invoice, isLoading, error, isPayable, paymentProgress } =
+    useInvoiceDetails(invoiceId);
+  const {
+    recordPayment,
+    isRecordingPayment,
+    simulatePayment,
+    initializeOnlinePayment,
+    isInitializingPayment,
+    sendPaymentLink,
+    isSendingPaymentLink,
+    verifyPayment,
+    isVerifyingPayment,
+  } = useInvoicePayment(invoiceId);
+
+  // Also add this effect right after that line, to auto-verify if we're landing back
+  // from a Paystack redirect (reference stashed in sessionStorage by the hook):
+  React.useEffect(() => {
+    const pendingRef = sessionStorage.getItem("pendingPaymentReference");
+    if (pendingRef) {
+      verifyPayment(pendingRef);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // console.log(invoice,"invoice")
+
+  const copy = (v: string, label: string) => {
+    navigator.clipboard?.writeText(v);
+    toast.success(`${label} copied`);
+  };
+
+  const fullPaymentUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/pay/${invoice?.invoiceNumber || invoiceId}`
+      : "";
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !invoice) {
+    return (
+      <div>
+        <PageHeader
+          title="Invoice not found"
+          subtitle="The invoice may have been deleted or you don't have access"
+        />
+        <Button asChild variant="outline">
+          <Link href="/dashboard/invoices">
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Invoices
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const handlePaymentConfirm = (
+    method: "transfer" | "pos" | "cash",
+    reference?: string,
+  ) => {
+    recordPayment({
+      method: method === "transfer" ? "bank_transfer" : method,
+      amount: invoice.balanceDue,
+      reference,
+      narration: `Payment via ${method.toUpperCase()} at LGA office`,
+    });
+  };
+
+  return (
+    <div>
+      <PageHeader
+        title={`Invoice ${invoice.invoiceNumber}`}
+        subtitle={`Issued ${new Date(invoice.issuedAt).toLocaleDateString()} • Due ${new Date(invoice.dueDate).toLocaleDateString()}`}
+        action={
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link href="/dashboard/invoices">
+                <ArrowLeft className="h-4 w-4 mr-1.5" /> All invoices
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="h-4 w-4 mr-1.5" /> Print
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="p-6 bg-gradient-card border-border/40">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+              <div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Total Due
+                </div>
+                <div className="text-3xl font-bold tracking-tight">
+                  ₦{invoice.totalAmount.toLocaleString()}
+                </div>
+                {invoice.balanceDue > 0 &&
+                  invoice.balanceDue < invoice.totalAmount && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Paid: ₦{invoice.amountPaid.toLocaleString()} • Balance: ₦
+                      {invoice.balanceDue.toLocaleString()}
+                    </div>
+                  )}
+              </div>
+              <StatusBadge status={invoice.status} />
+            </div>
+
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+              <div
+                className="bg-green-600 h-2 rounded-full transition-all"
+                style={{ width: `${paymentProgress}%` }}
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+              <Field label="Customer" value={invoice.customerName} />
+              {invoice.customerPhone && (
+                <Field label="Phone" value={invoice.customerPhone} />
+              )}
+              <Field label="Levy" value={invoice.levyType} />
+              {invoice.invoiceType !== "permit" && (
+                <Field label="Frequency" value={invoice.frequency} />
+              )}
+              <Field label="Quantity" value={`× ${invoice.quantity}`} />
+              <Field
+                label="Unit Price"
+                value={`₦${invoice.unitPrice.toLocaleString()}`}
+              />
+              {invoice.fieldOfficer && (
+                <Field label="Field Officer" value={invoice.fieldOfficer} />
+              )}
+              {invoice.paidAt && (
+                <Field
+                  label="Paid On"
+                  value={new Date(invoice.paidAt).toLocaleString()}
+                />
+              )}
+            </div>
+
+            {invoice.description && (
+              <div className="mt-4 p-3 rounded-lg bg-muted/40 text-sm">
+                <span className="text-muted-foreground">Description: </span>
+                {invoice.description}
+              </div>
+            )}
+          </Card>
+
+          {isPayable ? (
+            <Card className="p-6 bg-gradient-card border-border/40">
+              <h3 className="font-semibold mb-4">Payment Options</h3>
+              <Tabs defaultValue="transfer">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="transfer">
+                    <Banknote className="h-4 w-4 mr-1.5" /> Bank Transfer
+                  </TabsTrigger>
+                  <TabsTrigger value="online">
+                    <Link2 className="h-4 w-4 mr-1.5" /> Online
+                  </TabsTrigger>
+                  {isOfficer && (
+                    <>
+                      <TabsTrigger value="pos">
+                        <CreditCard className="h-4 w-4 mr-1.5" /> POS
+                      </TabsTrigger>
+                      <TabsTrigger value="cash">
+                        <Wallet className="h-4 w-4 mr-1.5" /> Cash
+                      </TabsTrigger>
+                    </>
+                  )}
+                </TabsList>
+
+                <TabsContent value="transfer">
+                  <div className="p-4 rounded-lg border border-border/60 bg-background space-y-3">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Dynamic Virtual Account
+                    </div>
+                    {invoice.virtualAccount ? (
+                      <>
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="text-2xl font-mono font-bold">
+                              {invoice.virtualAccount.accountNumber}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {invoice.virtualAccount.bankName} •{" "}
+                              {invoice.virtualAccount.accountName}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              copy(
+                                invoice.virtualAccount!.accountNumber,
+                                "Account number",
+                              )
+                            }
+                          >
+                            <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+                          </Button>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Transfer ₦{invoice.balanceDue.toLocaleString()} to
+                          this account. Payment auto-confirms within 2 mins.
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        Virtual account not yet generated. Please use other
+                        payment methods.
+                      </div>
+                    )}
+                    {/* remove ciizen for production */}
+                    {process.env.NODE_ENV === "development" && (
+                      <Button
+                        className="w-full bg-gradient-hero"
+                        onClick={() => simulatePayment()}
+                        disabled={isRecordingPayment}
+                      >
+                        {isRecordingPayment ? (
+                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                        )}
+                        Simulate transfer received
+                      </Button>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="online">
+                  <div className="p-4 rounded-lg border border-border/60 bg-background space-y-3">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Pay now
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      You&apos;ll be redirected to Paystack to complete payment
+                      of ₦{invoice.totalAmount.toLocaleString()}.
+                    </p>
+                    <Button
+                      className="w-full bg-gradient-hero"
+                      onClick={() => initializeOnlinePayment()}
+                      disabled={isInitializingPayment}
+                    >
+                      {isInitializingPayment ? (
+                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                      ) : (
+                        <Link2 className="h-4 w-4 mr-1.5" />
+                      )}
+                      Pay online
+                    </Button>
+                  </div>
+                </TabsContent>
+                <TabsContent value="pos">
+                  <POSConfirmDialog
+                    onConfirm={(ref) => handlePaymentConfirm("pos", ref)}
+                    isProcessing={isRecordingPayment}
+                  />
+                </TabsContent>
+
+                <TabsContent value="cash">
+                  <CashConfirmDialog
+                    amount={invoice.balanceDue}
+                    onConfirm={(received, note) => handlePaymentConfirm("cash")}
+                    isProcessing={isRecordingPayment}
+                  />
+                </TabsContent>
+              </Tabs>
+            </Card>
+          ) : (
+            <Card className="p-6 bg-success/5 border-2 border-success/30">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-success/15 text-success flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <Badge className="bg-success text-success-foreground">
+                    Paid
+                  </Badge>
+                  <h3 className="font-semibold mt-1">Invoice settled</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Paid on{" "}
+                    {invoice.paidAt &&
+                      new Date(invoice.paidAt).toLocaleString()}
+                  </p>
+                </div>
+                {invoice.receipt && (
+                  <Button asChild className="ml-auto bg-gradient-hero">
+                    <Link href={`/dashboard/receipts/${invoice.receipt.id}`}>
+                      <ReceiptIcon className="h-4 w-4 mr-1.5" /> View receipt
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          {invoice.status !== "paid" && (
+            <Card className="p-5 bg-gradient-card border-border/40 text-center">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                Scan to Pay
+              </div>
+              <div className="flex justify-center">
+                {/* <QRCodeSVG
+                  value={fullPaymentUrl}
+                  size={180}
+                /> */}
+                <a href={fullPaymentUrl} target="_blank" rel="noreferrer">
+                  <QRCodeSVG value={fullPaymentUrl} size={180} />
+                </a>
+              </div>
+              <div className="mt-3 text-xs text-muted-foreground break-all">
+                {invoice.qrData}
+              </div>
+            </Card>
+          )}
+
+          {isOfficer && invoice.status !== "paid" && (
+            <Card className="p-5 bg-gradient-card border-border/40 space-y-2">
+              <h4 className="font-semibold text-sm mb-1">Send payment link</h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                Sends via SMS and email in one go
+              </p>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => sendPaymentLink()}
+                disabled={isSendingPaymentLink}
+              >
+                {isSendingPaymentLink ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Send payment link
+              </Button>
+            </Card>
+          )}
+
+          {invoice.payments.length > 0 && (
+            <Card className="p-5 bg-gradient-card border-border/40">
+              <h4 className="font-semibold text-sm mb-3">Payment History</h4>
+              <div className="space-y-2">
+                {invoice.payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex flex-col sm:flex-row justify-between items-center text-sm border-b pb-2"
+                  >
+                    <div className="flex-1">
+                      <span className="font-medium">
+                        ₦{payment.amount.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {payment.method}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({payment.status})
+                      </span>
+                    </div>
+                    {payment.status === "pending" &&
+                    payment.method === "online_gateway" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => verifyPayment(payment.reference)}
+                        disabled={isVerifyingPayment}
+                      >
+                        {isVerifyingPayment ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          "Check status"
+                        )}
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(payment.confirmedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="font-medium mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function POSConfirmDialog({
+  onConfirm,
+  isProcessing,
+}: {
+  onConfirm: (ref: string) => void;
+  isProcessing: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [ref, setRef] = useState("");
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full bg-gradient-hero" disabled={isProcessing}>
+          <CreditCard className="h-4 w-4 mr-1.5" /> Record POS payment
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm POS payment</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>POS Reference / RRN</Label>
+            <Input
+              value={ref}
+              onChange={(e) => setRef(e.target.value)}
+              placeholder="e.g. 0123456789"
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label>POS Receipt (optional)</Label>
+            <Input type="file" accept="image/*" className="mt-1.5" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            onClick={() => {
+              if (!ref) return toast.error("Enter POS reference");
+              setOpen(false);
+              onConfirm(ref);
+            }}
+            className="bg-gradient-hero"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 mr-1.5" />
+            )}
+            Confirm payment
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CashConfirmDialog({
+  amount,
+  onConfirm,
+  isProcessing,
+}: {
+  amount: number;
+  onConfirm: (received: number, note: string) => void;
+  isProcessing: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [received, setReceived] = useState(amount);
+  const [note, setNote] = useState("");
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full bg-gradient-hero" disabled={isProcessing}>
+          <Wallet className="h-4 w-4 mr-1.5" /> Record cash payment
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm cash collection</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Amount received (₦)</Label>
+            <Input
+              type="number"
+              value={received}
+              onChange={(e) => setReceived(Number(e.target.value))}
+              className="mt-1.5"
+            />
+            {received < amount && (
+              <p className="text-xs text-red-500 mt-1">
+                Amount is less than balance due (₦{amount.toLocaleString()})
+              </p>
+            )}
+          </div>
+          <div>
+            <Label>Note (optional)</Label>
+            <Textarea
+              rows={3}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="mt-1.5"
+              placeholder="e.g., Payment received at LGA office"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            onClick={() => {
+              if (received < amount) {
+                toast.error(
+                  `Amount must be at least ₦${amount.toLocaleString()}`,
+                );
+                return;
+              }
+              setOpen(false);
+              onConfirm(received, note);
+            }}
+            className="bg-gradient-hero"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-1.5" />
+            )}
+            Confirm & issue receipt
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

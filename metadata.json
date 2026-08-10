@@ -1,0 +1,6 @@
+{
+  "name": "LOGMAS Odeda",
+  "description": "Local Government Management and Administration System for Odeda Local Government Area",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

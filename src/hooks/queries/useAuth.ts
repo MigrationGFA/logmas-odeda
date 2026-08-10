@@ -1,0 +1,246 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import {
+  authService,
+  tokenManager,
+  User,
+  LoginCredentials,
+  RegisterData,
+} from "@/services/apiAuth";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+// Query keys for caching
+export const authKeys = {
+  all: ["auth"] as const,
+  user: () => [...authKeys.all, "user"] as const,
+};
+
+export function useAuth() {
+  const queryClient = useQueryClient();
+  const navigate = useRouter();
+
+  // Query: Get current user
+  const {
+    data: user,
+    isLoading: isLoadingUser,
+    error: userError,
+    refetch: refetchUser,
+  } = useQuery({
+    queryKey: authKeys.user(),
+    queryFn: () => authService.getMe(),
+    // Don't retry on 401/403
+    retry: (failureCount, error: any) => {
+      if (error?.status === 401 || error?.status === 403) return false;
+      return failureCount < 3;
+    },
+    // Only run if we have an access token
+    enabled: !!tokenManager.getAccessToken(),
+    staleTime: Infinity, // it should never go stale
+  });
+
+  const currentUser = user ?? tokenManager.getUser();
+
+  // Mutation: Login
+  const loginMutation = useMutation({
+    mutationFn: (credentials: LoginCredentials) =>
+      authService.login(credentials),
+    onSuccess: (response) => {
+      // console.log("✅ LOGIN SUCCESS:", response); // ← Add this
+
+      const { accessToken, refreshToken, user } = response;
+      // console.log("🔐 Storing token:", accessToken?.substring(0, 20) + "...");
+
+      tokenManager.setAccessToken(accessToken);
+      tokenManager.setRefreshToken(refreshToken);
+      tokenManager.setUser(user ?? null);
+
+      // console.log("📦 localStorage check:", {
+      //   token: localStorage.getItem("logmas.auth.token")?.substring(0, 20),
+      //   refreshToken: localStorage
+      //     .getItem("logmas.auth.refreshToken")
+      //     ?.substring(0, 20),
+      // });
+
+      if (user) {
+        queryClient.setQueryData(authKeys.user(), user);
+        refetchUser();
+      }
+      navigate.push("/dashboard");
+    },
+    onError: (error) => {
+      console.error("❌ LOGIN FAILED:", error); // ← Add this too
+    },
+  });
+
+  // Mutation: Register
+  const registerMutation = useMutation({
+    mutationFn: (data: RegisterData) => authService.register(data),
+    onSuccess: (userData) => {
+      // After registration, you might want to automatically login
+      // Or redirect to login page
+      //   navigate({ to: "/dashboard" });
+
+      navigate.push("/login");
+    },
+  });
+
+  // Mutation: Update Profile
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: Partial<User>) => authService.updateUserProfile(data),
+    onSuccess: (updatedUser) => {
+      tokenManager.setUser(updatedUser);
+      queryClient.setQueryData(authKeys.user(), updatedUser);
+    },
+    onError: (error) => {
+      console.error("❌ UPDATE PROFILE FAILED:", error);
+    },
+  });
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: (data: { email: string }) => authService.forgotPassword(data),
+    onSuccess: () => {
+      toast.success("Password reset link sent to your email");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to send reset link");
+    },
+  });
+
+  // Reset Password Mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: (data: {
+      token: string;
+      newPassword: string;
+      confirmPassword: string;
+    }) => authService.resetPassword(data),
+    onSuccess: () => {
+      toast.success("Password reset successfully. You can now log in.");
+      navigate.push("/login");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to reset password");
+    },
+  });
+
+  // Change Password Mutation (authenticated)
+  const changePasswordMutation = useMutation({
+    mutationFn: (data: {
+      oldPassword: string;
+      newPassword: string;
+      confirmPassword: string;
+    }) => authService.changePassword(data),
+    onSuccess: (response) => {
+      if (response?.accessToken) {
+        tokenManager.setAccessToken(response.accessToken);
+      }
+      toast.success("Password changed successfully");
+      // Optionally logout or stay logged in
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to change password");
+    },
+  });
+
+  // Mutation: Logout
+  const logoutMutation = useMutation({
+    mutationFn: () => authService.logout(),
+    onMutate: () => {
+      // 🔥 Clear IMMEDIATELY on logout click (optimistic update)
+      tokenManager.clearAllTokens();
+      queryClient.clear();
+      // Redirect instantly
+      navigate.push("/login");
+    },
+    onSettled: () => {
+      // This runs after the API call (even if it fails)
+      // But we already cleared and redirected above
+    },
+  });
+
+  // Manual refresh token function (can be called when needed)
+  const refreshAccessToken = async () => {
+    const refreshToken = tokenManager.getRefreshToken();
+    if (!refreshToken) throw new Error("No refresh token available");
+
+    const response = await authService.refreshToken(refreshToken);
+    tokenManager.setAccessToken(response.accessToken);
+    return response.accessToken;
+  };
+
+  return {
+    // State
+    user: currentUser,
+    isAuthenticated: !!currentUser,
+    isLoadingUser,
+    userError,
+    userWard: currentUser?.ward?.name,
+
+    // Actions
+    login: loginMutation.mutate,
+    loginAsync: loginMutation.mutateAsync,
+    isLoggingIn: loginMutation.isPending,
+    loginError: loginMutation.error,
+
+    register: registerMutation.mutate,
+    registerAsync: registerMutation.mutateAsync,
+    isRegistering: registerMutation.isPending,
+    registerError: registerMutation.error,
+
+    updateProfile: updateProfileMutation.mutate,
+    updateProfileAsync: updateProfileMutation.mutateAsync,
+    isUpdatingProfile: updateProfileMutation.isPending,
+    updateProfileError: updateProfileMutation.error,
+
+    forgotPassword: forgotPasswordMutation.mutate,
+    forgotPasswordAsync: forgotPasswordMutation.mutateAsync,
+    isForgotPasswordLoading: forgotPasswordMutation.isPending,
+    forgotPasswordError: forgotPasswordMutation.error,
+
+    // Reset Password
+    resetPassword: resetPasswordMutation.mutate,
+    resetPasswordAsync: resetPasswordMutation.mutateAsync,
+    isResetPasswordLoading: resetPasswordMutation.isPending,
+    resetPasswordError: resetPasswordMutation.error,
+
+    // Change Password
+    changePassword: changePasswordMutation.mutate,
+    changePasswordAsync: changePasswordMutation.mutateAsync,
+    isChangePasswordLoading: changePasswordMutation.isPending,
+    changePasswordError: changePasswordMutation.error,
+
+    // googleLogin: googleLoginMutation.mutate,
+    // googleLoginAsync: googleLoginMutation.mutateAsync,
+    // isGoogleLoggingIn: googleLoginMutation.isPending,
+
+    logout: logoutMutation.mutate,
+    logoutAsync: logoutMutation.mutateAsync,
+    isLoggingOut: logoutMutation.isPending,
+
+    refetchUser,
+    refreshAccessToken,
+  };
+}
+
+// Optional: Hook to check if user has specific role
+export function useHasRole(allowedRoles: string[]) {
+  const { user } = useAuth();
+
+  if (!user) return false;
+  return allowedRoles.includes(user.role);
+}
+
+// Optional: Hook for protected routes
+export function useRequireAuth(redirectTo = "/login") {
+  const { isAuthenticated, isLoadingUser } = useAuth();
+  const navigate = useRouter();
+
+  if (!isLoadingUser && !isAuthenticated) {
+    navigate.push(`${redirectTo}`);
+  }
+
+  return { isAuthenticated, isLoadingUser };
+}
