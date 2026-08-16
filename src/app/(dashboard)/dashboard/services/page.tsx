@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ODEDA_SERVICES, OdedaService } from "@/config/odedaServices";
+import { ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
 import Link from "next/link";
 import {
   FileBadge,
@@ -134,8 +134,8 @@ export default function ServicesPage() {
                     <span className="text-foreground font-mono text-[11px]">{service.revenueHead}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground font-medium">
-                    <span>Estimated Fee:</span>
-                    <span className="text-foreground font-bold">₦{service.defaultFee.toLocaleString()}</span>
+                    <span>Configured Fee:</span>
+                    <span className="text-foreground font-bold">₦{getConfiguredFeeForService(service.id).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground items-center pt-1">
                     <span className="flex items-center gap-1 text-[11px]">

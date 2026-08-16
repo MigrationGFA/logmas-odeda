@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { type LevyCategory, type LevyPrice } from "@/lib/store";
-import CertificateFeeTab from "@/components/treasurer/CertificateFeeTab";
-import LevyPermitFeeTab from "@/components/treasurer/LevyPermitFeeTab";
+import ServiceFeeConfigurationTab from "@/components/treasurer/ServiceFeeConfigurationTab";
 import AssessmentApprovalTab from "@/components/treasurer/AssessmentApprovalTab";
 import BankReconciliationTab from "@/components/treasurer/BankReconciliationTab";
 
@@ -55,31 +54,24 @@ export default function RevenueFrameworkPage() {
     <div className="space-y-6">
       <PageHeader
         title="Odeda LGA Treasury Revenue Framework Portal"
-        subtitle="Configure fee schedules for Certificates vs Levies/Permits, approve field assessments, authorize demand notices, and perform real-time bank reconciliation."
+        subtitle="Configure statutory fee amounts and active statuses for all 12 Odeda LGA services, authorize assessments and demand notices, and track real-time payments."
       />
 
-      <Tabs defaultValue="certificates" className="w-full space-y-4">
+      <Tabs defaultValue="fee_configuration" className="w-full space-y-4">
         <TabsList className="mb-2 bg-muted/60 p-1 flex-wrap h-auto">
-          <TabsTrigger value="certificates" className="text-xs">
-            1. Certificate Fee Schedules
-          </TabsTrigger>
-          <TabsTrigger value="levies_permits" className="text-xs">
-            2. Rates, Levies & Permits Fee Schedules
+          <TabsTrigger value="fee_configuration" className="text-xs">
+            1. Service Fee Configuration
           </TabsTrigger>
           <TabsTrigger value="assessments" className="text-xs">
-            3. Assessments & Invoice Authorisation
+            2. Assessments & Invoice Authorisation
           </TabsTrigger>
           <TabsTrigger value="reconciliation" className="text-xs">
-            4. Real-time Payments & Bank Reconciliation
+            3. Real-time Payments & Bank Reconciliation
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="certificates">
-          <CertificateFeeTab />
-        </TabsContent>
-
-        <TabsContent value="levies_permits">
-          <LevyPermitFeeTab />
+        <TabsContent value="fee_configuration">
+          <ServiceFeeConfigurationTab />
         </TabsContent>
 
         <TabsContent value="assessments">

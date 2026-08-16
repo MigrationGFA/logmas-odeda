@@ -80,7 +80,7 @@ export const ODEDA_SERVICES: OdedaService[] = [
   },
   {
     id: "cda_registration",
-    name: "Certificate of CDA Registration",
+    name: "Certificate of Community Development Association Registration",
     category: "Community & Agriculture",
     description: "Registration and formal recognition of Community Development Associations (CDAs) in Odeda LGA wards.",
     revenueHead: "1003 - Community Dev Head",
@@ -136,7 +136,7 @@ export const ODEDA_SERVICES: OdedaService[] = [
   },
   {
     id: "environmental_sanitation",
-    name: "Environmental Sanitation Certificate",
+    name: "Certificate of Environmental Sanitation Compliance",
     category: "Certificates",
     description: "Mandatory environmental sanitation and public health compliance certificate for commercial & industrial premises.",
     revenueHead: "1005 - Health & Sanitation",
@@ -217,7 +217,7 @@ export const ODEDA_SERVICES: OdedaService[] = [
   },
   {
     id: "liquor_licence",
-    name: "Liquor Licence",
+    name: "Liquor Licence Fees",
     category: "Licences & Permits",
     description: "Annual statutory licence authorizing retail or wholesale sale of alcoholic beverages within Odeda LGA jurisdiction.",
     revenueHead: "2003 - Excise & Trade Licences",
@@ -244,7 +244,7 @@ export const ODEDA_SERVICES: OdedaService[] = [
   },
   {
     id: "viewing_centre_licence",
-    name: "Viewing Centre Licence",
+    name: "Viewing Centre Licence Fee",
     category: "Licences & Permits",
     description: "Annual permit and safety licence for commercial football viewing centres and game arcades in Odeda LGA.",
     revenueHead: "2004 - Entertainment & Sports",
@@ -271,7 +271,7 @@ export const ODEDA_SERVICES: OdedaService[] = [
   },
   {
     id: "quarry_permit",
-    name: "Quarry Fees and Permit",
+    name: "Quarry Fees and Permits",
     category: "Licences & Permits",
     description: "Annual operating permit, environmental fee, and stone/granite extraction licence for quarry operators in Odeda LGA.",
     revenueHead: "2005 - Mining & Natural Resources",
@@ -299,7 +299,7 @@ export const ODEDA_SERVICES: OdedaService[] = [
   },
   {
     id: "street_naming",
-    name: "Street Naming & Property Numbering",
+    name: "Street Naming and Property Numbering",
     category: "Urban Development",
     description: "Formal approval, naming, and property house numbering registration for streets and estates in Odeda LGA.",
     revenueHead: "3001 - Urban Planning Head",
@@ -355,4 +355,111 @@ export const ODEDA_SERVICES: OdedaService[] = [
 
 export function getOdedaServiceById(id: string): OdedaService | undefined {
   return ODEDA_SERVICES.find((s) => s.id === id);
+}
+
+export interface ServiceFeeConfig {
+  serviceId: string;
+  serviceName: string;
+  category: string;
+  revenueHead: string;
+  fee: number;
+  status: "active" | "inactive";
+  lastUpdated: string;
+}
+
+export function getInitialServiceFeeConfigs(): ServiceFeeConfig[] {
+  return ODEDA_SERVICES.map((s) => ({
+    serviceId: s.id,
+    serviceName: s.name,
+    category: s.category,
+    revenueHead: s.revenueHead,
+    fee: s.defaultFee,
+    status: "active",
+    lastUpdated: "2026-08-16",
+  }));
+}
+
+export function getServiceFeeConfigs(): ServiceFeeConfig[] {
+  if (typeof window === "undefined") {
+    return getInitialServiceFeeConfigs();
+  }
+  try {
+    const raw = localStorage.getItem("odeda_service_fee_configs");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const initial = getInitialServiceFeeConfigs();
+        return initial.map((init) => {
+          const found = parsed.find((p: any) => p.serviceId === init.serviceId);
+          return found
+            ? {
+                ...init,
+                fee: typeof found.fee === "number" ? found.fee : init.fee,
+                status: found.status === "inactive" ? "inactive" : "active",
+                lastUpdated: found.lastUpdated || init.lastUpdated,
+              }
+            : init;
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Error loading service fee configs", e);
+  }
+  const initial = getInitialServiceFeeConfigs();
+  try {
+    localStorage.setItem("odeda_service_fee_configs", JSON.stringify(initial));
+  } catch {}
+  return initial;
+}
+
+export function getConfiguredFeeForService(serviceId: string): number {
+  const configs = getServiceFeeConfigs();
+  const found = configs.find((c) => c.serviceId === serviceId);
+  if (found && typeof found.fee === "number") {
+    return found.fee;
+  }
+  const svc = getOdedaServiceById(serviceId);
+  return svc ? svc.defaultFee : 0;
+}
+
+export function saveServiceFeeConfig(
+  serviceId: string,
+  fee: number,
+  status: "active" | "inactive"
+): ServiceFeeConfig[] {
+  const current = getServiceFeeConfigs();
+  const updated = current.map((item) => {
+    if (item.serviceId === serviceId) {
+      return {
+        ...item,
+        fee: Math.max(0, Number(fee)),
+        status,
+        lastUpdated: new Date().toISOString().slice(0, 10),
+      };
+    }
+    return item;
+  });
+
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("odeda_service_fee_configs", JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent("odeda:service-fees-change", { detail: updated }));
+    } catch (e) {
+      console.error("Error saving service fee configs", e);
+    }
+  }
+  return updated;
+}
+
+export function toggleServiceFeeStatus(serviceId: string): ServiceFeeConfig[] {
+  const current = getServiceFeeConfigs();
+  const target = current.find((c) => c.serviceId === serviceId);
+  const newStatus = target?.status === "active" ? "inactive" : "active";
+  return saveServiceFeeConfig(serviceId, target ? target.fee : 0, newStatus);
+}
+
+export function resetServiceFeeToDefault(serviceId: string): ServiceFeeConfig[] {
+  const svc = getOdedaServiceById(serviceId);
+  if (!svc) return getServiceFeeConfigs();
+  return saveServiceFeeConfig(serviceId, svc.defaultFee, "active");
 }

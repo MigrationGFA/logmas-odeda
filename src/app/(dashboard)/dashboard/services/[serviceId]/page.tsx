@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, use } from "react";
-import { getOdedaServiceById } from "@/config/odedaServices";
+import { getOdedaServiceById, getConfiguredFeeForService } from "@/config/odedaServices";
 import { PageHeader } from "@/components/dashboard/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
         nin: formData.nin,
         cacNumber: formData.cacNumber,
         revenueHead: service.revenueHead,
-        amount: formData.amount || service.defaultFee,
+        amount: formData.amount || getConfiguredFeeForService(service.id) || service.defaultFee,
         details: formData,
         isDraft: false,
       });
