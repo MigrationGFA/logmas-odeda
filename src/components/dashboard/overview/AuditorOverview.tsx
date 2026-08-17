@@ -31,7 +31,7 @@ import {
 
 import { useOverview } from "@/hooks/queries/useOverview";
 import { Role } from "@/services/apiOverview";
-import { MiniChart, QuickActions } from "@/app/(dashboard)/dashboard/page";
+import { MiniChart, QuickActions } from "@/components/dashboard/DashboardWidgets";
 import Link from "next/link";
 
 interface AuditorOverviewProps {

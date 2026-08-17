@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 import { useAdminOverview } from "@/hooks/queries/useLgaAdmin";
-import { QuickActions } from "@/app/(dashboard)/dashboard/page";
+import { QuickActions } from "@/components/dashboard/DashboardWidgets";
 import Link from "next/link";
 
 function AdminOverview() {
@@ -106,6 +106,11 @@ function AdminOverview() {
         </Card>
         <QuickActions
           items={[
+            {
+              icon: FileText,
+              label: "Services",
+              to: "/dashboard/services",
+            },
             {
               icon: UserCog,
               label: "Officers",

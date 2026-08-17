@@ -33,25 +33,71 @@ export const lgaAdminKeys = {
   permits: () => [...lgaAdminKeys.all, "permits"] as const,
 };
 
+// Top-level Query Hooks
+export function useGetWards(params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: lgaAdminKeys.wardsList(params),
+    queryFn: () => lgaAdminService.listWards(params),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useGetWard(id: string) {
+  return useQuery({
+    queryKey: lgaAdminKeys.ward(id),
+    queryFn: () => lgaAdminService.getWardById(id),
+    enabled: !!id,
+  });
+}
+
+export function useGetStaff(params?: {
+  role?: Role;
+  wardId?: string;
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: lgaAdminKeys.staffList(params),
+    queryFn: () => lgaAdminService.listStaff(params),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useGetStaffDetail(id: string) {
+  return useQuery({
+    queryKey: lgaAdminKeys.staffDetail(id),
+    queryFn: () => lgaAdminService.getStaffById(id),
+    enabled: !!id,
+  });
+}
+
+export function useGetContractors(params?: { search?: string }) {
+  return useQuery({
+    queryKey: lgaAdminKeys.contractorsList(params),
+    queryFn: () => lgaAdminService.getContractorsOverview(params),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useGetAccounts(params?: {
+  search?: string;
+  role?: AccountRole;
+  page?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: lgaAdminKeys.accountsList(params),
+    queryFn: () => lgaAdminService.getAccountsOverview(params),
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 // Ward Management Hooks
 export function useWardManagement() {
   const queryClient = useQueryClient();
-
-  const useGetWards = (params?: { page?: number; limit?: number }) => {
-    return useQuery({
-      queryKey: lgaAdminKeys.wardsList(params),
-      queryFn: () => lgaAdminService.listWards(params),
-      staleTime: 2 * 60 * 1000,
-    });
-  };
-
-  const useGetWard = (id: string) => {
-    return useQuery({
-      queryKey: lgaAdminKeys.ward(id),
-      queryFn: () => lgaAdminService.getWardById(id),
-      enabled: !!id,
-    });
-  };
 
   const createWardMutation = useMutation({
     mutationFn: (data: CreateWardData) => lgaAdminService.createWard(data),
@@ -122,42 +168,14 @@ export function useWardManagement() {
 export function useStaffManagement() {
   const queryClient = useQueryClient();
 
-  const useGetStaff = (params?: {
-    role?: Role;
-    wardId?: string;
-    isActive?: boolean;
-    page?: number;
-    limit?: number;
-  }) => {
-    return useQuery({
-      queryKey: lgaAdminKeys.staffList(params),
-      queryFn: () => lgaAdminService.listStaff(params),
-      staleTime: 0,
-      refetchOnWindowFocus: true,
-    });
-  };
-
-  const useGetStaffDetail = (id: string) => {
-    return useQuery({
-      queryKey: lgaAdminKeys.staffDetail(id),
-      queryFn: () => lgaAdminService.getStaffById(id),
-      enabled: !!id,
-    });
-  };
-
   const createStaffMutation = useMutation({
     mutationFn: (data: CreateStaffData) => lgaAdminService.createStaff(data),
     onSuccess: (response) => {
-      toast.success(
-        `Staff account created for ${response.staff.firstName} ${response.staff.lastName}`,
-      );
-      // Show temporary password in console (in production, would be emailed)
-      // console.log("Temporary password:", response.temporaryPassword);
-      // toast.info(`Temporary password: ${response.temporaryPassword} (save this!)`);
+      toast.success(`Staff member "${response.name}" created`);
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.staff() });
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create staff");
+      toast.error(error.message || "Failed to create staff member");
     },
   });
 
@@ -165,27 +183,26 @@ export function useStaffManagement() {
     mutationFn: ({ id, data }: { id: string; data: UpdateStaffData }) =>
       lgaAdminService.updateStaff(id, data),
     onSuccess: () => {
-      toast.success("Staff updated successfully");
+      toast.success("Staff member updated successfully");
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.staff() });
     },
     onError: (error: any) => {
-      console.log(error, "error");
-      toast.error(error.message || "Failed to update staff");
+      toast.error(error.message || "Failed to update staff member");
     },
   });
 
   const toggleStaffStatusMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
       lgaAdminService.toggleStaffStatus(id, reason),
-    onSuccess: (data) => {
+    onSuccess: (response) => {
       toast.success(
-        `Account ${data.isActive ? "activated" : "suspended"} successfully`,
+        `Staff member ${response.isActive ? "activated" : "deactivated"} successfully`
       );
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.staff() });
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.accounts() });
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to toggle staff status");
+      toast.error(error.message || "Failed to update staff status");
     },
   });
 
@@ -208,22 +225,13 @@ export function useStaffManagement() {
 export function useContractorsManagement() {
   const queryClient = useQueryClient();
 
-  const useGetContractors = (params?: { search?: string }) => {
-    return useQuery({
-      queryKey: lgaAdminKeys.contractorsList(params),
-      queryFn: () => lgaAdminService.getContractorsOverview(params),
-      staleTime: 2 * 60 * 1000, // 2 minutes
-    });
-  };
-
   const createContractorMutation = useMutation({
     mutationFn: (data: CreateContractorData) =>
       lgaAdminService.createContractor(data),
     onSuccess: (response) => {
       toast.success(
-        `Contractor "${response.contractor.firstName} ${response.contractor.lastName}" created`,
+        `Contractor "${response.contractor.firstName} ${response.contractor.lastName}" created`
       );
-      // Show temporary password (remove in production after email is configured)
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.contractors() });
     },
     onError: (error: any) => {
@@ -241,7 +249,7 @@ export function useContractorsManagement() {
     }) => lgaAdminService.addAgentToContractor(contractorId, data),
     onSuccess: (response) => {
       toast.success(
-        `Agent ${response.agent.firstName} ${response.agent.lastName} added successfully`,
+        `Agent ${response.agent.firstName} ${response.agent.lastName} added successfully`
       );
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.contractors() });
     },
@@ -297,25 +305,9 @@ export function useAdminOverview() {
 export function useAccountManagement() {
   const queryClient = useQueryClient();
 
-  const useGetAccounts = (params?: {
-    search?: string;
-    role?: AccountRole;
-    page?: number;
-    limit?: number;
-  }) => {
-    return useQuery({
-      queryKey: lgaAdminKeys.accountsList(params),
-      queryFn: () => lgaAdminService.getAccountsOverview(params),
-      staleTime: 10000, // 2 minutes
-      refetchOnWindowFocus:true
-    });
-  };
-
   const resetPasswordMutation = useMutation({
     mutationFn: (id: string) => lgaAdminService.resetAccountPassword(id),
-    onSuccess: (response) => {
-      // toast.success(response.message);
-      // Show temporary password in console and toast (remove in production)
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.accounts() });
     },
     onError: (error: any) => {
@@ -346,28 +338,25 @@ export const useRevokePermit = () => {
       lgaAdminService.revokePermit(id, revokeReason),
     onSuccess: (response) => {
       toast.success(`Permit ${response.permitNumber} has been revoked`);
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['permits'] });
-      queryClient.invalidateQueries({ queryKey: ['permit', response.id] });
+      queryClient.invalidateQueries({ queryKey: ["permits"] });
+      queryClient.invalidateQueries({ queryKey: ["permit", response.id] });
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to revoke permit');
+      toast.error(error.message || "Failed to revoke permit");
     },
   });
-}
+};
 
 // Combined LGA Admin Hook
 export function useLgaAdmin() {
   const wards = useWardManagement();
   const staff = useStaffManagement();
-  const overview = useAdminOverview();
   const accounts = useAccountManagement();
   const contractors = useContractorsManagement();
 
   return {
     wards,
     staff,
-    overview,
     accounts,
     contractors,
   };

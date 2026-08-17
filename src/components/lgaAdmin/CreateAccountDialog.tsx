@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useMemo } from "react";
@@ -29,13 +31,12 @@ import {
 import { Plus, KeyRound, ShieldOff, Loader2, UserX, Power } from "lucide-react";
 import {
   useAccountManagement,
-  useLgaAdmin,
+  useGetWards,
   useStaffManagement,
 } from "@/hooks/queries/useLgaAdmin";
-import { ROLE_LABELS } from "@/lib/auth";
+import { ROLE_LABELS, MANAGEABLE_ROLES } from "@/lib/auth";
 import { Textarea } from "../ui/textarea";
 import { Account } from "@/services/apiLgaAdmin";
-import { MANAGEABLE_ROLES } from "@/app/(dashboard)/dashboard/accounts/page";
 
 // Account Creation Schema
 const createAccountSchema = z
@@ -62,12 +63,9 @@ const createAccountSchema = z
 
 type CreateAccountFormData = z.infer<typeof createAccountSchema>;
 
-function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
+export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
   const [open, setOpen] = useState(false);
   const { createStaffAsync, isCreating } = useStaffManagement();
-  // const { createStaff, isCreating } = staff;
-  const { wards } = useLgaAdmin();
-  const { useGetWards } = wards;
   const { data: wardsData } = useGetWards({ limit: 100 });
   const wardList = wardsData || [];
 

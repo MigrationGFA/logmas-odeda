@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useOverview } from '@/hooks/queries/useOverview';
 import { Role } from '@/services/apiOverview';
-import { MiniChart, QuickActions, RecentInvoices } from '@/app/(dashboard)/dashboard/page';
+import { MiniChart, QuickActions, RecentInvoices } from '@/components/dashboard/DashboardWidgets';
 import Link from 'next/link';
 
 interface ContractorOverviewProps {

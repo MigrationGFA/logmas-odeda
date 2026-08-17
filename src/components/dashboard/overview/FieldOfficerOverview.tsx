@@ -34,7 +34,7 @@ import {
   Building2,
   Phone,
 } from "lucide-react";
-import { QuickActions } from "@/app/(dashboard)/dashboard/page";
+import { QuickActions } from "@/components/dashboard/DashboardWidgets";
 import {
   getOdedaApplications,
   recordFieldInspection,
@@ -272,6 +272,7 @@ export default function FieldOfficerOverview() {
 
         <QuickActions
           items={[
+            { icon: FileBadge, label: "Services Catalogue", to: "/dashboard/services" },
             { icon: ClipboardList, label: "All Service Apps", to: "/dashboard/applications" },
             { icon: ScanLine, label: "Verify Payment", to: "/dashboard/verify-payment" },
             { icon: Building2, label: "Field Enforcement", to: "/dashboard/permits" },

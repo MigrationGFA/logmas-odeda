@@ -1,12 +1,13 @@
+"use client";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
-"use client"
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { PageHeader, StatCard, EmptyState } from "@/components/dashboard/shared";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useDebounce } from 'react-haiku';
+import { useDebounce } from "@/hooks/useDebounce";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -40,13 +41,14 @@ import {
   Search,
   Loader2,
 } from "lucide-react";
-import { useLgaAdmin, useStaffManagement } from "@/hooks/queries/useLgaAdmin";
-import { ROLE_LABELS } from "@/lib/auth";
-import CreateAccountDialog, {
+import { useGetAccounts } from "@/hooks/queries/useLgaAdmin";
+import { ROLE_LABELS, MANAGEABLE_ROLES } from "@/lib/auth";
+import { useAuth } from "@/hooks/queries/useAuth";
+import {
+  CreateAccountDialog,
   ResetPasswordDialog,
   SuspendAccountDialog,
 } from "@/components/lgaAdmin/CreateAccountDialog";
-import { tokenManager } from "@/services/apiAuth";
 
 
 type AccountStatus = "active" | "suspended" | "pending_reset";
@@ -64,23 +66,10 @@ const ROLE_ICON: Record<string, any> = {
   business_owner: Building2,
 };
 
-export const MANAGEABLE_ROLES = [
-  "chairman",
-  "ward_councillor",
-  "auditor",
-  "treasurer",
-  "contractor",
-  "field_officer",
-  "business_owner",
-  "citizen",
-];
-
 export default function AccountsPage() {
-  const user = tokenManager.getUser();
-  const { accounts } = useLgaAdmin();
-  const { useGetAccounts,} = accounts;
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
-   const debouncedValue = useDebounce(search, 500)
+  const debouncedValue = useDebounce(search, 500);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [page, setPage] = useState(1);
 

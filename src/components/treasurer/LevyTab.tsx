@@ -26,7 +26,7 @@ import LevyDialog from "@/components/treasurer/LevyDialog";
 
 import { useLevyConfigs } from "@/hooks/queries/useTreasurer";
 import { useRevenueCategories } from "@/hooks/queries/useRevenueCategories";
-import { FilterBar, formatNgn, SkeletonRows } from "@/app/(dashboard)/dashboard/levies/page";
+import { FilterBar, formatNgn, SkeletonRows } from "@/components/treasurer/shared";
 import { LevyConfig } from "@/services/apiTreasurer";
 
 function LevyTab() {

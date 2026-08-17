@@ -19,7 +19,7 @@ import {
   Plus,
   Loader2,
 } from "lucide-react";
-import { WardFormData, wardSchema } from '@/app/(dashboard)/dashboard/wards/page';
+import { WardFormData, wardSchema } from "@/lib/schemas/wardSchemas";
 
 
 function AddWardDialog({ onCreate, isCreating }: { onCreate: (data: WardFormData) => void; isCreating: boolean }) {

@@ -34,7 +34,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Role } from "@/services/apiOverview";
-import { QuickActions } from "@/app/(dashboard)/dashboard/page";
+import { QuickActions } from "@/components/dashboard/DashboardWidgets";
 import {
   getOdedaApplications,
   issueTreasuryInvoice,

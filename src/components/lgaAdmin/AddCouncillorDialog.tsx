@@ -28,7 +28,7 @@ import {
   UserPlus,
   Loader2,
 } from "lucide-react";
-import { CouncillorFormData, councillorSchema } from '@/app/(dashboard)/dashboard/wards/page';
+import { CouncillorFormData, councillorSchema } from "@/lib/schemas/wardSchemas";
 
 
 function AddCouncillorDialog({ wards, onCreate, isCreating }: { wards: any[]; onCreate: (data: CouncillorFormData) => void; isCreating: boolean }) {

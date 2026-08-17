@@ -57,6 +57,17 @@ export const ROLE_LABELS: Record<Role, string> = {
   business_owner: "Business Owner",
 };
 
+export const MANAGEABLE_ROLES: Role[] = [
+  "chairman",
+  "ward_councillor",
+  "auditor",
+  "treasurer",
+  "contractor",
+  "field_officer",
+  "business_owner",
+  "citizen",
+];
+
 const ROLE_NAMES: Record<Role, string> = {
   super_admin: "Adewale Super",
   chairman: "Hon. Folusho Joseph Badejo",

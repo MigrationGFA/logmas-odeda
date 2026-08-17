@@ -25,7 +25,7 @@ import {
 import { useRevenueCategories } from "@/hooks/queries/useRevenueCategories";
 import { usePermitConfigs } from "@/hooks/queries/useTreasurer";
 import PermitConfigDialog from "./PermitCOnfigDialog";
-import { FilterBar, formatNgn, SkeletonRows } from "@/app/(dashboard)/dashboard/levies/page";
+import { FilterBar, formatNgn, SkeletonRows } from "@/components/treasurer/shared";
 
 function PermitConfigTab() {
   const { useGetPermitConfigs } = usePermitConfigs();

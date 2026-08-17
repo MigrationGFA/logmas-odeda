@@ -23,7 +23,7 @@ import { useOverview } from "@/hooks/queries/useOverview";
 import { format } from "date-fns";
 import { Role } from "@/services/apiOverview";
 import Link from "next/link";
-import { QuickActions } from "@/app/(dashboard)/dashboard/page";
+import { QuickActions } from "@/components/dashboard/DashboardWidgets";
 
 function CitizenOverview({ role }: { role: Role }) {
   // const pending = invoices.filter((i) => i.status !== "paid").reduce((s, i) => s + i.amount, 0);
@@ -100,14 +100,14 @@ function CitizenOverview({ role }: { role: Role }) {
           items={[
             {
               icon: FileBadge,
-              label: "Apply for State of Origin",
-              to: "/dashboard/applications",
+              label: "Apply for Certificate of Origin",
+              to: "/dashboard/services/certificate_of_origin",
             },
-            // {
-            //   icon: Stamp,
-            //   label: "Apply for Trade Permit",
-            //   to: "/dashboard/permits/new",
-            // },
+            {
+              icon: FileBadge,
+              label: "All Government Services",
+              to: "/dashboard/services",
+            },
             {
               icon: CreditCard,
               label: "Pay Fees",
@@ -119,11 +119,6 @@ function CitizenOverview({ role }: { role: Role }) {
               to: "/dashboard/complaints",
             },
             { icon: Receipt, label: "My Receipts", to: "/dashboard/receipts" },
-            // {
-            //   icon: ShieldCheck,
-            //   label: "Verify Permit",
-            //   to: "/permits/verify",
-            // },
           ]}
         />
       </div>

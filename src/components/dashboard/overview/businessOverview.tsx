@@ -12,7 +12,7 @@ import {
 import { useOverview } from "@/hooks/queries/useOverview";
 import { Role } from "@/lib/auth";
 import { BusinessOwnerMetrics } from "@/services/apiOverview";
-import { QuickActions, RecentInvoiceItem, RecentInvoices } from "@/app/(dashboard)/dashboard/page";
+import { QuickActions, RecentInvoiceItem, RecentInvoices } from "@/components/dashboard/DashboardWidgets";
 
 function BusinessOverview({ role }: { role: Role }) {
   const { businessMetrics } = useOverview(role);
@@ -48,6 +48,7 @@ function BusinessOverview({ role }: { role: Role }) {
         <RecentInvoices limit={4} invoices={recentInvoices}/>
         <QuickActions
           items={[
+            { icon: FileText, label: "Government Services", to: "/dashboard/services" },
             { icon: ScrollText, label: "Trade Permits", to: "/dashboard/permits" },
             { icon: CreditCard, label: "Pay Now", to: "/dashboard/invoices" },
             { icon: Receipt, label: "Receipts", to: "/dashboard/receipts" },

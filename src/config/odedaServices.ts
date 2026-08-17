@@ -356,15 +356,26 @@ export const ODEDA_SERVICES: OdedaService[] = [
 export function getOdedaServiceById(id: string): OdedaService | undefined {
   if (!id) return undefined;
   
+  let raw = "";
+  try {
+    raw = decodeURIComponent(id).trim();
+  } catch {
+    raw = id.trim();
+  }
+
+  // Strip trailing/leading punctuation, periods, ellipses, slashes, query residues
+  const stripped = raw.replace(/^[^\w]+|[^\w]+$/g, "").trim();
+  if (!stripped) return undefined;
+
   // Exact match first
-  const exact = ODEDA_SERVICES.find((s) => s.id === id);
+  const exact = ODEDA_SERVICES.find((s) => s.id === stripped || s.id === id);
   if (exact) return exact;
 
-  const clean = id.toLowerCase().trim().replace(/[- ]+/g, "_");
+  const clean = stripped.toLowerCase().replace(/[- \s_]+/g, "_");
   const directClean = ODEDA_SERVICES.find((s) => s.id === clean);
   if (directClean) return directClean;
 
-  // Comprehensive alias mapping for URLs (both hyphenated and underscored)
+  // Comprehensive alias mapping for URLs (hyphenated, underscored, shorthand, and colloquial)
   const aliasMap: Record<string, string> = {
     // Certificate / State of Origin
     "certificate_of_origin": "certificate_of_origin",
@@ -375,95 +386,142 @@ export function getOdedaServiceById(id: string): OdedaService | undefined {
     "stateoforigin": "certificate_of_origin",
     "indigene_certificate": "certificate_of_origin",
     "indigene-certificate": "certificate_of_origin",
+    "indigenecertificate": "certificate_of_origin",
+    "indigene": "certificate_of_origin",
+    "indigeneity": "certificate_of_origin",
     "origin": "certificate_of_origin",
+    "origin_certificate": "certificate_of_origin",
+    "origin-certificate": "certificate_of_origin",
     "soo": "certificate_of_origin",
     "coo": "certificate_of_origin",
+    "local_origin": "certificate_of_origin",
+    "local-origin": "certificate_of_origin",
+    "lga_origin": "certificate_of_origin",
+    "lga-origin": "certificate_of_origin",
     
     // Club Registration
     "club_registration": "club_registration",
     "club-registration": "club_registration",
+    "clubregistration": "club_registration",
     "club": "club_registration",
     "clubs": "club_registration",
+    "social_club": "club_registration",
+    "social-club": "club_registration",
     
     // CDA Registration
     "cda_registration": "cda_registration",
     "cda-registration": "cda_registration",
+    "cdaregistration": "cda_registration",
     "cda": "cda_registration",
     "community_development": "cda_registration",
     "community-development": "cda_registration",
+    "community": "cda_registration",
     
     // Farmers Registration
     "farmers_registration": "farmers_registration",
     "farmers-registration": "farmers_registration",
     "farmer_registration": "farmers_registration",
     "farmer-registration": "farmers_registration",
+    "farmersregistration": "farmers_registration",
     "farmers": "farmers_registration",
     "farmer": "farmers_registration",
     "agriculture": "farmers_registration",
+    "agricultural": "farmers_registration",
+    "farming": "farmers_registration",
     
     // Environmental Sanitation
     "environmental_sanitation": "environmental_sanitation",
     "environmental-sanitation": "environmental_sanitation",
+    "environmentalsanitation": "environmental_sanitation",
     "sanitation": "environmental_sanitation",
     "environment": "environmental_sanitation",
     "health_sanitation": "environmental_sanitation",
+    "health-sanitation": "environmental_sanitation",
+    "waste_compliance": "environmental_sanitation",
     
     // Tenement Rate
     "tenement_rate": "tenement_rate",
     "tenement-rate": "tenement_rate",
+    "tenementrate": "tenement_rate",
     "tenement": "tenement_rate",
     "property_rate": "tenement_rate",
     "property-rate": "tenement_rate",
+    "property": "tenement_rate",
+    "land_rate": "tenement_rate",
     
     // Haulage Fees
     "haulage_fees": "haulage_fees",
     "haulage-fees": "haulage_fees",
+    "haulagefees": "haulage_fees",
     "haulage": "haulage_fees",
     "transit_fees": "haulage_fees",
+    "transit": "haulage_fees",
     "heavy_duty": "haulage_fees",
+    "truck_levy": "haulage_fees",
     
     // Liquor Licence
     "liquor_licence": "liquor_licence",
     "liquor-licence": "liquor_licence",
     "liquor_license": "liquor_licence",
     "liquor-license": "liquor_licence",
+    "liquorlicence": "liquor_licence",
+    "liquorlicense": "liquor_licence",
     "liquor": "liquor_licence",
+    "beer_licence": "liquor_licence",
+    "beer-licence": "liquor_licence",
     "bar_licence": "liquor_licence",
+    "bar-licence": "liquor_licence",
+    "bar": "liquor_licence",
     
     // Viewing Centre
     "viewing_centre_licence": "viewing_centre_licence",
     "viewing-centre-licence": "viewing_centre_licence",
+    "viewing_center_licence": "viewing_centre_licence",
+    "viewing-center-licence": "viewing_centre_licence",
+    "viewing_center_license": "viewing_centre_licence",
+    "viewing-center-license": "viewing_centre_licence",
     "viewing_centre": "viewing_centre_licence",
     "viewing-centre": "viewing_centre_licence",
     "viewing_center": "viewing_centre_licence",
     "viewing-center": "viewing_centre_licence",
-    "viewing_center_licence": "viewing_centre_licence",
-    "viewing_center_license": "viewing_centre_licence",
     "viewing": "viewing_centre_licence",
+    "viewingcentre": "viewing_centre_licence",
+    "viewingcenter": "viewing_centre_licence",
+    "game_centre": "viewing_centre_licence",
     
     // Quarry Permit
     "quarry_permit": "quarry_permit",
     "quarry-permit": "quarry_permit",
+    "quarrypermit": "quarry_permit",
     "quarry": "quarry_permit",
     "quarry_fees": "quarry_permit",
+    "quarry-fees": "quarry_permit",
     "mining_permit": "quarry_permit",
+    "mining": "quarry_permit",
+    "granite": "quarry_permit",
     
     // Street Naming
     "street_naming": "street_naming",
     "street-naming": "street_naming",
+    "streetnaming": "street_naming",
     "street": "street_naming",
     "property_numbering": "street_naming",
+    "property-numbering": "street_naming",
+    "house_numbering": "street_naming",
     
     // Kiosk Licence
     "kiosk_licence": "kiosk_licence",
     "kiosk-licence": "kiosk_licence",
     "kiosk_license": "kiosk_licence",
     "kiosk-license": "kiosk_licence",
+    "kiosklicence": "kiosk_licence",
+    "kiosklicense": "kiosk_licence",
     "kiosk": "kiosk_licence",
+    "booth": "kiosk_licence",
   };
 
-  const rawLower = id.toLowerCase().trim();
-  const mappedId = aliasMap[clean] || aliasMap[rawLower];
+  const rawLower = stripped.toLowerCase();
+  const mappedId = aliasMap[clean] || aliasMap[rawLower] || aliasMap[clean.replace(/_/g, "")];
   if (mappedId) {
     return ODEDA_SERVICES.find((s) => s.id === mappedId);
   }
