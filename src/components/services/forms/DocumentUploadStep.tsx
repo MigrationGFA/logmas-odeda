@@ -1,24 +1,45 @@
 "use client";
+
 import React, { useRef } from "react";
-import { Upload, FileText, CheckCircle2, AlertCircle, Trash2, ShieldCheck, FileCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import {
+  Upload,
+  FileCheck,
+  FileText,
+  Trash2,
+  AlertCircle,
+  ShieldCheck,
+  Eye,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 export interface DocumentSpec {
-  id: string;
-  label: string;
+  id: string; // Machine-readable key, e.g. "passport_photo", "nin_slip"
+  label: string; // Human-friendly display label, e.g. "Passport Photograph"
   description: string;
   required: boolean;
   acceptedFormats?: string;
 }
 
+export interface UploadedFileMeta {
+  file?: File;
+  name: string;
+  size?: number;
+  type?: string;
+  previewUrl?: string;
+}
+
 interface DocumentUploadStepProps {
   documents: DocumentSpec[];
-  uploadedFiles: Record<string, string>;
-  onFileUpload: (docId: string, fileName: string) => void;
+  uploadedFiles: Record<string, string | UploadedFileMeta>;
+  onFileUpload: (docId: string, fileNameOrMeta: string | UploadedFileMeta, actualFile?: File) => void;
   onFileRemove: (docId: string) => void;
   serviceName: string;
 }
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
 
 export function DocumentUploadStep({
   documents,
@@ -29,32 +50,93 @@ export function DocumentUploadStep({
 }: DocumentUploadStepProps) {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  const validateFile = (file: File): boolean => {
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      toast.error(`Invalid file format: ${file.name}. Only JPG, PNG, and PDF documents are permitted.`);
+      return false;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File "${file.name}" exceeds the maximum 5 MB limit (${(file.size / (1024 * 1024)).toFixed(1)} MB).`);
+      return false;
+    }
+    return true;
+  };
+
   const handleNativeFileChange = (docId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      onFileUpload(docId, file.name);
+      if (!validateFile(file)) {
+        e.target.value = "";
+        return;
+      }
+
+      const meta: UploadedFileMeta = {
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        previewUrl: URL.createObjectURL(file),
+      };
+
+      onFileUpload(docId, meta, file);
+      toast.success(`Attached ${file.name}`);
     }
   };
 
-  const simulateQuickUpload = (docId: string, docLabel: string) => {
-    const extensions: Record<string, string> = {
-      photo: "jpg",
-      passport: "jpg",
-      image: "jpg",
-      sketch: "pdf",
-      plan: "pdf",
-      cert: "pdf",
-      letter: "pdf",
-      constitution: "pdf",
-    };
-    const ext = Object.keys(extensions).find((k) => docId.toLowerCase().includes(k))
-      ? extensions[Object.keys(extensions).find((k) => docId.toLowerCase().includes(k))!]
-      : "pdf";
-    const sampleName = `${docId}_verified_document.${ext}`;
-    onFileUpload(docId, sampleName);
+  const handleDrop = (docId: string, e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (!validateFile(file)) return;
+
+      const meta: UploadedFileMeta = {
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        previewUrl: URL.createObjectURL(file),
+      };
+
+      onFileUpload(docId, meta, file);
+      toast.success(`Attached ${file.name}`);
+    }
   };
 
-  const missingRequired = documents.filter((d) => d.required && !uploadedFiles[d.id]);
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const simulateQuickUpload = (docId: string, docLabel: string) => {
+    const isImageDoc = docId.toLowerCase().includes("photo") || docId.toLowerCase().includes("passport") || docId.toLowerCase().includes("image");
+    const ext = isImageDoc ? "jpg" : "pdf";
+    const sampleName = `${docId}_sample.${ext}`;
+    const mimeType = isImageDoc ? "image/jpeg" : "application/pdf";
+    
+    // Create real File object for multipart
+    const sampleFile = new File([new Blob([`SAMPLE STATUTORY DOCUMENT FOR ${docLabel} (${docId})`])], sampleName, {
+      type: mimeType,
+    });
+
+    const meta: UploadedFileMeta = {
+      file: sampleFile,
+      name: sampleName,
+      size: 145000,
+      type: mimeType,
+    };
+
+    onFileUpload(docId, meta, sampleFile);
+    toast.success(`Attached sample document for ${docLabel}`);
+  };
+
+  const missingRequired = documents.filter((d) => {
+    const val = uploadedFiles[d.id];
+    if (!val) return d.required;
+    if (typeof val === "string") return !val && d.required;
+    return !val.name && d.required;
+  });
 
   return (
     <div className="space-y-6">
@@ -63,7 +145,7 @@ export function DocumentUploadStep({
           Statutory Supporting Documents
         </h4>
         <p className="text-xs text-muted-foreground mt-1">
-          In accordance with Odeda Local Government statutory bye-laws, please upload clear, legible copies of all required supporting documents for <strong className="text-foreground">{serviceName}</strong>.
+          In accordance with Odeda Local Government statutory bye-laws, please upload clear, legible copies of all required supporting documents for <strong className="text-foreground">{serviceName}</strong>. Allowed formats: JPG, PNG, PDF (Max 5 MB per file).
         </p>
       </div>
 
@@ -71,7 +153,7 @@ export function DocumentUploadStep({
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3 text-xs text-amber-900 dark:text-amber-200">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold">Required Documents Remaining:</span>
+            <span className="font-bold">Required Documents Remaining ({missingRequired.length}):</span>
             <p className="mt-0.5 text-muted-foreground">
               Please attach {missingRequired.map((d) => d.label).join(", ")} before proceeding to review & submission.
             </p>
@@ -91,12 +173,16 @@ export function DocumentUploadStep({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {documents.map((doc) => {
-          const isUploaded = !!uploadedFiles[doc.id];
-          const fileName = uploadedFiles[doc.id];
+          const rawVal = uploadedFiles[doc.id];
+          const isUploaded = !!rawVal && (typeof rawVal === "string" ? rawVal.length > 0 : !!rawVal.name);
+          const fileName = typeof rawVal === "string" ? rawVal : rawVal?.name || "";
+          const fileSize = typeof rawVal === "object" && rawVal?.size ? rawVal.size : null;
 
           return (
             <div
               key={doc.id}
+              onDrop={(e) => handleDrop(doc.id, e)}
+              onDragOver={handleDragOver}
               className={`border rounded-xl p-4 transition-all flex flex-col justify-between ${
                 isUploaded
                   ? "bg-emerald-500/5 border-emerald-500/30 shadow-xs"
@@ -107,7 +193,7 @@ export function DocumentUploadStep({
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <div
                       className={`p-2 rounded-lg ${
                         isUploaded
@@ -118,8 +204,8 @@ export function DocumentUploadStep({
                       <FileText className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="font-semibold text-xs text-foreground flex items-center gap-1.5">
-                        {doc.label}
+                      <div className="font-semibold text-xs text-foreground flex items-center gap-1.5 flex-wrap">
+                        <span>{doc.label}</span>
                         {doc.required ? (
                           <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-600 border-red-200 px-1 py-0">
                             Required *
@@ -133,6 +219,9 @@ export function DocumentUploadStep({
                       <div className="text-[11px] text-muted-foreground mt-0.5">
                         {doc.description}
                       </div>
+                      <span className="text-[10px] font-mono text-muted-foreground/80 block mt-0.5">
+                        Field Key: {doc.id}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -145,9 +234,16 @@ export function DocumentUploadStep({
                         {fileName}
                       </span>
                     </div>
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 text-[10px] shrink-0 border-emerald-300">
-                      Attached
-                    </Badge>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {fileSize && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {(fileSize / 1024).toFixed(0)} KB
+                        </span>
+                      )}
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 text-[10px] border-emerald-300">
+                        Attached
+                      </Badge>
+                    </div>
                   </div>
                 )}
               </div>

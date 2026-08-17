@@ -354,7 +354,131 @@ export const ODEDA_SERVICES: OdedaService[] = [
 ];
 
 export function getOdedaServiceById(id: string): OdedaService | undefined {
-  return ODEDA_SERVICES.find((s) => s.id === id);
+  if (!id) return undefined;
+  
+  // Exact match first
+  const exact = ODEDA_SERVICES.find((s) => s.id === id);
+  if (exact) return exact;
+
+  const clean = id.toLowerCase().trim().replace(/[- ]+/g, "_");
+  const directClean = ODEDA_SERVICES.find((s) => s.id === clean);
+  if (directClean) return directClean;
+
+  // Comprehensive alias mapping for URLs (both hyphenated and underscored)
+  const aliasMap: Record<string, string> = {
+    // Certificate / State of Origin
+    "certificate_of_origin": "certificate_of_origin",
+    "certificate-of-origin": "certificate_of_origin",
+    "certificateoforigin": "certificate_of_origin",
+    "state_of_origin": "certificate_of_origin",
+    "state-of-origin": "certificate_of_origin",
+    "stateoforigin": "certificate_of_origin",
+    "indigene_certificate": "certificate_of_origin",
+    "indigene-certificate": "certificate_of_origin",
+    "origin": "certificate_of_origin",
+    "soo": "certificate_of_origin",
+    "coo": "certificate_of_origin",
+    
+    // Club Registration
+    "club_registration": "club_registration",
+    "club-registration": "club_registration",
+    "club": "club_registration",
+    "clubs": "club_registration",
+    
+    // CDA Registration
+    "cda_registration": "cda_registration",
+    "cda-registration": "cda_registration",
+    "cda": "cda_registration",
+    "community_development": "cda_registration",
+    "community-development": "cda_registration",
+    
+    // Farmers Registration
+    "farmers_registration": "farmers_registration",
+    "farmers-registration": "farmers_registration",
+    "farmer_registration": "farmers_registration",
+    "farmer-registration": "farmers_registration",
+    "farmers": "farmers_registration",
+    "farmer": "farmers_registration",
+    "agriculture": "farmers_registration",
+    
+    // Environmental Sanitation
+    "environmental_sanitation": "environmental_sanitation",
+    "environmental-sanitation": "environmental_sanitation",
+    "sanitation": "environmental_sanitation",
+    "environment": "environmental_sanitation",
+    "health_sanitation": "environmental_sanitation",
+    
+    // Tenement Rate
+    "tenement_rate": "tenement_rate",
+    "tenement-rate": "tenement_rate",
+    "tenement": "tenement_rate",
+    "property_rate": "tenement_rate",
+    "property-rate": "tenement_rate",
+    
+    // Haulage Fees
+    "haulage_fees": "haulage_fees",
+    "haulage-fees": "haulage_fees",
+    "haulage": "haulage_fees",
+    "transit_fees": "haulage_fees",
+    "heavy_duty": "haulage_fees",
+    
+    // Liquor Licence
+    "liquor_licence": "liquor_licence",
+    "liquor-licence": "liquor_licence",
+    "liquor_license": "liquor_licence",
+    "liquor-license": "liquor_licence",
+    "liquor": "liquor_licence",
+    "bar_licence": "liquor_licence",
+    
+    // Viewing Centre
+    "viewing_centre_licence": "viewing_centre_licence",
+    "viewing-centre-licence": "viewing_centre_licence",
+    "viewing_centre": "viewing_centre_licence",
+    "viewing-centre": "viewing_centre_licence",
+    "viewing_center": "viewing_centre_licence",
+    "viewing-center": "viewing_centre_licence",
+    "viewing_center_licence": "viewing_centre_licence",
+    "viewing_center_license": "viewing_centre_licence",
+    "viewing": "viewing_centre_licence",
+    
+    // Quarry Permit
+    "quarry_permit": "quarry_permit",
+    "quarry-permit": "quarry_permit",
+    "quarry": "quarry_permit",
+    "quarry_fees": "quarry_permit",
+    "mining_permit": "quarry_permit",
+    
+    // Street Naming
+    "street_naming": "street_naming",
+    "street-naming": "street_naming",
+    "street": "street_naming",
+    "property_numbering": "street_naming",
+    
+    // Kiosk Licence
+    "kiosk_licence": "kiosk_licence",
+    "kiosk-licence": "kiosk_licence",
+    "kiosk_license": "kiosk_licence",
+    "kiosk-license": "kiosk_licence",
+    "kiosk": "kiosk_licence",
+  };
+
+  const rawLower = id.toLowerCase().trim();
+  const mappedId = aliasMap[clean] || aliasMap[rawLower];
+  if (mappedId) {
+    return ODEDA_SERVICES.find((s) => s.id === mappedId);
+  }
+
+  // Fuzzy match fallback
+  return ODEDA_SERVICES.find((s) => {
+    const sIdClean = s.id.toLowerCase().replace(/_/g, "");
+    const targetClean = clean.replace(/_/g, "");
+    return (
+      s.id.toLowerCase().includes(clean) ||
+      clean.includes(s.id.toLowerCase()) ||
+      sIdClean.includes(targetClean) ||
+      targetClean.includes(sIdClean)
+    );
+  });
 }
 
 export interface ServiceFeeConfig {

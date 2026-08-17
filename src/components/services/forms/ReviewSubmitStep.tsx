@@ -1,10 +1,12 @@
 "use client";
+
 import React from "react";
-import { ShieldCheck, FileCheck, AlertCircle, CheckCircle2, DollarSign } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { DocumentSpec } from "./DocumentUploadStep";
+import { FileCheck, AlertCircle, ShieldCheck, User, Phone, MapPin, Building2 } from "lucide-react";
+import { DocumentSpec, UploadedFileMeta } from "./DocumentUploadStep";
+import { ApplicantSnapshot } from "../ApplicantSelectionStep";
 
 export interface ReviewSection {
   title: string;
@@ -21,10 +23,11 @@ interface ReviewSubmitStepProps {
   serviceName: string;
   revenueHead: string;
   feeAmount: number;
+  applicant?: ApplicantSnapshot;
   sections: ReviewSection[];
   repeatableSections?: ReviewRepeatableSection[];
   documents: DocumentSpec[];
-  uploadedFiles: Record<string, string>;
+  uploadedFiles: Record<string, string | UploadedFileMeta>;
   declarationChecked: boolean;
   onDeclarationChange: (checked: boolean) => void;
   declarationText?: string;
@@ -34,6 +37,7 @@ export function ReviewSubmitStep({
   serviceName,
   revenueHead,
   feeAmount,
+  applicant,
   sections,
   repeatableSections = [],
   documents,
@@ -49,7 +53,7 @@ export function ReviewSubmitStep({
           Review Application & Statutory Submission
         </h4>
         <p className="text-xs text-muted-foreground mt-1">
-          Please carefully inspect all provided information, officer/entity records, and attached supporting documents before final statutory submission to Odeda LGA Treasury and Administration.
+          Please carefully inspect all applicant information, service parameters, and attached supporting documents before final statutory submission to Odeda LGA Treasury and Administration.
         </p>
       </div>
 
@@ -74,6 +78,62 @@ export function ReviewSubmitStep({
           </div>
         </div>
       </div>
+
+      {/* Applicant Snapshot Section */}
+      {applicant && applicant.fullName && (
+        <div className="border rounded-xl p-4 bg-muted/10 space-y-3">
+          <div className="flex items-center justify-between border-b pb-1.5">
+            <h5 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" /> Applicant Profile & Identity
+            </h5>
+            {applicant.applicantId ? (
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 text-[10px] border-emerald-300">
+                Registered Citizen / Business (ID: {applicant.applicantId})
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-700 text-[10px] border-amber-300">
+                Unregistered Applicant
+              </Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+            <div>
+              <span className="text-muted-foreground block text-[11px] font-medium">Full Name:</span>
+              <span className="font-semibold text-foreground">{applicant.fullName}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px] font-medium">Phone Number:</span>
+              <span className="font-semibold text-foreground">{applicant.phone}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px] font-medium">Ward of Origin/Residency:</span>
+              <span className="font-semibold text-foreground">{applicant.ward}</span>
+            </div>
+            <div className="sm:col-span-2">
+              <span className="text-muted-foreground block text-[11px] font-medium">Address:</span>
+              <span className="font-semibold text-foreground">{applicant.address}</span>
+            </div>
+            {applicant.email && (
+              <div>
+                <span className="text-muted-foreground block text-[11px] font-medium">Email Address:</span>
+                <span className="font-semibold text-foreground">{applicant.email}</span>
+              </div>
+            )}
+            {applicant.nin && (
+              <div>
+                <span className="text-muted-foreground block text-[11px] font-medium">NIN:</span>
+                <span className="font-mono font-semibold text-foreground">{applicant.nin}</span>
+              </div>
+            )}
+            {applicant.cacNumber && (
+              <div>
+                <span className="text-muted-foreground block text-[11px] font-medium">CAC Reg. No:</span>
+                <span className="font-mono font-semibold text-foreground">{applicant.cacNumber}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Standard Sections */}
       <div className="space-y-4">
@@ -109,7 +169,6 @@ export function ReviewSubmitStep({
               {rep.items.length} {rep.countLabel}
             </Badge>
           </div>
-
           {rep.items.length === 0 ? (
             <p className="text-xs text-muted-foreground italic py-2">
               No entries recorded.
@@ -145,7 +204,9 @@ export function ReviewSubmitStep({
         </h5>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           {documents.map((doc) => {
-            const uploadedName = uploadedFiles[doc.id];
+            const rawVal = uploadedFiles[doc.id];
+            const uploadedName = typeof rawVal === "string" ? rawVal : rawVal?.name;
+
             return (
               <div
                 key={doc.id}
@@ -161,7 +222,7 @@ export function ReviewSubmitStep({
                     <span className="font-medium text-foreground block truncate">{doc.label}</span>
                     {uploadedName && (
                       <span className="text-[10px] font-mono text-muted-foreground block truncate">
-                        {uploadedName}
+                        {uploadedName} (Field: {doc.id})
                       </span>
                     )}
                   </div>
@@ -199,7 +260,7 @@ export function ReviewSubmitStep({
               htmlFor="statutory-declaration-checkbox"
               className="text-xs font-bold text-foreground cursor-pointer"
             >
-              Statutory Declaration & Consent *
+              Statutory Declaration & Legal Consent <span className="text-red-500">*</span>
             </Label>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {declarationText}

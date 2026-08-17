@@ -1,19 +1,26 @@
 "use client";
+
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WARDS } from "@/lib/mock-data";
 import { OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
-import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
+import { DocumentUploadStep, DocumentSpec, UploadedFileMeta } from "./DocumentUploadStep";
 import { ReviewSubmitStep, ReviewSection } from "./ReviewSubmitStep";
+import { ApplicantSelectionStep, ApplicantSnapshot } from "../ApplicantSelectionStep";
 
 interface Props {
   service: OdedaService;
-  onSubmit: (formData: Record<string, any>) => void;
+  onSubmit: (payload: {
+    applicant: ApplicantSnapshot;
+    formData: Record<string, any>;
+    files: Record<string, any>;
+  }) => void;
   isSubmitting?: boolean;
+  mode?: "citizen" | "business_owner" | "field_officer" | "admin";
+  initialApplicant?: ApplicantSnapshot;
 }
 
 const STEPS: FormStep[] = [
@@ -21,7 +28,7 @@ const STEPS: FormStep[] = [
     id: "applicant_info",
     title: "Applicant & Identity Information",
     shortTitle: "Applicant Info",
-    description: "Provide personal information and Odeda LGA ward residency details.",
+    description: "Provide personal contact details and Odeda LGA ward residency details.",
   },
   {
     id: "lineage_info",
@@ -39,7 +46,7 @@ const STEPS: FormStep[] = [
     id: "review",
     title: "Review & Submit",
     shortTitle: "Review",
-    description: "Verify all details, sign statutory declaration, and proceed to payment.",
+    description: "Verify all details, sign statutory declaration, and proceed to submission.",
   },
 ];
 
@@ -71,25 +78,36 @@ const DOCUMENTS: DocumentSpec[] = [
   },
 ];
 
-export default function CertificateOfOriginForm({ service, onSubmit, isSubmitting }: Props) {
+export default function CertificateOfOriginForm({
+  service,
+  onSubmit,
+  isSubmitting = false,
+  mode = "citizen",
+  initialApplicant,
+}: Props) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedFileMeta>>({});
   const [declaration, setDeclaration] = useState(false);
 
+  const [applicant, setApplicant] = useState<ApplicantSnapshot>(
+    initialApplicant || {
+      fullName: "",
+      phone: "",
+      email: "",
+      address: "",
+      ward: "Ward 7 (Itesi / Camp)",
+      nin: "",
+      cacNumber: "",
+      applicantId: null,
+      isRegistered: false,
+    }
+  );
+
   const [formData, setFormData] = useState({
-    // Step 1: Personal
-    fullName: "",
     dob: "",
     gender: "Male",
     maritalStatus: "Single",
-    phone: "",
-    email: "",
-    nin: "",
-    address: "",
-    ward: WARDS[0] || "Odeda",
     occupation: "",
-
-    // Step 2: Lineage
     fatherName: "",
     fatherCompound: "",
     fatherVillage: "",
@@ -101,8 +119,18 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
     previousApplication: "No",
   });
 
-  const handleFileUpload = (docId: string, fileName: string) => {
-    setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
+  const handleFileUpload = (docId: string, meta: UploadedFileMeta | string, actualFile?: File) => {
+    if (typeof meta === "string") {
+      setUploadedFiles((prev) => ({
+        ...prev,
+        [docId]: { name: meta, file: actualFile },
+      }));
+    } else {
+      setUploadedFiles((prev) => ({
+        ...prev,
+        [docId]: meta,
+      }));
+    }
   };
 
   const handleFileRemove = (docId: string) => {
@@ -116,12 +144,11 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
   const validateStep = (index: number): boolean => {
     if (index === 0) {
       return (
-        !!formData.fullName.trim() &&
-        !!formData.dob &&
-        !!formData.phone.trim() &&
-        !!formData.address.trim() &&
-        !!formData.ward &&
-        !!formData.nin.trim()
+        !!applicant.fullName.trim() &&
+        !!applicant.phone.trim() &&
+        !!applicant.address.trim() &&
+        !!applicant.ward &&
+        !!formData.dob
       );
     }
     if (index === 1) {
@@ -130,38 +157,55 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
         !!formData.fatherCompound.trim() &&
         !!formData.motherName.trim() &&
         !!formData.motherCompound.trim() &&
-        !!formData.purpose.trim()
+        !!formData.purpose
       );
     }
     if (index === 2) {
       const missing = DOCUMENTS.filter((d) => d.required && !uploadedFiles[d.id]);
       return missing.length === 0;
     }
+    if (index === 3) {
+      return declaration;
+    }
     return true;
   };
 
   const handleNext = () => {
     if (validateStep(currentStepIndex)) {
-      setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
+      setCurrentStepIndex((prev) => Math.min(STEPS.length - 1, prev + 1));
     }
   };
 
   const handlePrev = () => {
-    setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
+    setCurrentStepIndex((prev) => Math.max(0, prev - 1));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!declaration) return;
 
-    const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
+    // Collect actual files mapped by machine-readable requirement keys
+    const filesPayload: Record<string, any> = {};
+    Object.entries(uploadedFiles).forEach(([k, meta]) => {
+      if (meta.file) {
+        filesPayload[k] = meta.file;
+      } else {
+        filesPayload[k] = { name: meta.name };
+      }
+    });
+
     onSubmit({
-      ...formData,
-      uploadedFiles,
-      amount: currentFee,
-      revenueHead: service.revenueHead,
-      serviceName: service.name,
-      applicant: formData.fullName,
+      applicant,
+      formData: {
+        ...formData,
+        fullName: applicant.fullName,
+        phone: applicant.phone,
+        email: applicant.email,
+        address: applicant.address,
+        ward: applicant.ward,
+        nin: applicant.nin,
+      },
+      files: filesPayload,
     });
   };
 
@@ -169,31 +213,36 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
 
   const reviewSections: ReviewSection[] = [
     {
-      title: "Applicant & Identity Data",
+      title: "Personal Demographics & Identity",
       items: [
-        { label: "Full Legal Name", value: formData.fullName },
+        { label: "Full Legal Name", value: applicant.fullName },
         { label: "Date of Birth", value: formData.dob },
         { label: "Gender", value: formData.gender },
         { label: "Marital Status", value: formData.maritalStatus },
-        { label: "Phone Number", value: formData.phone },
-        { label: "Email Address", value: formData.email },
-        { label: "NIN", value: formData.nin },
-        { label: "Residential Address", value: formData.address },
-        { label: "Ward in Odeda LGA", value: formData.ward },
-        { label: "Occupation", value: formData.occupation },
+        { label: "Occupation / Profession", value: formData.occupation || "N/A" },
+        { label: "National ID (NIN)", value: applicant.nin || "Not Provided" },
       ],
     },
     {
-      title: "Ancestral Lineage & Traditional Compounds",
+      title: "Contact & Ward Residency",
       items: [
-        { label: "Father's Full Name", value: formData.fatherName },
-        { label: "Father's Compound", value: formData.fatherCompound },
-        { label: "Father's Ancestral Village", value: formData.fatherVillage },
-        { label: "Mother's Full Name", value: formData.motherName },
+        { label: "Phone Number", value: applicant.phone },
+        { label: "Email Address", value: applicant.email || "N/A" },
+        { label: "Ward of Origin in Odeda", value: `${applicant.ward} Ward` },
+        { label: "Residential Address", value: applicant.address },
+      ],
+    },
+    {
+      title: "Ancestral & Traditional Lineage",
+      items: [
+        { label: "Father's Name", value: formData.fatherName },
+        { label: "Father's Compound (Agbo-Ile)", value: formData.fatherCompound },
+        { label: "Father's Ancestral Village", value: formData.fatherVillage || "Odeda LGA" },
+        { label: "Mother's Maiden Name", value: formData.motherName },
         { label: "Mother's Compound", value: formData.motherCompound },
-        { label: "Mother's Ancestral Village", value: formData.motherVillage },
-        { label: "Family Baale / Chief", value: formData.familyBaale },
-        { label: "Application Purpose", value: formData.purpose },
+        { label: "Mother's Ancestral Village", value: formData.motherVillage || "Odeda LGA" },
+        { label: "Quarter Chief / Baale Title", value: formData.familyBaale || "N/A" },
+        { label: "Purpose of Certificate", value: formData.purpose },
       ],
     },
   ];
@@ -203,148 +252,86 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
       service={service}
       steps={STEPS}
       currentStepIndex={currentStepIndex}
-      onStepChange={(idx) => setCurrentStepIndex(idx)}
+      onStepChange={setCurrentStepIndex}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleFormSubmit}
       isSubmitting={isSubmitting}
       isStepValid={validateStep(currentStepIndex)}
       currentFee={currentFee}
-      submitDisabled={!declaration || !validateStep(0) || !validateStep(1) || !validateStep(2)}
+      submitDisabled={!declaration}
+      submitLabel="Submit Certificate Application"
     >
-      {/* STEP 1: Applicant Info */}
+      {/* STEP 1: Applicant & Identity Info */}
       {currentStepIndex === 0 && (
-        <div className="space-y-4">
-          <div className="border-b pb-3">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
-              Personal & Indigene Information
-            </h4>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Enter the exact name and details as they appear on your National Identity Slip.
-            </p>
-          </div>
+        <div className="space-y-6">
+          <ApplicantSelectionStep
+            mode={mode}
+            value={applicant}
+            onChange={setApplicant}
+            serviceName={service.name}
+            serviceCategory={service.category}
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="fullName">Full Name (Surname First) *</Label>
-              <Input
-                id="fullName"
-                required
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="e.g. Adebayo Olusegun Emmanuel"
-              />
-            </div>
+          <div className="border-t pt-4 space-y-4">
+            <h5 className="font-bold text-xs uppercase tracking-wider text-primary">
+              Personal Demographics
+            </h5>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div className="space-y-1.5">
+                <Label htmlFor="dob">Date of Birth *</Label>
+                <Input
+                  id="dob"
+                  type="date"
+                  required
+                  value={formData.dob}
+                  onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="dob">Date of Birth *</Label>
-              <Input
-                id="dob"
-                type="date"
-                required
-                value={formData.dob}
-                onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="gender">Gender *</Label>
+                <Select
+                  value={formData.gender}
+                  onValueChange={(val) => setFormData({ ...formData, gender: val })}
+                >
+                  <SelectTrigger id="gender">
+                    <SelectValue placeholder="Select Gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="gender">Gender *</Label>
-              <Select value={formData.gender} onValueChange={(val) => setFormData({ ...formData, gender: val })}>
-                <SelectTrigger id="gender">
-                  <SelectValue placeholder="Select Gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="maritalStatus">Marital Status</Label>
+                <Select
+                  value={formData.maritalStatus}
+                  onValueChange={(val) => setFormData({ ...formData, maritalStatus: val })}
+                >
+                  <SelectTrigger id="maritalStatus">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Single">Single</SelectItem>
+                    <SelectItem value="Married">Married</SelectItem>
+                    <SelectItem value="Divorced">Divorced</SelectItem>
+                    <SelectItem value="Widowed">Widowed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="maritalStatus">Marital Status</Label>
-              <Select value={formData.maritalStatus} onValueChange={(val) => setFormData({ ...formData, maritalStatus: val })}>
-                <SelectTrigger id="maritalStatus">
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Single">Single</SelectItem>
-                  <SelectItem value="Married">Married</SelectItem>
-                  <SelectItem value="Divorced">Divorced</SelectItem>
-                  <SelectItem value="Widowed">Widowed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+234 800 000 0000"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="applicant@example.com"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="nin">National Identity Number (NIN) *</Label>
-              <Input
-                id="nin"
-                required
-                maxLength={11}
-                value={formData.nin}
-                onChange={(e) => setFormData({ ...formData, nin: e.target.value })}
-                placeholder="11-digit NIN"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="ward">Ward of Origin in Odeda LGA *</Label>
-              <Select value={formData.ward} onValueChange={(val) => setFormData({ ...formData, ward: val })}>
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="address">Current Residential Address *</Label>
-              <Input
-                id="address"
-                required
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Street address, Town/Area in Ogun State or elsewhere"
-              />
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="occupation">Occupation / Profession</Label>
-              <Input
-                id="occupation"
-                value={formData.occupation}
-                onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                placeholder="e.g. Civil Servant, Student, Trader, Engineer"
-              />
+              <div className="space-y-1.5 md:col-span-3">
+                <Label htmlFor="occupation">Occupation / Profession</Label>
+                <Input
+                  id="occupation"
+                  value={formData.occupation}
+                  onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                  placeholder="e.g. Civil Servant, Student, Trader, Engineer"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -365,11 +352,11 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
           <div className="space-y-4">
             <div className="bg-muted/30 p-4 rounded-xl border space-y-3">
               <h5 className="font-bold text-xs text-foreground uppercase tracking-wide">
-                Paternal Ancestral Lineage (Father's Side)
+                Paternal Ancestral Lineage (Father&apos;s Side)
               </h5>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="fatherName">Father's Full Name *</Label>
+                  <Label htmlFor="fatherName">Father&apos;s Full Name *</Label>
                   <Input
                     id="fatherName"
                     required
@@ -379,7 +366,7 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="fatherCompound">Father's Compound / Agbo-Ile *</Label>
+                  <Label htmlFor="fatherCompound">Father&apos;s Compound / Agbo-Ile *</Label>
                   <Input
                     id="fatherCompound"
                     required
@@ -402,11 +389,11 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
 
             <div className="bg-muted/30 p-4 rounded-xl border space-y-3">
               <h5 className="font-bold text-xs text-foreground uppercase tracking-wide">
-                Maternal Ancestral Lineage (Mother's Side)
+                Maternal Ancestral Lineage (Mother&apos;s Side)
               </h5>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="motherName">Mother's Maiden Name *</Label>
+                  <Label htmlFor="motherName">Mother&apos;s Maiden Name *</Label>
                   <Input
                     id="motherName"
                     required
@@ -416,7 +403,7 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="motherCompound">Mother's Compound *</Label>
+                  <Label htmlFor="motherCompound">Mother&apos;s Compound *</Label>
                   <Input
                     id="motherCompound"
                     required
@@ -447,10 +434,12 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
                   placeholder="e.g. Baale Adeyemi of Camp"
                 />
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="purpose">Purpose of Application *</Label>
-                <Select value={formData.purpose} onValueChange={(val) => setFormData({ ...formData, purpose: val })}>
+                <Select
+                  value={formData.purpose}
+                  onValueChange={(val) => setFormData({ ...formData, purpose: val })}
+                >
                   <SelectTrigger id="purpose">
                     <SelectValue placeholder="Select Purpose" />
                   </SelectTrigger>
@@ -486,6 +475,7 @@ export default function CertificateOfOriginForm({ service, onSubmit, isSubmittin
           serviceName={service.name}
           revenueHead={service.revenueHead}
           feeAmount={currentFee}
+          applicant={applicant}
           sections={reviewSections}
           documents={DOCUMENTS}
           uploadedFiles={uploadedFiles}

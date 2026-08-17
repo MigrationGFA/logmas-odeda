@@ -35,13 +35,15 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   "/dashboard/contractors": ["auditor", "lga_admin"],
   "/dashboard/field-officers": ["contractor", "treasurer", "auditor", "lga_admin", "super_admin"],
 
-  // Citizen/business workflows
+  // Citizen/business/officer workflows
   "/dashboard/applications": [
     "citizen",
     "business_owner",
+    "field_officer",
     "ward_councillor",
     "lga_admin",
     "chairman",
+    "super_admin",
   ],
   "/dashboard/complaints": ["citizen", "business_owner", "ward_councillor", "lga_admin", "chairman"],
 

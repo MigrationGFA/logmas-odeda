@@ -1,753 +1,716 @@
-/* eslint-disable react-hooks/preserve-manual-memoization */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { PageHeader, StatusBadge } from "@/components/dashboard/shared";
-import { Card } from "@/components/ui/card";
+import React, { useState } from "react";
+import { PageHeader } from "@/components/dashboard/shared";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { tokenManager } from "@/services/apiAuth";
-import { ODEDA_SERVICES } from "@/config/odedaServices";
-import { WARDS } from "@/lib/mock-data";
-import { QRCodeSVG } from "@/components/dashboard/qr-code";
 import {
-  getOdedaApplications,
-  getOdedaApplicationById,
-  updateApplicationStatus,
-  processApplicationPayment,
-  recordFieldInspection,
-  issueTreasuryInvoice,
-  approveAndGenerateCertificate,
-  reapplyFromRejected,
-  OdedaApplication,
-  ApplicationStatus,
-} from "@/lib/odedaApplications";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Search,
+  Filter,
   Eye,
   CheckCircle2,
-  XCircle,
-  RotateCcw,
-  Plus,
-  Briefcase,
-  Printer,
-  ShieldCheck,
-  CreditCard,
-  FileCheck2,
   Clock,
-  UserCheck,
-  ClipboardList,
-  DollarSign,
-  AlertTriangle,
-  RefreshCw,
+  XCircle,
+  FileBadge,
   FileText,
+  DollarSign,
+  Download,
+  Printer,
+  ChevronRight,
+  ShieldAlert,
+  UserCheck,
+  Building2,
+  Phone,
+  MapPin,
+  Plus,
+  RefreshCw,
+  AlertTriangle,
+  Receipt,
+  User,
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { WARDS } from "@/lib/mock-data";
+import { ODEDA_SERVICES } from "@/config/odedaServices";
+import { tokenManager } from "@/services/apiAuth";
+import {
+  useApplications,
+  useMoveToUnderReview,
+  useApproveApplication,
+  useDeclineApplication,
+} from "@/hooks/queries/useApplications";
+import { Application, ApplicationStatus } from "@/types/application";
+import { FormDataViewer } from "@/components/services/FormDataViewer";
+import { DocumentsViewer } from "@/components/services/DocumentsViewer";
 
 export default function ApplicationsPage() {
-  const user = tokenManager.getUser();
-  const role = user?.role || "citizen";
+  const currentUser = tokenManager.getUser();
+  const userRole = currentUser?.role || "citizen";
 
-  const isCitizen = role === "citizen";
-  const isBusiness = role === "business_owner";
-  const isFieldOfficer = role === "field_officer";
-  const isTreasurer = role === "treasurer";
-  const isLgaAdmin = role === "lga_admin";
-  const isSuperAdmin = role === "super_admin";
-  const isChairman = role === "chairman";
-  const isCouncillor = role === "ward_councillor";
+  const isAdmin = ["super_admin", "lga_admin", "chairman", "councillor"].includes(userRole);
+  const isFieldOfficer = userRole === "field_officer";
+  const isCitizen = !isAdmin && !isFieldOfficer;
 
-  const [search, setSearch] = useState("");
-  const [serviceFilter, setServiceFilter] = useState("all");
-  const [wardFilter, setWardFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [applications, setApplications] = useState<OdedaApplication[]>([]);
+  // Search and Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [serviceFilter, setServiceFilter] = useState<string>("all");
+  const [wardFilter, setWardFilter] = useState<string>("all");
 
-  // Selected app for detail / workflow modal
-  const [selectedApp, setSelectedApp] = useState<OdedaApplication | null>(null);
-  const [activeTab, setActiveTab] = useState<"details" | "inspection" | "treasury" | "timeline" | "certificate">("details");
-
-  // Dialog Visibility Flags
+  // Selection & Modal States
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
-  const [treasuryModalOpen, setTreasuryModalOpen] = useState(false);
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [adminActionModalOpen, setAdminActionModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [declineModalOpen, setDeclineModalOpen] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [certificateModalOpen, setCertificateModalOpen] = useState(false);
 
-  // Form states for modals
-  // Field Officer Inspection Form
-  const [inspectionFindings, setInspectionFindings] = useState("");
-  const [recommendedCategory, setRecommendedCategory] = useState("Standard Category");
-  const [recommendedFee, setRecommendedFee] = useState(10000);
+  // Queries & Mutations
+  const { data: applications = [], isLoading, refetch, isFetching } = useApplications({
+    search: searchTerm,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    serviceId: serviceFilter !== "all" ? serviceFilter : undefined,
+    wardId: wardFilter !== "all" ? wardFilter : undefined,
+  });
 
-  // Treasury Form
-  const [approvedFee, setApprovedFee] = useState(10000);
-  const [revenueHead, setRevenueHead] = useState("");
-  const [treasuryNotes, setTreasuryNotes] = useState("");
+  const moveToReviewMutation = useMoveToUnderReview();
+  const approveMutation = useApproveApplication();
+  const declineMutation = useDeclineApplication();
 
-  // Payment Form
-  const [payMethod, setPayMethod] = useState("card");
+  // Filter applications for citizen role if applicable
+  const displayApplications = React.useMemo(() => {
+    let list = applications;
+    if (isCitizen && currentUser) {
+      const userPhone = currentUser.phone || "";
+      const userEmail = currentUser.email || "";
+      const userName = `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim().toLowerCase();
 
-  // Admin Action Form
-  const [adminAction, setAdminAction] = useState<"approve" | "return" | "reject">("approve");
-  const [correctionNotes, setCorrectionNotes] = useState("");
-  const [rejectionReason, setRejectionReason] = useState("");
+      list = list.filter((app) => {
+        if (app.applicantId && app.applicantId === currentUser.id) return true;
+        if (app.createdById && app.createdById === currentUser.id) return true;
+        if (userPhone && app.phone === userPhone) return true;
+        if (userEmail && app.email === userEmail) return true;
+        if (userName && app.fullName.toLowerCase().includes(userName)) return true;
+        return false;
+      });
+    }
+    return list;
+  }, [applications, isCitizen, currentUser]);
 
-  // Resubmit Form State
-  const [editDetails, setEditDetails] = useState<Record<string, any>>({});
+  // Status Metrics
+  const stats = React.useMemo(() => {
+    const total = displayApplications.length;
+    const submitted = displayApplications.filter((a) => a.status.toLowerCase() === "submitted").length;
+    const underReview = displayApplications.filter((a) => a.status.toLowerCase().includes("review")).length;
+    const approved = displayApplications.filter((a) => a.status.toLowerCase() === "approved" || a.status.toLowerCase() === "completed").length;
+    const declined = displayApplications.filter((a) => a.status.toLowerCase() === "declined" || a.status.toLowerCase() === "rejected").length;
+    return { total, submitted, underReview, approved, declined };
+  }, [displayApplications]);
 
-  // Reload applications from central store
-  const reloadApps = () => {
-    const apps = getOdedaApplications();
-    setApplications(apps);
-  };
-
-  useEffect(() => {
-    reloadApps();
-    const handleStoreChange = () => reloadApps();
-    window.addEventListener("odeda:applications-change", handleStoreChange);
-    return () => window.removeEventListener("odeda:applications-change", handleStoreChange);
-  }, []);
-
-  // Filter applications by search, service, ward, status, and role scope
-  const filteredApps = useMemo(() => {
-    return applications.filter((app) => {
-      // Role scope filter
-      if ((isCitizen || isBusiness) && app.applicant.toLowerCase().indexOf((user?.firstName || "").toLowerCase()) === -1) {
-        // Show all if mock demo, but prioritize matching or all for convenience
-      }
-
-      const matchesSearch =
-        (app.applicant || "").toLowerCase().includes(search.toLowerCase()) ||
-        (app.id || "").toLowerCase().includes(search.toLowerCase()) ||
-        (app.applicationNo || "").toLowerCase().includes(search.toLowerCase()) ||
-        (app.serviceName || "").toLowerCase().includes(search.toLowerCase());
-
-      const matchesService = serviceFilter === "all" || app.serviceId === serviceFilter;
-      const matchesWard = wardFilter === "all" || app.ward === wardFilter;
-      const matchesStatus = statusFilter === "all" || app.status.toLowerCase().replace(/\s+/g, "_") === statusFilter;
-
-      return matchesSearch && matchesService && matchesWard && matchesStatus;
-    });
-  }, [applications, search, serviceFilter, wardFilter, statusFilter, isCitizen, isBusiness, user]);
-
-  // Open details
-  const handleOpenDetails = (app: OdedaApplication) => {
+  const handleOpenDetail = (app: Application) => {
     setSelectedApp(app);
-    setActiveTab("details");
     setDetailModalOpen(true);
   };
 
-  // Field Officer Inspection action
-  const handleStartInspection = (app: OdedaApplication) => {
-    setSelectedApp(app);
-    setInspectionFindings(app.inspectionReport?.findings || "Property and premises inspected in good order.");
-    setRecommendedCategory(app.inspectionReport?.recommendedCategory || "Standard Category");
-    setRecommendedFee(app.amount || 10000);
-    setInspectionModalOpen(true);
+  const handleMoveToReview = async (app: Application) => {
+    try {
+      const updated = await moveToReviewMutation.mutateAsync({ id: app.id });
+      if (selectedApp?.id === app.id) setSelectedApp(updated);
+    } catch {
+      // Error handled by mutation toast
+    }
   };
 
-  const handleSaveInspection = () => {
+  const handleApprove = async (app: Application) => {
+    try {
+      const updated = await approveMutation.mutateAsync({ id: app.id });
+      if (selectedApp?.id === app.id) setSelectedApp(updated);
+    } catch {
+      // Error handled by mutation toast
+    }
+  };
+
+  const handleOpenDecline = (app: Application) => {
+    setSelectedApp(app);
+    setDeclineReason("");
+    setDeclineModalOpen(true);
+  };
+
+  const handleExecuteDecline = async () => {
     if (!selectedApp) return;
-    const updated = recordFieldInspection(
-      selectedApp.id,
-      {
-        findings: inspectionFindings,
-        recommendedCategory,
-        recommendedFee: Number(recommendedFee),
-      },
-      { name: user?.firstName || "Field Officer", role: "field_officer" }
+    if (!declineReason.trim()) {
+      return;
+    }
+
+    try {
+      const updated = await declineMutation.mutateAsync({
+        id: selectedApp.id,
+        declineReason: declineReason.trim(),
+      });
+      setSelectedApp(updated);
+      setDeclineModalOpen(false);
+      setDeclineReason("");
+    } catch {
+      // Error handled by mutation toast
+    }
+  };
+
+  const getStatusBadge = (status: ApplicationStatus) => {
+    const s = String(status).toLowerCase();
+    if (s === "submitted") {
+      return (
+        <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 text-[11px] gap-1 font-semibold">
+          <Clock className="w-3 h-3" /> Submitted
+        </Badge>
+      );
+    }
+    if (s.includes("review")) {
+      return (
+        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300 text-[11px] gap-1 font-semibold">
+          <RefreshCw className="w-3 h-3 animate-spin" /> Under Review
+        </Badge>
+      );
+    }
+    if (s === "approved" || s === "completed") {
+      return (
+        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 text-[11px] gap-1 font-semibold">
+          <CheckCircle2 className="w-3 h-3" /> Approved
+        </Badge>
+      );
+    }
+    if (s === "declined" || s === "rejected") {
+      return (
+        <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-300 text-[11px] gap-1 font-semibold">
+          <XCircle className="w-3 h-3" /> Declined
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-[11px]">
+        {status}
+      </Badge>
     );
-    if (updated) {
-      toast.success(`Inspection report submitted for ${updated.applicationNo}. Forwarded to Treasury.`);
-      setInspectionModalOpen(false);
-      reloadApps();
-    }
-  };
-
-  // Treasury Assessment action
-  const handleStartTreasury = (app: OdedaApplication) => {
-    setSelectedApp(app);
-    setApprovedFee(app.amount || 10000);
-    setRevenueHead(app.revenueHead || "1001 - General Revenue");
-    setTreasuryNotes(app.treasuryAssessment?.treasuryNotes || "Assessment approved based on field inspection.");
-    setTreasuryModalOpen(true);
-  };
-
-  const handleSaveTreasury = () => {
-    if (!selectedApp) return;
-    const updated = issueTreasuryInvoice(
-      selectedApp.id,
-      {
-        approvedFee: Number(approvedFee),
-        revenueHead,
-        treasuryNotes,
-      },
-      { name: user?.firstName || "Treasury Officer", role: "treasurer" }
-    );
-    if (updated) {
-      toast.success(`Demand Notice & Invoice generated for ${updated.applicationNo}. Citizen notified.`);
-      setTreasuryModalOpen(false);
-      reloadApps();
-    }
-  };
-
-  // Payment action
-  const handleStartPayment = (app: OdedaApplication) => {
-    setSelectedApp(app);
-    setPaymentModalOpen(true);
-  };
-
-  const handleExecutePayment = () => {
-    if (!selectedApp) return;
-    const updated = processApplicationPayment(
-      selectedApp.id,
-      payMethod,
-      { name: user?.firstName || "Applicant", role: user?.role || "citizen" }
-    );
-    if (updated) {
-      toast.success(`Payment of ₦${updated.amount.toLocaleString()} successful! Application sent to LGA Admin for approval.`);
-      setPaymentModalOpen(false);
-      reloadApps();
-    }
-  };
-
-  // LGA Admin approval / return / reject action
-  const handleStartAdminAction = (app: OdedaApplication) => {
-    setSelectedApp(app);
-    setAdminAction("approve");
-    setCorrectionNotes("");
-    setRejectionReason("");
-    setAdminActionModalOpen(true);
-  };
-
-  const handleExecuteAdminAction = () => {
-    if (!selectedApp) return;
-    const actor = { name: user?.firstName || "LGA Admin", role: "lga_admin" };
-
-    if (adminAction === "approve") {
-      const updated = approveAndGenerateCertificate(selectedApp.id, actor);
-      if (updated) {
-        toast.success(`Application ${updated.applicationNo} APPROVED! Statutory Certificate/Licence generated.`);
-      }
-    } else if (adminAction === "return") {
-      if (!correctionNotes.trim()) {
-        toast.error("Please enter correction instructions for the citizen.");
-        return;
-      }
-      updateApplicationStatus(selectedApp.id, "Returned For Correction", actor, { correctionNotes });
-      toast.info(`Application ${selectedApp.applicationNo} returned to citizen for correction.`);
-    } else if (adminAction === "reject") {
-      if (!rejectionReason.trim()) {
-        toast.error("Please enter a reason for rejecting this application.");
-        return;
-      }
-      updateApplicationStatus(selectedApp.id, "Rejected", actor, { rejectionReason });
-      toast.error(`Application ${selectedApp.applicationNo} rejected.`);
-    }
-
-    setAdminActionModalOpen(false);
-    reloadApps();
-  };
-
-  // Citizen Resubmit action
-  const handleStartEdit = (app: OdedaApplication) => {
-    setSelectedApp(app);
-    setEditDetails({ ...app.details });
-    setEditModalOpen(true);
-  };
-
-  const handleExecuteResubmit = () => {
-    if (!selectedApp) return;
-    const updated = updateApplicationStatus(
-      selectedApp.id,
-      "Submitted",
-      { name: user?.firstName || "Applicant", role: "citizen" },
-      { details: editDetails, correctionNotes: undefined }
-    );
-    if (updated) {
-      toast.success(`Application ${updated.applicationNo} updated and resubmitted successfully!`);
-      setEditModalOpen(false);
-      reloadApps();
-    }
-  };
-
-  // Citizen Reapply from Rejected
-  const handleReapply = (app: OdedaApplication) => {
-    const newApp = reapplyFromRejected(app.id, user?.firstName || app.applicant);
-    if (newApp) {
-      toast.success(`Fresh application ${newApp.applicationNo} created from previous details.`);
-      reloadApps();
-    }
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <PageHeader
-        title={
-          isCitizen || isBusiness
-            ? "My Odeda Service Applications"
-            : isFieldOfficer
-            ? "Field Inspection & Application Queue"
-            : isTreasurer
-            ? "Revenue Assessment & Invoice Queue"
-            : isLgaAdmin
-            ? "LGA Executive Approval Queue"
-            : isChairman
-            ? "Executive Applications Overview"
-            : "Odeda Local Government Applications Management"
-        }
-        subtitle="Simulate and execute the complete statutory workflow from submission, inspection, treasury assessment, payment, approval, to certificate issue."
-        action={
-          <div className="flex items-center gap-2">
-            <Button onClick={reloadApps} variant="outline" size="sm" className="gap-1 text-xs">
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh Store
-            </Button>
-            <Button asChild className="gap-2 text-xs">
-              <Link href="/dashboard/services">
-                <Plus className="h-4 w-4" /> Apply for New Service
-              </Link>
-            </Button>
-          </div>
-        }
-      />
+    <div className="space-y-6 max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+        <div>
+          <PageHeader
+            title={isAdmin ? "Statutory Service Applications" : isFieldOfficer ? "Field Officer Applications Registry" : "My Applications"}
+            subtitle={
+              isAdmin
+                ? "Review, verify documents, and issue official certificates and licences for Odeda LGA."
+                : isFieldOfficer
+                ? "Submit and track citizen and business service applications across Odeda LGA wards."
+                : "Track the status of your statutory certificates, permits, and licence applications."
+            }
+          />
+        </div>
 
-      {/* Filter Controls */}
-      <Card className="p-4 bg-card border-border/60 space-y-3">
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="text-xs h-9 gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+
+          <Button asChild size="sm" className="text-xs h-9 gap-1.5 bg-primary text-primary-foreground font-semibold">
+            <Link href="/dashboard/services">
+              <Plus className="h-4 w-4" />
+              {isFieldOfficer ? "Apply for Citizen" : "New Application"}
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Metrics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-4 bg-card border shadow-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+            Total Applications
+          </span>
+          <div className="text-2xl font-black text-foreground mt-1">{stats.total}</div>
+        </Card>
+        <Card className="p-4 bg-blue-500/5 border-blue-500/20 shadow-xs">
+          <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
+            Submitted / Pending
+          </span>
+          <div className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-1">{stats.submitted}</div>
+        </Card>
+        <Card className="p-4 bg-amber-500/5 border-amber-500/20 shadow-xs">
+          <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
+            Under Review
+          </span>
+          <div className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">{stats.underReview}</div>
+        </Card>
+        <Card className="p-4 bg-emerald-500/5 border-emerald-500/20 shadow-xs">
+          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+            Approved & Issued
+          </span>
+          <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{stats.approved}</div>
+        </Card>
+      </div>
+
+      {/* Search & Filtering Toolbar */}
+      <div className="bg-card border rounded-xl p-3.5 sm:p-4 space-y-3 shadow-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search applicant, ID, or service..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 text-xs"
+              placeholder="Search by App No, Name, NIN, Phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 text-xs sm:text-sm h-9"
             />
           </div>
 
-          <Select value={serviceFilter} onValueChange={setServiceFilter}>
-            <SelectTrigger className="text-xs">
-              <SelectValue placeholder="Filter by Service" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Services (12)</SelectItem>
-              {ODEDA_SERVICES.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="under_review">Under Review</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={wardFilter} onValueChange={setWardFilter}>
-            <SelectTrigger className="text-xs">
-              <SelectValue placeholder="Filter by Ward" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Wards (10)</SelectItem>
-              {WARDS.map((w) => (
-                <SelectItem key={w} value={w}>{w} Ward</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Select value={serviceFilter} onValueChange={setServiceFilter}>
+              <SelectTrigger className="text-xs h-9 truncate">
+                <SelectValue placeholder="All Services" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statutory Services</SelectItem>
+                {ODEDA_SERVICES.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="text-xs">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="submitted">Submitted</SelectItem>
-              <SelectItem value="inspection_required">Inspection Required</SelectItem>
-              <SelectItem value="inspection_completed">Inspection Completed</SelectItem>
-              <SelectItem value="awaiting_assessment">Awaiting Assessment</SelectItem>
-              <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
-              <SelectItem value="payment_confirmed">Payment Confirmed</SelectItem>
-              <SelectItem value="pending_approval">Pending Approval</SelectItem>
-              <SelectItem value="completed">Completed / Approved</SelectItem>
-              <SelectItem value="returned_for_correction">Returned for Correction</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
+          <div>
+            <Select value={wardFilter} onValueChange={setWardFilter}>
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue placeholder="All Wards" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Odeda Wards</SelectItem>
+                {WARDS.map((w) => (
+                  <SelectItem key={w} value={w}>
+                    {w} Ward
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Application Table */}
-      <Card className="p-0 bg-gradient-card border-border/40 overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>App Reference</TableHead>
-                <TableHead>Applicant</TableHead>
-                <TableHead>Service Name</TableHead>
-                <TableHead>Ward</TableHead>
-                <TableHead>Amount & Payment</TableHead>
-                <TableHead>Status Stage</TableHead>
-                <TableHead className="text-right">Role Workflow Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredApps.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground font-medium">
-                    No Odeda applications found matching your search parameters.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredApps.map((a) => (
-                  <TableRow key={a.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell className="font-mono text-xs font-bold text-primary">
-                      {a.applicationNo || a.id}
-                    </TableCell>
-                    <TableCell className="font-medium text-xs">
-                      <div>{a.applicant}</div>
-                      <div className="text-[10px] text-muted-foreground">{a.phone}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[11px] font-normal">
-                        {a.serviceName}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{a.ward}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          a.paymentStatus === "paid"
-                            ? "border-success/40 bg-success/10 text-success text-[11px]"
-                            : "border-warning/40 bg-warning/10 text-warning-foreground text-[11px]"
-                        }
-                      >
-                        ₦{a.amount.toLocaleString()} ({a.paymentStatus})
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={a.status.toLowerCase().replace(/\s+/g, "_")} />
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {/* Citizen Payment Action */}
-                      {(isCitizen || isBusiness) && (a.status === "Invoice Generated" || a.status === "Awaiting Payment" || (a.status === "Submitted" && a.paymentStatus === "unpaid")) && (
-                        <Button
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs"
-                          onClick={() => handleStartPayment(a)}
-                        >
-                          <CreditCard className="h-3.5 w-3.5" /> Pay Fee
-                        </Button>
-                      )}
+      {/* Applications Table / Cards */}
+      {isLoading ? (
+        <div className="p-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center space-y-3">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span>Loading applications registry...</span>
+        </div>
+      ) : displayApplications.length === 0 ? (
+        <Card className="p-12 text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+            <FileText className="h-6 w-6" />
+          </div>
+          <div>
+            <h4 className="font-bold text-base text-foreground">No applications found</h4>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+              {searchTerm || statusFilter !== "all"
+                ? "No applications match your active search or filter parameters."
+                : "You have not submitted any statutory service applications yet."}
+            </p>
+          </div>
+          <Button asChild size="sm" className="text-xs">
+            <Link href="/dashboard/services">Browse Services Catalogue</Link>
+          </Button>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {displayApplications.map((app) => {
+            const s = String(app.status).toLowerCase();
+            const isSubmitted = s === "submitted";
+            const isUnderReview = s.includes("review");
+            const isApproved = s === "approved" || s === "completed";
+            const isDeclined = s === "declined" || s === "rejected";
 
-                      {/* Citizen Edit & Resubmit */}
-                      {(isCitizen || isBusiness) && a.status === "Returned For Correction" && (
-                        <Button
-                          size="sm"
-                          className="bg-amber-600 hover:bg-amber-700 text-white gap-1 text-xs"
-                          onClick={() => handleStartEdit(a)}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" /> Edit & Resubmit
-                        </Button>
-                      )}
+            return (
+              <div
+                key={app.id}
+                className="bg-card border rounded-xl p-4 hover:border-primary/50 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs"
+              >
+                {/* Left info */}
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="font-mono font-bold text-sm text-primary">
+                      {app.applicationNo}
+                    </span>
+                    {getStatusBadge(app.status)}
+                    <Badge variant="secondary" className="text-[10px] font-normal">
+                      {app.category || "Service"}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground">
+                      Ward: <strong>{app.ward || "Ward 7"}</strong>
+                    </span>
+                  </div>
 
-                      {/* Citizen Reapply */}
-                      {(isCitizen || isBusiness) && a.status === "Rejected" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-primary text-primary gap-1 text-xs"
-                          onClick={() => handleReapply(a)}
-                        >
-                          <RefreshCw className="h-3.5 w-3.5" /> Reapply
-                        </Button>
-                      )}
+                  <div>
+                    <h4 className="font-bold text-sm text-foreground">{app.serviceName}</h4>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        <strong className="text-foreground">{app.fullName}</strong>
+                      </span>
+                      {app.phone && <span>• Phone: {app.phone}</span>}
+                      {app.nin && <span className="font-mono text-[11px]">NIN: {app.nin}</span>}
+                    </div>
+                  </div>
 
-                      {/* Field Officer Inspection Action */}
-                      {isFieldOfficer && (a.status === "Inspection Required" || a.status === "Submitted") && (
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700 text-white gap-1 text-xs"
-                          onClick={() => handleStartInspection(a)}
-                        >
-                          <ClipboardList className="h-3.5 w-3.5" /> Conduct Inspection
-                        </Button>
-                      )}
+                  {/* Decline reason notice banner if rejected */}
+                  {isDeclined && app.declineReason && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2.5 text-xs text-red-900 dark:text-red-200 flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="block text-[11px]">Decline Justification:</strong>
+                        <span>{app.declineReason}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                      {/* Treasury Assessment Action */}
-                      {isTreasurer && (a.status === "Inspection Completed" || a.status === "Awaiting Assessment" || a.status === "Submitted") && (
-                        <Button
-                          size="sm"
-                          className="bg-purple-600 hover:bg-purple-700 text-white gap-1 text-xs"
-                          onClick={() => handleStartTreasury(a)}
-                        >
-                          <DollarSign className="h-3.5 w-3.5" /> Assess & Issue Invoice
-                        </Button>
-                      )}
+                {/* Right Actions & Pipeline Controls */}
+                <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 shrink-0">
+                  {/* Pipeline Action Buttons for Admins */}
+                  {isAdmin && isSubmitted && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleMoveToReview(app)}
+                      disabled={moveToReviewMutation.isPending}
+                      className="text-xs h-8 gap-1.5 border-amber-400 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Move to Under Review
+                    </Button>
+                  )}
 
-                      {/* LGA Admin Approval Action */}
-                      {isLgaAdmin && (a.status === "Payment Confirmed" || a.status === "Pending Approval" || a.status === "Under Review") && (
-                        <Button
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs"
-                          onClick={() => handleStartAdminAction(a)}
-                        >
-                          <UserCheck className="h-3.5 w-3.5" /> Review & Approve
-                        </Button>
-                      )}
-
-                      {/* View Details Button for everyone */}
+                  {isAdmin && isUnderReview && (
+                    <>
                       <Button
                         size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenDetails(a)}
-                        className="text-xs"
+                        onClick={() => handleApprove(app)}
+                        disabled={approveMutation.isPending}
+                        className="text-xs h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                       >
-                        <Eye className="h-3.5 w-3.5 mr-1" /> View
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Approve & Issue
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
 
-      {/* DETAILS / TIMELINE MODAL */}
-      {selectedApp && (
-        <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                  <span>{selectedApp.serviceName} ({selectedApp.applicationNo})</span>
-                </div>
-                <StatusBadge status={selectedApp.status.toLowerCase().replace(/\s+/g, "_")} />
-              </DialogTitle>
-              <DialogDescription>
-                Submitted by {selectedApp.applicant} • {selectedApp.ward}
-              </DialogDescription>
-            </DialogHeader>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenDecline(app)}
+                        disabled={declineMutation.isPending}
+                        className="text-xs h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-300"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        Decline
+                      </Button>
+                    </>
+                  )}
 
-            <div className="space-y-4 text-xs">
-              {/* Tabs header */}
-              <div className="flex gap-2 border-b pb-2">
-                <Button
-                  size="sm"
-                  variant={activeTab === "details" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("details")}
-                  className="text-xs"
-                >
-                  Application Details
-                </Button>
-                <Button
-                  size="sm"
-                  variant={activeTab === "timeline" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("timeline")}
-                  className="text-xs gap-1"
-                >
-                  <Clock className="h-3.5 w-3.5" /> Workflow Timeline
-                </Button>
-                {(selectedApp.status === "Completed" || selectedApp.certificateNumber) && (
+                  {/* Certificate button if approved */}
+                  {isApproved && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedApp(app);
+                        setCertificateModalOpen(true);
+                      }}
+                      className="text-xs h-8 gap-1.5 border-emerald-400 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 font-semibold"
+                    >
+                      <FileBadge className="h-3.5 w-3.5" />
+                      View Certificate / Licence
+                    </Button>
+                  )}
+
+                  {/* View Details Modal */}
                   <Button
                     size="sm"
-                    variant={activeTab === "certificate" ? "default" : "ghost"}
-                    onClick={() => setActiveTab("certificate")}
-                    className="text-xs gap-1 bg-amber-600 text-white"
+                    variant="secondary"
+                    onClick={() => handleOpenDetail(app)}
+                    className="text-xs h-8 gap-1"
                   >
-                    <ShieldCheck className="h-3.5 w-3.5" /> Official Certificate
+                    <Eye className="h-3.5 w-3.5" />
+                    Details
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* DETAILED APPLICATION DRAWER / MODAL */}
+      {selectedApp && (
+        <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="border-b pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <DialogTitle className="text-lg font-black text-foreground">
+                      {selectedApp.serviceName}
+                    </DialogTitle>
+                    {getStatusBadge(selectedApp.status)}
+                  </div>
+                  <DialogDescription className="text-xs font-mono mt-0.5">
+                    Application No: {selectedApp.applicationNo} • Ref: {selectedApp.id}
+                  </DialogDescription>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                    Statutory Assessment
+                  </span>
+                  <span className="text-base font-black text-primary">
+                    ₦{(selectedApp.amount || selectedApp.feeAmount || 5000).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto pr-1 py-4 space-y-6">
+              {/* Applicant Snapshot Profile */}
+              <div className="border rounded-xl p-4 bg-muted/10 space-y-3">
+                <div className="flex items-center justify-between border-b pb-1.5">
+                  <h5 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" /> Applicant Profile & Identity
+                  </h5>
+                  {selectedApp.applicantId ? (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 text-[10px] border-emerald-300">
+                      Registered User (ID: {selectedApp.applicantId})
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-700 text-[10px] border-amber-300">
+                      Unregistered Walk-in Applicant
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground text-[11px] block font-medium">Full Name:</span>
+                    <span className="font-semibold text-foreground">{selectedApp.fullName}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[11px] block font-medium">Phone Number:</span>
+                    <span className="font-semibold text-foreground">{selectedApp.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[11px] block font-medium">Ward of Residency:</span>
+                    <span className="font-semibold text-foreground">{selectedApp.ward || "Ward 7"}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-muted-foreground text-[11px] block font-medium">Address:</span>
+                    <span className="font-semibold text-foreground">{selectedApp.address}</span>
+                  </div>
+                  {selectedApp.email && (
+                    <div>
+                      <span className="text-muted-foreground text-[11px] block font-medium">Email:</span>
+                      <span className="font-semibold text-foreground">{selectedApp.email}</span>
+                    </div>
+                  )}
+                  {selectedApp.nin && (
+                    <div>
+                      <span className="text-muted-foreground text-[11px] block font-medium">NIN:</span>
+                      <span className="font-mono font-semibold text-foreground">{selectedApp.nin}</span>
+                    </div>
+                  )}
+                  {selectedApp.cacNumber && (
+                    <div>
+                      <span className="text-muted-foreground text-[11px] block font-medium">CAC Reg No:</span>
+                      <span className="font-mono font-semibold text-foreground">{selectedApp.cacNumber}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Decline Reason Banner if declined */}
+              {selectedApp.declineReason && (
+                <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-4 space-y-1 text-xs text-red-900 dark:text-red-200">
+                  <span className="font-bold flex items-center gap-1.5 text-red-700 dark:text-red-300">
+                    <XCircle className="h-4 w-4" /> Application Declined by Odeda LGA Authority
+                  </span>
+                  <p className="mt-1 leading-relaxed">{selectedApp.declineReason}</p>
+                </div>
+              )}
+
+              {/* Dynamic Form Data Viewer */}
+              <div>
+                <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Application Parameters & Structured Data
+                </h5>
+                <FormDataViewer formData={selectedApp.formData} />
+              </div>
+
+              {/* Uploaded Documents Viewer with Thumbnail & Lightbox Preview */}
+              <div>
+                <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Statutory Supporting Documents ({selectedApp.documents.length})
+                </h5>
+                <DocumentsViewer documents={selectedApp.documents} />
+              </div>
+            </div>
+
+            {/* Modal Footer Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setDetailModalOpen(false)}
+              >
+                Close
+              </Button>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {isAdmin && selectedApp.status.toLowerCase() === "submitted" && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleMoveToReview(selectedApp)}
+                    disabled={moveToReviewMutation.isPending}
+                    className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Move to Under Review
+                  </Button>
+                )}
+
+                {isAdmin && selectedApp.status.toLowerCase().includes("review") && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => handleApprove(selectedApp)}
+                      disabled={approveMutation.isPending}
+                      className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Approve & Issue Certificate
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenDecline(selectedApp)}
+                      className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> Decline Application
+                    </Button>
+                  </>
+                )}
+
+                {(selectedApp.status.toLowerCase() === "approved" ||
+                  selectedApp.status.toLowerCase() === "completed") && (
+                  <Button
+                    size="sm"
+                    onClick={() => setCertificateModalOpen(true)}
+                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <FileBadge className="h-3.5 w-3.5" /> View Official Certificate
                   </Button>
                 )}
               </div>
-
-              {activeTab === "details" && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-muted/40 border grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-muted-foreground block">Applicant Name:</span>
-                      <span className="font-bold text-sm">{selectedApp.applicant}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">Phone Contact:</span>
-                      <span className="font-semibold">{selectedApp.phone}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">Address:</span>
-                      <span className="font-semibold">{selectedApp.address}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">Ward:</span>
-                      <span className="font-semibold">{selectedApp.ward}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">Revenue Head:</span>
-                      <span className="font-semibold">{selectedApp.revenueHead}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">Fee Amount:</span>
-                      <span className="font-bold text-success text-sm">₦{selectedApp.amount.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  {selectedApp.correctionNotes && (
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-900 dark:text-amber-200 space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
-                        Returned for Correction Notice:
-                      </div>
-                      <p>{selectedApp.correctionNotes}</p>
-                    </div>
-                  )}
-
-                  {selectedApp.rejectionReason && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-900 dark:text-red-200 space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        Rejection Reason:
-                      </div>
-                      <p>{selectedApp.rejectionReason}</p>
-                    </div>
-                  )}
-
-                  {selectedApp.inspectionReport?.completed && (
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg space-y-1">
-                      <div className="font-bold text-blue-900 dark:text-blue-200">Field Inspection Report</div>
-                      <p className="text-muted-foreground">Inspector: {selectedApp.inspectionReport.inspectorName}</p>
-                      <p>Findings: {selectedApp.inspectionReport.findings}</p>
-                    </div>
-                  )}
-
-                  {selectedApp.details && (
-                    <div className="border rounded-lg p-4 space-y-2">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Form Payloads & Inputs</h4>
-                      <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-                        {Object.entries(selectedApp.details).map(([k, v]) => {
-                          if (typeof v === "object") return null;
-                          return (
-                            <div key={k}>
-                              <span className="capitalize">{k.replace(/([A-Z])/g, " $1")}: </span>
-                              <strong className="text-foreground">{String(v)}</strong>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === "timeline" && (
-                <div className="space-y-3 py-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Statutory Lifecycle History</h4>
-                  <div className="relative pl-6 space-y-4 border-l-2 border-primary/30">
-                    {(selectedApp.timeline || []).map((ev) => (
-                      <div key={ev.id} className="relative">
-                        <div className="absolute -left-[31px] top-0 h-4 w-4 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground font-bold">
-                          ✓
-                        </div>
-                        <div className="flex justify-between items-start">
-                          <span className="font-bold text-foreground text-xs">{ev.title}</span>
-                          <span className="text-[10px] text-muted-foreground">{ev.timestamp}</span>
-                        </div>
-                        <p className="text-muted-foreground text-xs mt-0.5">{ev.description}</p>
-                        <span className="text-[10px] text-primary/80 font-medium">Actor: {ev.actor} ({ev.actorRole})</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "certificate" && (selectedApp.certificateNumber || selectedApp.status === "Completed") && (
-                <div className="p-6 bg-amber-500/5 border border-amber-500/30 rounded-xl space-y-4 text-center">
-                  <ShieldCheck className="h-12 w-12 text-amber-600 mx-auto" />
-                  <h3 className="text-lg font-bold font-serif">Odeda Local Government Statutory Document</h3>
-                  <p className="text-xs text-muted-foreground">Official certificate/licence issued to <strong className="text-foreground">{selectedApp.applicant}</strong></p>
-                  
-                  <div className="p-4 bg-background border rounded-lg max-w-md mx-auto space-y-2 font-mono text-left text-xs">
-                    <div>Document No: <strong>{selectedApp.certificateNumber}</strong></div>
-                    <div>Issued Date: <strong>{selectedApp.issuedAt ? new Date(selectedApp.issuedAt).toLocaleDateString() : "2026-08-02"}</strong></div>
-                    <div>Valid Ward: <strong>{selectedApp.ward}</strong></div>
-                    <div>Verification Token: <strong>{selectedApp.qrToken}</strong></div>
-                  </div>
-
-                  <div className="flex justify-center py-2">
-                    <QRCodeSVG value={`https://logmas.gov.ng/verify/${selectedApp.certificateNumber}`} size={120} />
-                  </div>
-
-                  <Button onClick={() => window.print()} className="bg-amber-600 hover:bg-amber-700 text-white gap-2">
-                    <Printer className="h-4 w-4" /> Print / Download Official Document
-                  </Button>
-                </div>
-              )}
             </div>
           </DialogContent>
         </Dialog>
       )}
 
-      {/* FIELD OFFICER INSPECTION MODAL */}
+      {/* MANDATORY DECLINE REASON MODAL */}
       {selectedApp && (
-        <Dialog open={inspectionModalOpen} onOpenChange={setInspectionModalOpen}>
+        <Dialog open={declineModalOpen} onOpenChange={setDeclineModalOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ClipboardList className="h-5 w-5 text-blue-600" />
-                Conduct Field Inspection
+              <DialogTitle className="flex items-center gap-2 text-red-600 font-bold">
+                <AlertTriangle className="h-5 w-5" /> Decline Application
               </DialogTitle>
-              <DialogDescription>
-                {selectedApp.serviceName} ({selectedApp.applicationNo})
+              <DialogDescription className="text-xs">
+                Provide the specific statutory reason for declining {selectedApp.applicationNo} (Applicant: {selectedApp.fullName}).
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 text-xs">
-              <div>
-                <Label>Inspection Findings & Report</Label>
+            <div className="space-y-4 text-xs py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="decline_reason">
+                  Decline Justification / Notice <span className="text-red-500">*</span>
+                </Label>
                 <Textarea
-                  rows={3}
-                  value={inspectionFindings}
-                  onChange={(e) => setInspectionFindings(e.target.value)}
-                  placeholder="Record property condition, size, equipment, sanitation state..."
+                  id="decline_reason"
+                  rows={4}
+                  required
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  placeholder="Specify missing documentation, failed site inspection, invalid lineage claims, or non-compliance with Odeda LGA bye-laws..."
                 />
-              </div>
-
-              <div>
-                <Label>Recommended Fee Category</Label>
-                <Input
-                  value={recommendedCategory}
-                  onChange={(e) => setRecommendedCategory(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label>Recommended Fee Tariff (₦)</Label>
-                <Input
-                  type="number"
-                  value={recommendedFee}
-                  onChange={(e) => setRecommendedFee(Number(e.target.value))}
-                />
-              </div>
-
-              <div className="p-3 bg-muted rounded-lg text-[11px] text-muted-foreground">
-                Submitting this inspection report transitions status to <strong>Inspection Completed / Awaiting Assessment</strong> and sends it to Treasury.
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setInspectionModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleSaveInspection} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Submit Inspection Report
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeclineModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!declineReason.trim() || declineMutation.isPending}
+                  onClick={handleExecuteDecline}
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold gap-1.5"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Confirm & Decline Application
                 </Button>
               </div>
             </div>
@@ -755,209 +718,90 @@ export default function ApplicationsPage() {
         </Dialog>
       )}
 
-      {/* TREASURY ASSESSMENT MODAL */}
+      {/* OFFICIAL CERTIFICATE / LICENCE MODAL */}
       {selectedApp && (
-        <Dialog open={treasuryModalOpen} onOpenChange={setTreasuryModalOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-purple-600" />
-                Treasury Revenue Assessment
+        <Dialog open={certificateModalOpen} onOpenChange={setCertificateModalOpen}>
+          <DialogContent className="max-w-3xl p-6">
+            <DialogHeader className="border-b pb-3 text-center">
+              <DialogTitle className="text-lg font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                Odeda Local Government, Ogun State
               </DialogTitle>
-              <DialogDescription>
-                Issue Statutory Demand Notice & Invoice for {selectedApp.applicationNo}
+              <DialogDescription className="text-xs font-semibold">
+                Official Statutory Certificate / Operational Licence
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 text-xs">
-              <div>
-                <Label>Approved Statutory Fee (₦)</Label>
-                <Input
-                  type="number"
-                  value={approvedFee}
-                  onChange={(e) => setApprovedFee(Number(e.target.value))}
-                />
+            <div className="my-4 p-8 border-4 border-double border-emerald-600/40 rounded-2xl bg-emerald-500/5 space-y-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-600/20 text-emerald-800 dark:text-emerald-200 flex items-center justify-center mx-auto">
+                <FileBadge className="h-9 w-9" />
               </div>
 
-              <div>
-                <Label>Revenue Head Account</Label>
-                <Input
-                  value={revenueHead}
-                  onChange={(e) => setRevenueHead(e.target.value)}
-                  placeholder="e.g. 2001 - Tenement & Property Rates"
-                />
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                  This is to certify that
+                </span>
+                <h3 className="text-2xl font-black text-foreground">
+                  {selectedApp.fullName}
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                  Has fulfilled all statutory conditions, documentation verifications, and bye-law requirements for
+                </p>
+                <h4 className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400">
+                  {selectedApp.serviceName}
+                </h4>
               </div>
 
-              <div>
-                <Label>Treasury Notes & Remarks</Label>
-                <Textarea
-                  rows={2}
-                  value={treasuryNotes}
-                  onChange={(e) => setTreasuryNotes(e.target.value)}
-                  placeholder="Add assessment remarks..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setTreasuryModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleSaveTreasury} className="bg-purple-600 hover:bg-purple-700 text-white">
-                  Issue Invoice to Citizen
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* SIMULATED PAYMENT MODAL */}
-      {selectedApp && (
-        <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-emerald-600" />
-                Simulate Statutory Payment
-              </DialogTitle>
-              <DialogDescription>
-                Pay ₦{selectedApp.amount.toLocaleString()} for {selectedApp.serviceName} ({selectedApp.applicationNo})
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 text-xs">
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg font-medium text-emerald-900 dark:text-emerald-200">
-                Amount Billed: <strong>₦{selectedApp.amount.toLocaleString()}</strong>
-              </div>
-
-              <div>
-                <Label>Select Payment Method</Label>
-                <Select value={payMethod} onValueChange={setPayMethod}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="card">Debit / Credit Card (Paystack Simulated)</SelectItem>
-                    <SelectItem value="transfer">Bank Transfer (NIBSS / Virtual Account)</SelectItem>
-                    <SelectItem value="pos">Field Officer POS Terminal</SelectItem>
-                    <SelectItem value="cash">Direct Cash Collection</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setPaymentModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleExecutePayment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Confirm Payment
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* LGA ADMIN ACTION MODAL */}
-      {selectedApp && (
-        <Dialog open={adminActionModalOpen} onOpenChange={setAdminActionModalOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-emerald-600" />
-                LGA Executive Review Action
-              </DialogTitle>
-              <DialogDescription>
-                {selectedApp.serviceName} — {selectedApp.applicant}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <Label>Action Decision</Label>
-                <Select value={adminAction} onValueChange={(v: any) => setAdminAction(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="approve">Approve & Issue Official Certificate/Licence</SelectItem>
-                    <SelectItem value="return">Return for Correction to Applicant</SelectItem>
-                    <SelectItem value="reject">Reject Application</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {adminAction === "return" && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-background/90 p-4 rounded-xl border max-w-lg mx-auto text-left">
                 <div>
-                  <Label>Correction Notes for Citizen</Label>
-                  <Textarea
-                    rows={3}
-                    value={correctionNotes}
-                    onChange={(e) => setCorrectionNotes(e.target.value)}
-                    placeholder="Specify exactly what document or field needs correction..."
-                  />
+                  <span className="text-[10px] text-muted-foreground block font-medium">Certificate No:</span>
+                  <span className="font-mono font-bold text-foreground">
+                    {selectedApp.certificateNumber || `ODE/CERT/2026/${selectedApp.id}`}
+                  </span>
                 </div>
-              )}
-
-              {adminAction === "reject" && (
                 <div>
-                  <Label>Rejection Reason</Label>
-                  <Textarea
-                    rows={3}
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Provide justification for rejecting this application..."
-                  />
+                  <span className="text-[10px] text-muted-foreground block font-medium">Ward Domain:</span>
+                  <span className="font-semibold text-foreground">{selectedApp.ward || "Ward 7"}</span>
                 </div>
-              )}
+                <div>
+                  <span className="text-[10px] text-muted-foreground block font-medium">Issued Date:</span>
+                  <span className="font-semibold text-foreground">
+                    {new Date(selectedApp.updatedAt || selectedApp.createdAt).toLocaleDateString("en-NG")}
+                  </span>
+                </div>
+              </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setAdminActionModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleExecuteAdminAction} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Execute Decision
-                </Button>
+              <div className="flex items-center justify-between pt-6 border-t text-xs text-muted-foreground max-w-md mx-auto">
+                <div className="text-left">
+                  <span className="block font-bold text-foreground">Executive Chairman</span>
+                  <span>Odeda Local Government</span>
+                </div>
+                <div className="w-16 h-16 border rounded-lg bg-card flex items-center justify-center font-mono text-[9px] font-bold text-muted-foreground">
+                  QR VERIFIED
+                </div>
+                <div className="text-right">
+                  <span className="block font-bold text-foreground">Head of Local Govt. Admin</span>
+                  <span>HOLGA / Secretary</span>
+                </div>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
 
-      {/* CITIZEN RESUBMIT MODAL */}
-      {selectedApp && (
-        <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <RotateCcw className="h-5 w-5 text-amber-600" />
-                Edit & Resubmit Application
-              </DialogTitle>
-              <DialogDescription>
-                {selectedApp.serviceName} ({selectedApp.applicationNo})
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 text-xs">
-              {selectedApp.correctionNotes && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-900 dark:text-amber-200">
-                  <strong>Notice:</strong> {selectedApp.correctionNotes}
-                </div>
-              )}
-
-              {Object.entries(editDetails).map(([k, v]) => {
-                if (typeof v === "object") return null;
-                return (
-                  <div key={k}>
-                    <Label className="capitalize">{k.replace(/([A-Z])/g, " $1")}</Label>
-                    <Input
-                      value={v || ""}
-                      onChange={(e) => setEditDetails({ ...editDetails, [k]: e.target.value })}
-                    />
-                  </div>
-                );
-              })}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setEditModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleExecuteResubmit} className="bg-amber-600 hover:bg-amber-700 text-white">
-                  Resubmit Application
-                </Button>
-              </div>
+            <div className="flex items-center justify-between pt-2 text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCertificateModalOpen(false)}
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => window.print()}
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              >
+                <Printer className="h-3.5 w-3.5" /> Print Official Certificate
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

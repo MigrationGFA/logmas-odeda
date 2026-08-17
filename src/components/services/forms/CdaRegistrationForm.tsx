@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +9,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { WARDS } from "@/lib/mock-data";
 import { OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
-import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
+import { DocumentUploadStep, DocumentSpec, UploadedFileMeta } from "./DocumentUploadStep";
 import { ReviewSubmitStep, ReviewSection, ReviewRepeatableSection } from "./ReviewSubmitStep";
+import { ApplicantSelectionStep, ApplicantSnapshot } from "../ApplicantSelectionStep";
 import { Plus, Trash2, Shield, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
   service: OdedaService;
-  onSubmit: (formData: Record<string, any>) => void;
+  onSubmit: (payload: {
+    applicant: ApplicantSnapshot;
+    formData: Record<string, any>;
+    files: Record<string, any>;
+  }) => void;
   isSubmitting?: boolean;
+  mode?: "citizen" | "business_owner" | "field_officer" | "admin";
+  initialApplicant?: ApplicantSnapshot;
 }
 
 interface CdaOfficer {
@@ -38,6 +46,12 @@ interface CommunityStreet {
 
 const STEPS: FormStep[] = [
   {
+    id: "applicant_info",
+    title: "Lead CDA Representative & Contact",
+    shortTitle: "Representative",
+    description: "Provide contact details for the submitting CDA Chairman / Secretary.",
+  },
+  {
     id: "cda_profile",
     title: "CDA Identity & Community Profile",
     shortTitle: "CDA Profile",
@@ -51,139 +65,106 @@ const STEPS: FormStep[] = [
   },
   {
     id: "executives_streets",
-    title: "Executive Committee & Street Zones",
-    shortTitle: "Executives & Streets",
-    description: "Provide complete details for CDA officers and the list of streets/zones within the community.",
+    title: "Executive Officers & Street Zones",
+    shortTitle: "Officers & Zones",
+    description: "Record CDA Chairman, Secretary, Treasurer, Security Officer, and street/zone leaders.",
   },
   {
     id: "documents",
     title: "Supporting Documents",
     shortTitle: "Documents",
-    description: "Upload CDA constitution, inaugural minutes with resident attendance, and boundary map.",
+    description: "Upload CDA constitution, Baale consent letter, minutes, and sketch map.",
   },
   {
     id: "review",
     title: "Review & Submit",
     shortTitle: "Review",
-    description: "Review all community records, council roster, and submit statutory application.",
+    description: "Review CDA data, officers, zones, and execute statutory declaration.",
   },
 ];
 
 const DOCUMENTS: DocumentSpec[] = [
   {
     id: "cda_constitution",
-    label: "CDA Constitution & Bye-Laws",
-    description: "Adopted constitution governing community dues, security, and elections.",
+    label: "CDA Constitution & Bye-laws",
+    description: "Adopted constitution specifying governance, election tenure, and community security codes.",
     required: true,
   },
   {
-    id: "minutes_attendance",
-    label: "Inaugural Minutes & Residents Attendance List",
-    description: "Signed attendance register from the general community meeting establishing the CDA.",
+    id: "baale_letter",
+    label: "Baale / Traditional Council Consent Letter",
+    description: "Letter of endorsement signed by the Village Head or Baale of the community.",
     required: true,
   },
   {
-    id: "executives_roster_signed",
-    label: "Signed Executive Council Roster",
-    description: "List of all elected executives with signatures and phone numbers.",
-    required: true,
-  },
-  {
-    id: "baale_endorsement",
-    label: "Baale / Traditional Council Endorsement",
-    description: "Official letter of recommendation and consent from the area Baale or traditional ruler.",
+    id: "inaugural_minutes",
+    label: "Inaugural Community Assembly Minutes",
+    description: "Signed attendance and minutes of the general meeting where the CDA was formed.",
     required: true,
   },
   {
     id: "boundary_sketch",
     label: "Community Boundary Sketch / Map",
-    description: "Map or survey sketch showing north, south, east, and west perimeter boundaries.",
-    required: false,
+    description: "Sketch plan indicating major streets, landmarks, and contiguous borders.",
+    required: true,
+  },
+  {
+    id: "chairman_passport",
+    label: "CDA Chairman Passport Photo",
+    description: "Clear passport photograph of the presiding CDA Chairman.",
+    required: true,
+    acceptedFormats: ".jpg,.jpeg,.png",
   },
 ];
 
-export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }: Props) {
+export default function CdaRegistrationForm({
+  service,
+  onSubmit,
+  isSubmitting = false,
+  mode = "citizen",
+  initialApplicant,
+}: Props) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedFileMeta>>({});
   const [declaration, setDeclaration] = useState(false);
 
-  // Form State
+  const [applicant, setApplicant] = useState<ApplicantSnapshot>(
+    initialApplicant || {
+      fullName: "",
+      phone: "",
+      email: "",
+      address: "",
+      ward: "Ward 7 (Itesi / Camp)",
+      nin: "",
+      cacNumber: "",
+      applicantId: null,
+      isRegistered: false,
+    }
+  );
+
   const [formData, setFormData] = useState({
     cdaName: "",
-    communityName: "",
+    cdaAcronym: "",
     ward: WARDS[0] || "Odeda",
-    quarterZone: "",
-    yearFormed: "2023",
-    estimatedHouseholds: "120",
-    estimatedPopulation: "600",
-    northBoundary: "",
-    southBoundary: "",
-    eastBoundary: "",
-    westBoundary: "",
-    sponsoringBaale: "",
+    hostVillage: "",
+    baaleName: "",
     baalePhone: "",
-    ongoingProjects: "Community security gate installation and street lighting along Main Access Road.",
-    proposedProjects: "Grading of internal access roads and installation of 500kVA community transformer.",
-    meetingVenue: "Community Secretariat / Baale Palace Grounds",
-    meetingDay: "First Saturday of Every Month (8:00 AM)",
-    monthlyDues: "₦1,000 per household per month",
+    estimatedPopulation: 3500,
+    estimatedHouseholds: 420,
+    primarySecurityArrangement: "Ogun State So-Safe Corps / Local Hunters Vigilante",
+    securityPostLocation: "",
+    primaryWaterSource: "Community Solar Boreholes & Hand Pumps",
+    electricityStatus: "Connected to IBEDC 33KV Grid (With Community Transformer)",
+    priorityProject1: "Grading and drainage construction of main spine road",
+    priorityProject2: "Installation of 500KVA relief transformer",
+    priorityProject3: "Community health post refurbishment",
+    bankName: "",
+    accountNumber: "",
   });
 
-  // Core Executive Officers
-  const [chairman, setChairman] = useState<CdaOfficer>({
-    role: "CDA Chairman",
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    occupation: "",
-    nin: "",
-  });
-
-  const [viceChairman, setViceChairman] = useState<CdaOfficer>({
-    role: "Vice Chairman",
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    occupation: "",
-    nin: "",
-  });
-
-  const [secretary, setSecretary] = useState<CdaOfficer>({
-    role: "General Secretary",
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    occupation: "",
-    nin: "",
-  });
-
-  const [treasurer, setTreasurer] = useState<CdaOfficer>({
-    role: "Treasurer",
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    occupation: "",
-    nin: "",
-  });
-
-  const [securityOfficer, setSecurityOfficer] = useState<CdaOfficer>({
-    role: "Chief Security Officer (CSO)",
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    occupation: "",
-    nin: "",
-  });
-
-  // Other Executive Officers (Repeatable List)
-  const [otherOfficers, setOtherOfficers] = useState<CdaOfficer[]>([
+  const [officers, setOfficers] = useState<CdaOfficer[]>([
     {
-      role: "Financial Secretary",
+      role: "CDA Chairman",
       fullName: "",
       phone: "",
       email: "",
@@ -192,7 +173,7 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
       nin: "",
     },
     {
-      role: "Public Relations Officer (PRO)",
+      role: "General Secretary",
       fullName: "",
       phone: "",
       email: "",
@@ -201,7 +182,16 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
       nin: "",
     },
     {
-      role: "Women Leader",
+      role: "Treasurer",
+      fullName: "",
+      phone: "",
+      email: "",
+      address: "",
+      occupation: "",
+      nin: "",
+    },
+    {
+      role: "Chief Security Officer (CSO)",
       fullName: "",
       phone: "",
       email: "",
@@ -211,18 +201,32 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
     },
   ]);
 
-  // Repeatable Streets / Zones in Community
   const [streets, setStreets] = useState<CommunityStreet[]>([
-    { streetName: "Main Community Boulevard", estimatedHouses: "35", zoneLeader: "", leaderPhone: "" },
-    { streetName: "Peace & Unity Avenue", estimatedHouses: "28", zoneLeader: "", leaderPhone: "" },
+    { streetName: "", estimatedHouses: "35", zoneLeader: "", leaderPhone: "" },
+    { streetName: "", estimatedHouses: "28", zoneLeader: "", leaderPhone: "" },
   ]);
 
-  // Handlers for Other Officers
+  const handleFileUpload = (docId: string, meta: UploadedFileMeta | string, actualFile?: File) => {
+    if (typeof meta === "string") {
+      setUploadedFiles((prev) => ({ ...prev, [docId]: { name: meta, file: actualFile } }));
+    } else {
+      setUploadedFiles((prev) => ({ ...prev, [docId]: meta }));
+    }
+  };
+
+  const handleFileRemove = (docId: string) => {
+    setUploadedFiles((prev) => {
+      const next = { ...prev };
+      delete next[docId];
+      return next;
+    });
+  };
+
   const addOfficer = () => {
-    setOtherOfficers((prev) => [
+    setOfficers((prev) => [
       ...prev,
       {
-        role: "Executive Member / Zonal Head",
+        role: "Executive Member (PRO / Welfare)",
         fullName: "",
         phone: "",
         email: "",
@@ -233,19 +237,19 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
     ]);
   };
 
-  const removeOfficer = (idx: number) => {
-    setOtherOfficers((prev) => prev.filter((_, i) => i !== idx));
+  const removeOfficer = (index: number) => {
+    if (officers.length <= 4) return;
+    setOfficers((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateOfficer = (idx: number, field: keyof CdaOfficer, val: string) => {
-    setOtherOfficers((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
+  const updateOfficer = (index: number, field: keyof CdaOfficer, value: string) => {
+    setOfficers((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
     });
   };
 
-  // Handlers for Streets
   const addStreet = () => {
     setStreets((prev) => [
       ...prev,
@@ -258,212 +262,135 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
     ]);
   };
 
-  const removeStreet = (idx: number) => {
-    setStreets((prev) => prev.filter((_, i) => i !== idx));
+  const removeStreet = (index: number) => {
+    if (streets.length <= 1) return;
+    setStreets((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateStreet = (idx: number, field: keyof CommunityStreet, val: string) => {
+  const updateStreet = (index: number, field: keyof CommunityStreet, value: string) => {
     setStreets((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  const handleFileUpload = (docId: string, fileName: string) => {
-    setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
-  };
-
-  const handleFileRemove = (docId: string) => {
-    setUploadedFiles((prev) => {
-      const next = { ...prev };
-      delete next[docId];
-      return next;
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
     });
   };
 
   const validateStep = (index: number): boolean => {
     if (index === 0) {
-      return (
-        !!formData.cdaName.trim() &&
-        !!formData.communityName.trim() &&
-        !!formData.ward &&
-        !!formData.estimatedHouseholds &&
-        !!formData.sponsoringBaale.trim()
-      );
+      return !!applicant.fullName.trim() && !!applicant.phone.trim() && !!applicant.address.trim();
     }
     if (index === 1) {
-      return !!formData.ongoingProjects.trim() && !!formData.meetingVenue.trim();
+      return !!formData.cdaName.trim() && !!formData.hostVillage.trim() && !!formData.baaleName.trim();
     }
     if (index === 2) {
-      return (
-        !!chairman.fullName.trim() &&
-        !!chairman.phone.trim() &&
-        !!secretary.fullName.trim() &&
-        !!secretary.phone.trim() &&
-        !!treasurer.fullName.trim()
-      );
+      return !!formData.priorityProject1.trim() && !!formData.primarySecurityArrangement.trim();
     }
     if (index === 3) {
+      return !!officers[0]?.fullName.trim() && !!officers[1]?.fullName.trim();
+    }
+    if (index === 4) {
       const missing = DOCUMENTS.filter((d) => d.required && !uploadedFiles[d.id]);
       return missing.length === 0;
+    }
+    if (index === 5) {
+      return declaration;
     }
     return true;
   };
 
   const handleNext = () => {
     if (validateStep(currentStepIndex)) {
-      setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
+      setCurrentStepIndex((prev) => Math.min(STEPS.length - 1, prev + 1));
     }
   };
 
   const handlePrev = () => {
-    setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
+    setCurrentStepIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!declaration) return;
+
+    const filesPayload: Record<string, any> = {};
+    Object.entries(uploadedFiles).forEach(([k, meta]) => {
+      if (meta.file) {
+        filesPayload[k] = meta.file;
+      } else {
+        filesPayload[k] = { name: meta.name };
+      }
+    });
+
+    const cleanOfficers = officers.filter((o) => o.fullName.trim().length > 0);
+    const cleanStreets = streets.filter((s) => s.streetName.trim().length > 0);
+
+    onSubmit({
+      applicant,
+      formData: {
+        ...formData,
+        officers: cleanOfficers,
+        streets: cleanStreets,
+        officerCount: cleanOfficers.length,
+        streetCount: cleanStreets.length,
+      },
+      files: filesPayload,
+    });
   };
 
   const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!declaration) return;
-
-    const allOfficers = [
-      chairman,
-      viceChairman,
-      secretary,
-      treasurer,
-      securityOfficer,
-      ...otherOfficers.filter((o) => o.fullName.trim()),
-    ];
-
-    const cleanStreets = streets.filter((s) => s.streetName.trim());
-
-    onSubmit({
-      ...formData,
-      chairman,
-      viceChairman,
-      secretary,
-      treasurer,
-      securityOfficer,
-      otherOfficers: otherOfficers.filter((o) => o.fullName.trim()),
-      allOfficers,
-      streets: cleanStreets,
-      uploadedFiles,
-      amount: currentFee,
-      revenueHead: service.revenueHead,
-      serviceName: service.name,
-      applicant: formData.cdaName,
-    });
-  };
-
   const reviewSections: ReviewSection[] = [
     {
-      title: "CDA & Community Demographics",
+      title: "CDA Community Identity",
       items: [
-        { label: "CDA Name", value: formData.cdaName },
-        { label: "Community / Settlement", value: formData.communityName },
-        { label: "Ward Jurisdiction", value: formData.ward },
-        { label: "Quarter / Zone", value: formData.quarterZone },
-        { label: "Year Formed", value: formData.yearFormed },
-        { label: "Estimated Households", value: `${formData.estimatedHouseholds} homes` },
-        { label: "Estimated Population", value: `${formData.estimatedPopulation} residents` },
-        { label: "Sponsoring Baale / Ruler", value: `${formData.sponsoringBaale} (${formData.baalePhone})` },
+        { label: "Full CDA Name", value: formData.cdaName },
+        { label: "Acronym", value: formData.cdaAcronym || "N/A" },
+        { label: "Host Ward", value: `${formData.ward} Ward` },
+        { label: "Host Village / Area", value: formData.hostVillage },
+        { label: "Traditional Baale / Head", value: formData.baaleName },
+        { label: "Baale Contact Phone", value: formData.baalePhone || "N/A" },
+        { label: "Est. Households / Population", value: `${formData.estimatedHouseholds} Houses / ~${Number(formData.estimatedPopulation).toLocaleString()} Residents` },
       ],
     },
     {
-      title: "Geographical Perimeter Boundaries",
+      title: "Community Infrastructure & Security",
       items: [
-        { label: "North Boundary", value: formData.northBoundary },
-        { label: "South Boundary", value: formData.southBoundary },
-        { label: "East Boundary", value: formData.eastBoundary },
-        { label: "West Boundary", value: formData.westBoundary },
-      ],
-    },
-    {
-      title: "Development Programs & Governance",
-      items: [
-        { label: "Regular Meeting Venue", value: formData.meetingVenue },
-        { label: "Meeting Schedule", value: formData.meetingDay },
-        { label: "Community Security Dues", value: formData.monthlyDues },
-        { label: "Ongoing Projects", value: formData.ongoingProjects },
-        { label: "Proposed Projects", value: formData.proposedProjects },
+        { label: "Security Apparatus", value: formData.primarySecurityArrangement },
+        { label: "Security Post Location", value: formData.securityPostLocation || "Central Junction" },
+        { label: "Water Infrastructure", value: formData.primaryWaterSource },
+        { label: "Electricity Infrastructure", value: formData.electricityStatus },
+        { label: "Priority Project #1", value: formData.priorityProject1 },
+        { label: "Priority Project #2", value: formData.priorityProject2 || "N/A" },
+        { label: "Priority Project #3", value: formData.priorityProject3 || "N/A" },
       ],
     },
   ];
 
-  const reviewRepeatableSections: ReviewRepeatableSection[] = [
+  const reviewRepeatables: ReviewRepeatableSection[] = [
     {
-      title: "CDA Executive Committee (Cabinet)",
+      title: "CDA Executive Committee",
       countLabel: "Executive Officers",
-      items: [
-        {
-          Role: chairman.role,
-          Name: chairman.fullName,
-          Phone: chairman.phone,
-          Email: chairman.email,
-          Address: chairman.address,
-          Occupation: chairman.occupation,
-          NIN: chairman.nin,
-        },
-        {
-          Role: viceChairman.role,
-          Name: viceChairman.fullName,
-          Phone: viceChairman.phone,
-          Email: viceChairman.email,
-          Address: viceChairman.address,
-          Occupation: viceChairman.occupation,
-          NIN: viceChairman.nin,
-        },
-        {
-          Role: secretary.role,
-          Name: secretary.fullName,
-          Phone: secretary.phone,
-          Email: secretary.email,
-          Address: secretary.address,
-          Occupation: secretary.occupation,
-          NIN: secretary.nin,
-        },
-        {
-          Role: treasurer.role,
-          Name: treasurer.fullName,
-          Phone: treasurer.phone,
-          Email: treasurer.email,
-          Address: treasurer.address,
-          Occupation: treasurer.occupation,
-          NIN: treasurer.nin,
-        },
-        {
-          Role: securityOfficer.role,
-          Name: securityOfficer.fullName,
-          Phone: securityOfficer.phone,
-          Email: securityOfficer.email,
-          Address: securityOfficer.address,
-          Occupation: securityOfficer.occupation,
-          NIN: securityOfficer.nin,
-        },
-        ...otherOfficers
-          .filter((o) => o.fullName.trim())
-          .map((o) => ({
-            Role: o.role,
-            Name: o.fullName,
-            Phone: o.phone,
-            Email: o.email,
-            Address: o.address,
-            Occupation: o.occupation,
-            NIN: o.nin,
-          })),
-      ],
+      items: officers
+        .filter((o) => o.fullName.trim())
+        .map((o) => ({
+          role: o.role,
+          name: o.fullName,
+          phone: o.phone,
+          email: o.email || "N/A",
+          occupation: o.occupation || "N/A",
+          nin: o.nin || "N/A",
+        })),
     },
     {
-      title: "Streets & Residential Zones Covered",
-      countLabel: "Streets / Zones",
+      title: "Street & Zone Register",
+      countLabel: "Streets Listed",
       items: streets
         .filter((s) => s.streetName.trim())
         .map((s) => ({
-          "Street Name": s.streetName,
-          "Est. Houses": `${s.estimatedHouses} units`,
-          "Zone Leader": s.zoneLeader,
-          "Leader Phone": s.leaderPhone,
+          streetName: s.streetName,
+          estHouses: s.estimatedHouses,
+          zoneLeader: s.zoneLeader || "N/A",
+          leaderPhone: s.leaderPhone || "N/A",
         })),
     },
   ];
@@ -473,53 +400,67 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
       service={service}
       steps={STEPS}
       currentStepIndex={currentStepIndex}
-      onStepChange={(idx) => setCurrentStepIndex(idx)}
+      onStepChange={setCurrentStepIndex}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleFormSubmit}
       isSubmitting={isSubmitting}
       isStepValid={validateStep(currentStepIndex)}
       currentFee={currentFee}
-      submitDisabled={!declaration || !validateStep(0) || !validateStep(1) || !validateStep(2) || !validateStep(3)}
+      submitDisabled={!declaration}
+      submitLabel="Submit CDA Registration Application"
     >
-      {/* STEP 1: CDA Profile */}
+      {/* STEP 0: Applicant Selection */}
       {currentStepIndex === 0 && (
-        <div className="space-y-4">
+        <ApplicantSelectionStep
+          mode={mode}
+          value={applicant}
+          onChange={setApplicant}
+          serviceName={service.name}
+          serviceCategory={service.category}
+        />
+      )}
+
+      {/* STEP 1: CDA Profile */}
+      {currentStepIndex === 1 && (
+        <div className="space-y-4 text-xs">
           <div className="border-b pb-3">
             <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
-              Community Development Association Profile
+              CDA Identity & Traditional Domain
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Enter official CDA registration credentials and geographic territory within Odeda LGA.
+              Enter official Community Development Association particulars in Odeda Local Government.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="cdaName">Proposed CDA Official Name *</Label>
+              <Label htmlFor="cdaName">Full Name of CDA *</Label>
               <Input
                 id="cdaName"
                 required
                 value={formData.cdaName}
                 onChange={(e) => setFormData({ ...formData, cdaName: e.target.value })}
-                placeholder="e.g. Obantoko Harmony Community Development Association"
+                placeholder="e.g. Ifelodun Community Development Association, Itesi"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="communityName">Community / Estate / Settlement Name *</Label>
+              <Label htmlFor="cdaAcronym">CDA Short Name / Acronym</Label>
               <Input
-                id="communityName"
-                required
-                value={formData.communityName}
-                onChange={(e) => setFormData({ ...formData, communityName: e.target.value })}
-                placeholder="e.g. Harmony Estate, Camp Area"
+                id="cdaAcronym"
+                value={formData.cdaAcronym}
+                onChange={(e) => setFormData({ ...formData, cdaAcronym: e.target.value })}
+                placeholder="e.g. IFELODUN CDA"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ward">Ward Jurisdiction in Odeda LGA *</Label>
-              <Select value={formData.ward} onValueChange={(val) => setFormData({ ...formData, ward: val })}>
+              <Label htmlFor="ward">Ward Location *</Label>
+              <Select
+                value={formData.ward}
+                onValueChange={(val) => setFormData({ ...formData, ward: val })}
+              >
                 <SelectTrigger id="ward">
                   <SelectValue placeholder="Select Ward" />
                 </SelectTrigger>
@@ -534,575 +475,310 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="quarterZone">Quarter / Zonal Section</Label>
+              <Label htmlFor="hostVillage">Host Village / Quarter / Community *</Label>
               <Input
-                id="quarterZone"
-                value={formData.quarterZone}
-                onChange={(e) => setFormData({ ...formData, quarterZone: e.target.value })}
-                placeholder="e.g. Zone 4 / Upper Camp"
+                id="hostVillage"
+                required
+                value={formData.hostVillage}
+                onChange={(e) => setFormData({ ...formData, hostVillage: e.target.value })}
+                placeholder="e.g. Camp Village / Alabata Road"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="yearFormed">Year Community Formed</Label>
+              <Label htmlFor="baaleName">Community Baale / Traditional Ruler *</Label>
               <Input
-                id="yearFormed"
-                value={formData.yearFormed}
-                onChange={(e) => setFormData({ ...formData, yearFormed: e.target.value })}
-                placeholder="e.g. 2022"
+                id="baaleName"
+                required
+                value={formData.baaleName}
+                onChange={(e) => setFormData({ ...formData, baaleName: e.target.value })}
+                placeholder="Chief / Baale of Community"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="estimatedHouseholds">Estimated Number of Households *</Label>
+              <Label htmlFor="baalePhone">Baale Contact Phone</Label>
+              <Input
+                id="baalePhone"
+                value={formData.baalePhone}
+                onChange={(e) => setFormData({ ...formData, baalePhone: e.target.value })}
+                placeholder="080XXXXXXXX"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="estimatedHouseholds">Estimated Number of Buildings / Households</Label>
               <Input
                 id="estimatedHouseholds"
                 type="number"
-                required
                 value={formData.estimatedHouseholds}
-                onChange={(e) => setFormData({ ...formData, estimatedHouseholds: e.target.value })}
-                placeholder="e.g. 150"
+                onChange={(e) => setFormData({ ...formData, estimatedHouseholds: Number(e.target.value) })}
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="estimatedPopulation">Estimated Total Resident Population</Label>
-              <Input
-                id="estimatedPopulation"
-                type="number"
-                value={formData.estimatedPopulation}
-                onChange={(e) => setFormData({ ...formData, estimatedPopulation: e.target.value })}
-                placeholder="e.g. 800"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="sponsoringBaale">Sponsoring Baale / Traditional Chief *</Label>
-              <Input
-                id="sponsoringBaale"
-                required
-                value={formData.sponsoringBaale}
-                onChange={(e) => setFormData({ ...formData, sponsoringBaale: e.target.value })}
-                placeholder="e.g. Baale Adesanya of Camp"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="baalePhone">Baale / Chief Phone Contact</Label>
-              <Input
-                id="baalePhone"
-                type="tel"
-                value={formData.baalePhone}
-                onChange={(e) => setFormData({ ...formData, baalePhone: e.target.value })}
-                placeholder="+234 800 000 0000"
-              />
-            </div>
-          </div>
-
-          <div className="bg-muted/30 p-4 rounded-xl border space-y-3 mt-4">
-            <h5 className="font-bold text-xs uppercase tracking-wide text-foreground flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-primary" /> Community Perimeter Boundaries
-            </h5>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">North Boundary Landmark</Label>
-                <Input
-                  value={formData.northBoundary}
-                  onChange={(e) => setFormData({ ...formData, northBoundary: e.target.value })}
-                  placeholder="e.g. Express Road"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">South Boundary Landmark</Label>
-                <Input
-                  value={formData.southBoundary}
-                  onChange={(e) => setFormData({ ...formData, southBoundary: e.target.value })}
-                  placeholder="e.g. Stream / River"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">East Boundary Landmark</Label>
-                <Input
-                  value={formData.eastBoundary}
-                  onChange={(e) => setFormData({ ...formData, eastBoundary: e.target.value })}
-                  placeholder="e.g. Odeda High School"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">West Boundary Landmark</Label>
-                <Input
-                  value={formData.westBoundary}
-                  onChange={(e) => setFormData({ ...formData, westBoundary: e.target.value })}
-                  placeholder="e.g. Boundary with Ward 8"
-                />
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* STEP 2: Projects & Development */}
-      {currentStepIndex === 1 && (
-        <div className="space-y-4">
-          <div className="border-b pb-3">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
-              Community Development Projects & Operations
-            </h4>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Provide information on community projects, security initiatives, and meeting protocols.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="ongoingProjects">Ongoing Community Self-Help Projects *</Label>
-              <Textarea
-                id="ongoingProjects"
-                rows={3}
-                required
-                value={formData.ongoingProjects}
-                onChange={(e) => setFormData({ ...formData, ongoingProjects: e.target.value })}
-                placeholder="Describe current security gates, grading, culverts, or water borehole projects..."
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="proposedProjects">Proposed Future Priority Projects (Next 1-3 Years)</Label>
-              <Textarea
-                id="proposedProjects"
-                rows={3}
-                value={formData.proposedProjects}
-                onChange={(e) => setFormData({ ...formData, proposedProjects: e.target.value })}
-                placeholder="Planned transformers, healthcare posts, drainage gutters, paving..."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="meetingVenue">General Meeting Venue *</Label>
-                <Input
-                  id="meetingVenue"
-                  required
-                  value={formData.meetingVenue}
-                  onChange={(e) => setFormData({ ...formData, meetingVenue: e.target.value })}
-                  placeholder="e.g. Community Central Hall"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="meetingDay">Meeting Day & Time</Label>
-                <Input
-                  id="meetingDay"
-                  value={formData.meetingDay}
-                  onChange={(e) => setFormData({ ...formData, meetingDay: e.target.value })}
-                  placeholder="e.g. 1st Saturday 7:00 AM"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="monthlyDues">Agreed Household Security & Dev Dues</Label>
-                <Input
-                  id="monthlyDues"
-                  value={formData.monthlyDues}
-                  onChange={(e) => setFormData({ ...formData, monthlyDues: e.target.value })}
-                  placeholder="e.g. ₦1,500 / month"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 3: Executives & Streets (REPEATABLE UI) */}
+      {/* STEP 2: Projects & Focus */}
       {currentStepIndex === 2 && (
-        <div className="space-y-6">
+        <div className="space-y-4 text-xs">
           <div className="border-b pb-3">
             <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
-              CDA Executive Committee & Street Zones Roster
+              Security, Infrastructure & Development Priorities
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Provide complete executive council particulars and the streets/zones falling within this CDA.
+              Specify the community security architecture, utilities, and development roadmap.
             </p>
           </div>
 
-          {/* Core CDA Officers */}
-          <div className="space-y-4">
-            <h5 className="font-bold text-xs uppercase tracking-wider text-foreground flex items-center gap-1.5">
-              <Shield className="w-4 h-4 text-primary" /> Mandatory Principal CDA Officers
-            </h5>
+          <div className="space-y-3.5">
+            <div className="space-y-1.5">
+              <Label htmlFor="primarySecurityArrangement">Community Security / Vigilante System *</Label>
+              <Select
+                value={formData.primarySecurityArrangement}
+                onValueChange={(val) => setFormData({ ...formData, primarySecurityArrangement: val })}
+              >
+                <SelectTrigger id="primarySecurityArrangement">
+                  <SelectValue placeholder="Select Security Architecture" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ogun State So-Safe Corps / Local Hunters Vigilante">
+                    Ogun State So-Safe Corps / Local Hunters Vigilante
+                  </SelectItem>
+                  <SelectItem value="Nigeria Police Force (Odeda Div) & Community Patrol">
+                    Nigeria Police Force (Odeda Div) & Community Patrol
+                  </SelectItem>
+                  <SelectItem value="Licensed Private Security Guards">
+                    Licensed Private Security Guards
+                  </SelectItem>
+                  <SelectItem value="Amotekun Corps / Joint Vigilante">
+                    Amotekun Corps / Joint Vigilante
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            {/* 1. Chairman */}
-            <div className="bg-muted/20 border border-primary/20 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="font-bold text-xs text-primary uppercase">1. CDA Chairman *</span>
-                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary">Head of Executive</Badge>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="primaryWaterSource">Community Water Infrastructure</Label>
+                <Input
+                  id="primaryWaterSource"
+                  value={formData.primaryWaterSource}
+                  onChange={(e) => setFormData({ ...formData, primaryWaterSource: e.target.value })}
+                  placeholder="e.g. Solar powered public boreholes"
+                />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Full Name *</Label>
-                  <Input
-                    required
-                    value={chairman.fullName}
-                    onChange={(e) => setChairman({ ...chairman, fullName: e.target.value })}
-                    placeholder="Full Legal Name"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Phone Number *</Label>
-                  <Input
-                    required
-                    value={chairman.phone}
-                    onChange={(e) => setChairman({ ...chairman, phone: e.target.value })}
-                    placeholder="+234 800..."
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Email Address</Label>
-                  <Input
-                    value={chairman.email}
-                    onChange={(e) => setChairman({ ...chairman, email: e.target.value })}
-                    placeholder="chairman@email.com"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Residential Address in Community</Label>
-                  <Input
-                    value={chairman.address}
-                    onChange={(e) => setChairman({ ...chairman, address: e.target.value })}
-                    placeholder="House number & street"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Occupation</Label>
-                  <Input
-                    value={chairman.occupation}
-                    onChange={(e) => setChairman({ ...chairman, occupation: e.target.value })}
-                    placeholder="Occupation"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">NIN Number</Label>
-                  <Input
-                    maxLength={11}
-                    value={chairman.nin}
-                    onChange={(e) => setChairman({ ...chairman, nin: e.target.value })}
-                    placeholder="11-digit NIN"
-                  />
-                </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="electricityStatus">Electricity / Grid Connection Status</Label>
+                <Input
+                  id="electricityStatus"
+                  value={formData.electricityStatus}
+                  onChange={(e) => setFormData({ ...formData, electricityStatus: e.target.value })}
+                  placeholder="e.g. IBEDC 33KV line with 300KVA Transformer"
+                />
               </div>
             </div>
 
-            {/* 2. General Secretary */}
-            <div className="bg-muted/20 border border-primary/20 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="font-bold text-xs text-primary uppercase">2. General Secretary *</span>
-                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary">Secretariat</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Full Name *</Label>
-                  <Input
-                    required
-                    value={secretary.fullName}
-                    onChange={(e) => setSecretary({ ...secretary, fullName: e.target.value })}
-                    placeholder="Full Legal Name"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Phone Number *</Label>
-                  <Input
-                    required
-                    value={secretary.phone}
-                    onChange={(e) => setSecretary({ ...secretary, phone: e.target.value })}
-                    placeholder="+234 800..."
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Email Address</Label>
-                  <Input
-                    value={secretary.email}
-                    onChange={(e) => setSecretary({ ...secretary, email: e.target.value })}
-                    placeholder="secretary@email.com"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Residential Address</Label>
-                  <Input
-                    value={secretary.address}
-                    onChange={(e) => setSecretary({ ...secretary, address: e.target.value })}
-                    placeholder="Address"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Occupation</Label>
-                  <Input
-                    value={secretary.occupation}
-                    onChange={(e) => setSecretary({ ...secretary, occupation: e.target.value })}
-                    placeholder="Occupation"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">NIN Number</Label>
-                  <Input
-                    maxLength={11}
-                    value={secretary.nin}
-                    onChange={(e) => setSecretary({ ...secretary, nin: e.target.value })}
-                    placeholder="11-digit NIN"
-                  />
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="priorityProject1">Priority Community Project #1 *</Label>
+              <Input
+                id="priorityProject1"
+                required
+                value={formData.priorityProject1}
+                onChange={(e) => setFormData({ ...formData, priorityProject1: e.target.value })}
+                placeholder="e.g. Culvert construction across Main Stream"
+              />
             </div>
 
-            {/* 3. Treasurer */}
-            <div className="bg-muted/20 border border-primary/20 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="font-bold text-xs text-primary uppercase">3. Treasurer *</span>
-                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary">Treasury</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Full Name *</Label>
-                  <Input
-                    required
-                    value={treasurer.fullName}
-                    onChange={(e) => setTreasurer({ ...treasurer, fullName: e.target.value })}
-                    placeholder="Full Legal Name"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Phone Number *</Label>
-                  <Input
-                    required
-                    value={treasurer.phone}
-                    onChange={(e) => setTreasurer({ ...treasurer, phone: e.target.value })}
-                    placeholder="+234 800..."
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Email Address</Label>
-                  <Input
-                    value={treasurer.email}
-                    onChange={(e) => setTreasurer({ ...treasurer, email: e.target.value })}
-                    placeholder="treasurer@email.com"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Residential Address</Label>
-                  <Input
-                    value={treasurer.address}
-                    onChange={(e) => setTreasurer({ ...treasurer, address: e.target.value })}
-                    placeholder="Address"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Occupation</Label>
-                  <Input
-                    value={treasurer.occupation}
-                    onChange={(e) => setTreasurer({ ...treasurer, occupation: e.target.value })}
-                    placeholder="Occupation"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">NIN Number</Label>
-                  <Input
-                    maxLength={11}
-                    value={treasurer.nin}
-                    onChange={(e) => setTreasurer({ ...treasurer, nin: e.target.value })}
-                    placeholder="11-digit NIN"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 4. Chief Security Officer */}
-            <div className="bg-muted/20 border border-primary/20 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="font-bold text-xs text-primary uppercase">4. Chief Security Officer (CSO) *</span>
-                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary">Community Vigilance</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Full Name</Label>
-                  <Input
-                    value={securityOfficer.fullName}
-                    onChange={(e) => setSecurityOfficer({ ...securityOfficer, fullName: e.target.value })}
-                    placeholder="Full Legal Name"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Phone Number</Label>
-                  <Input
-                    value={securityOfficer.phone}
-                    onChange={(e) => setSecurityOfficer({ ...securityOfficer, phone: e.target.value })}
-                    placeholder="+234 800..."
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Residential Address</Label>
-                  <Input
-                    value={securityOfficer.address}
-                    onChange={(e) => setSecurityOfficer({ ...securityOfficer, address: e.target.value })}
-                    placeholder="Address in community"
-                  />
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="priorityProject2">Priority Community Project #2</Label>
+              <Input
+                id="priorityProject2"
+                value={formData.priorityProject2}
+                onChange={(e) => setFormData({ ...formData, priorityProject2: e.target.value })}
+                placeholder="e.g. Street numbering and solar street lighting"
+              />
             </div>
           </div>
+        </div>
+      )}
 
-          {/* REPEATABLE SECTION: Other Executive Officers */}
-          <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center justify-between">
+      {/* STEP 3: Officers & Street Zones */}
+      {currentStepIndex === 3 && (
+        <div className="space-y-6">
+          {/* Officers */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b pb-2">
               <div>
-                <h5 className="font-bold text-xs uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-primary" /> Other CDA Executive Council Members
-                </h5>
-                <p className="text-[11px] text-muted-foreground">
-                  Add additional positions (Financial Sec, PRO, Women Leader, Youth Leader, Auditor, Legal Adviser).
+                <h4 className="text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> CDA Executive Committee
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  CDA Chairman, Secretary, Treasurer, and CSO details are required by Odeda LGA Community Dev Dept.
                 </p>
               </div>
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={addOfficer}
-                className="gap-1 text-xs h-8"
+                size="sm"
+                variant="outline"
+                className="text-xs gap-1 h-8"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Council Member
+                <Plus className="w-3.5 h-3.5" />
+                Add Executive
               </Button>
             </div>
 
-            {otherOfficers.map((officer, idx) => (
-              <div key={idx} className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <span className="font-bold text-xs text-foreground">Officer #{idx + 1}: {officer.role || "Executive Member"}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeOfficer(idx)}
-                    className="text-red-500 hover:text-red-700 h-7 px-2 text-xs"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
-                  </Button>
-                </div>
+            <div className="space-y-3">
+              {officers.map((officer, index) => (
+                <div
+                  key={index}
+                  className="border rounded-xl p-4 bg-muted/20 space-y-3 shadow-2xs text-xs"
+                >
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs font-semibold">
+                        Officer #{index + 1}
+                      </Badge>
+                      <span className="font-bold text-xs text-foreground">{officer.role}</span>
+                    </div>
+                    {officers.length > 4 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeOfficer(index)}
+                        className="h-7 text-xs text-red-600 hover:text-red-700 px-2"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
+                      </Button>
+                    )}
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">CDA Role / Title *</Label>
-                    <Input
-                      value={officer.role}
-                      onChange={(e) => updateOfficer(idx, "role", e.target.value)}
-                      placeholder="e.g. Financial Secretary / PRO"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Full Name *</Label>
-                    <Input
-                      value={officer.fullName}
-                      onChange={(e) => updateOfficer(idx, "fullName", e.target.value)}
-                      placeholder="Full Legal Name"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Phone Number *</Label>
-                    <Input
-                      value={officer.phone}
-                      onChange={(e) => updateOfficer(idx, "phone", e.target.value)}
-                      placeholder="+234 800..."
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Residential Address</Label>
-                    <Input
-                      value={officer.address}
-                      onChange={(e) => updateOfficer(idx, "address", e.target.value)}
-                      placeholder="House address"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Occupation</Label>
-                    <Input
-                      value={officer.occupation}
-                      onChange={(e) => updateOfficer(idx, "occupation", e.target.value)}
-                      placeholder="Occupation"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">NIN Number</Label>
-                    <Input
-                      maxLength={11}
-                      value={officer.nin}
-                      onChange={(e) => updateOfficer(idx, "nin", e.target.value)}
-                      placeholder="11-digit NIN"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label>Executive Designation *</Label>
+                      <Input
+                        value={officer.role}
+                        onChange={(e) => updateOfficer(index, "role", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label>Full Name *</Label>
+                      <Input
+                        required
+                        value={officer.fullName}
+                        onChange={(e) => updateOfficer(index, "fullName", e.target.value)}
+                        placeholder="Legal Full Name"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Phone Number *</Label>
+                      <Input
+                        required
+                        value={officer.phone}
+                        onChange={(e) => updateOfficer(index, "phone", e.target.value)}
+                        placeholder="080XXXXXXXX"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Email Address</Label>
+                      <Input
+                        type="email"
+                        value={officer.email}
+                        onChange={(e) => updateOfficer(index, "email", e.target.value)}
+                        placeholder="officer@domain.com"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>National ID (NIN)</Label>
+                      <Input
+                        value={officer.nin}
+                        onChange={(e) => updateOfficer(index, "nin", e.target.value)}
+                        placeholder="11-digit NIN"
+                        maxLength={11}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* REPEATABLE SECTION: Streets & Zones Covered */}
+          {/* Streets */}
           <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-b pb-2">
               <div>
-                <h5 className="font-bold text-xs uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-primary" /> Community Streets & Zones Schedule
-                </h5>
-                <p className="text-[11px] text-muted-foreground">
-                  List all residential streets, closes, and zones represented by this CDA.
+                <h4 className="text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                  <MapPin className="w-4 h-4" /> Street / Zone Registry
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Record all streets/zones within this CDA boundary.
                 </p>
               </div>
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={addStreet}
-                className="gap-1 text-xs h-8"
+                size="sm"
+                variant="outline"
+                className="text-xs gap-1 h-8"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Street
+                <Plus className="w-3.5 h-3.5" />
+                Add Street Zone
               </Button>
             </div>
 
             <div className="space-y-2.5">
-              {streets.map((street, idx) => (
-                <div key={idx} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
-                  <div className="space-y-1 sm:col-span-2">
-                    <Label className="text-[11px]">Street / Zone Name</Label>
+              {streets.map((street, index) => (
+                <div
+                  key={index}
+                  className="border rounded-lg p-3 bg-muted/10 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center text-xs"
+                >
+                  <div className="sm:col-span-4">
                     <Input
                       value={street.streetName}
-                      onChange={(e) => updateStreet(idx, "streetName", e.target.value)}
-                      placeholder="e.g. Adebayo Close"
+                      onChange={(e) => updateStreet(index, "streetName", e.target.value)}
+                      placeholder="Street / Close Name"
                       className="h-8 text-xs"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px]">Estimated Houses</Label>
+                  <div className="sm:col-span-2">
                     <Input
                       value={street.estimatedHouses}
-                      onChange={(e) => updateStreet(idx, "estimatedHouses", e.target.value)}
-                      placeholder="e.g. 24"
+                      onChange={(e) => updateStreet(index, "estimatedHouses", e.target.value)}
+                      placeholder="Est. Houses"
                       className="h-8 text-xs"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px]">Zone Rep & Phone</Label>
+                  <div className="sm:col-span-3">
                     <Input
                       value={street.zoneLeader}
-                      onChange={(e) => updateStreet(idx, "zoneLeader", e.target.value)}
-                      placeholder="Rep Name / 080..."
+                      onChange={(e) => updateStreet(index, "zoneLeader", e.target.value)}
+                      placeholder="Zone Leader Name"
                       className="h-8 text-xs"
                     />
                   </div>
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeStreet(idx)}
-                      className="text-red-500 hover:text-red-700 h-8 px-2 text-xs"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                  <div className="sm:col-span-2">
+                    <Input
+                      value={street.leaderPhone}
+                      onChange={(e) => updateStreet(index, "leaderPhone", e.target.value)}
+                      placeholder="Leader Phone"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="sm:col-span-1 flex justify-end">
+                    {streets.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeStreet(index)}
+                        className="h-7 w-7 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1111,8 +787,8 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
         </div>
       )}
 
-      {/* STEP 4: Documents Upload */}
-      {currentStepIndex === 3 && (
+      {/* STEP 4: Documents */}
+      {currentStepIndex === 4 && (
         <DocumentUploadStep
           documents={DOCUMENTS}
           uploadedFiles={uploadedFiles}
@@ -1123,18 +799,19 @@ export default function CdaRegistrationForm({ service, onSubmit, isSubmitting }:
       )}
 
       {/* STEP 5: Review & Submit */}
-      {currentStepIndex === 4 && (
+      {currentStepIndex === 5 && (
         <ReviewSubmitStep
           serviceName={service.name}
           revenueHead={service.revenueHead}
           feeAmount={currentFee}
+          applicant={applicant}
           sections={reviewSections}
-          repeatableSections={reviewRepeatableSections}
+          repeatableSections={reviewRepeatables}
           documents={DOCUMENTS}
           uploadedFiles={uploadedFiles}
           declarationChecked={declaration}
           onDeclarationChange={setDeclaration}
-          declarationText="We, the elected executive council of this Community Development Association, solemnly declare that this application represents the authentic will of the residents, and that we shall collaborate with Odeda Local Government in advancing peace, security, and infrastructure development."
+          declarationText="We, the principal executive officers of this Community Development Association, swear that the bounds, officers, streets, and resolution submitted represent the collective decision of our residents. We pledge cooperation with Odeda Local Government Authority for peace, security, and orderly development."
         />
       )}
     </FormWizard>
