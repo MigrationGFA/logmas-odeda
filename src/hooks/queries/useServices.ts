@@ -33,8 +33,6 @@ export function useServices() {
     });
   };
 
-  console.log(data,"inside ")
-
   return {
     services: data ?? [],
     isLoading,

@@ -122,100 +122,46 @@ export default function ServiceDetailPage({ params }: PageProps) {
   }
 
   // Initialize applicant profile snapshot based on role
-  const initialApplicant: ApplicantSnapshot = {
-    fullName: currentUser
-      ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() ||
-        currentUser.name ||
-        currentUser.businessName ||
-        ""
-      : "",
-    phone: currentUser?.phone || "",
-    email: currentUser?.email || "",
-    address: currentUser?.address || "",
-    ward: currentUser?.ward || "Ward 7 (Itesi / Camp)",
-    nin: currentUser?.nin || "",
-    cacNumber: currentUser?.cacNumber || "",
+  const initialApplicant: any = {
     applicantId: currentUser?.id || null,
     isRegistered: !!currentUser?.id,
   };
 
   const handleSubmit = async (payload: any) => {
-    let applicant: ApplicantSnapshot = initialApplicant;
+    let applicant: any = initialApplicant;
     let formData: Record<string, any> = {};
     let files: Record<string, any> = {};
 
-    // Check if unified payload structure is passed
+    // Preferred payload shape: { applicant?, formData, files? }
+    // Do not merge applicant snapshot into formData or invent fallback values.
     if (payload && (payload.applicant || payload.files || payload.formData)) {
       applicant = payload.applicant || initialApplicant;
       formData = payload.formData || {};
       files = payload.files || {};
     } else {
-      // Legacy dictionary fallback
+      // Legacy dictionary fallback: treat payload as formData only.
       formData = payload || {};
-      const fallbackName =
-        formData.fullName ||
-        formData.clubName ||
-        formData.cdaName ||
-        formData.farmerName ||
-        formData.businessName ||
-        formData.ownerName ||
-        formData.companyName ||
-        formData.applicantName ||
-        formData.kioskName ||
-        initialApplicant.fullName ||
-        "Odeda Citizen / Business";
 
-      applicant = {
-        fullName: fallbackName,
-        phone:
-          formData.phone ||
-          formData.phoneNo ||
-          initialApplicant.phone ||
-          "08012345678",
-        email: formData.email || initialApplicant.email || "",
-        address:
-          formData.address ||
-          formData.farmLocation ||
-          formData.siteAddress ||
-          initialApplicant.address ||
-          "Odeda LGA, Ogun State",
-        ward: formData.ward || initialApplicant.ward || "Ward 7 (Itesi / Camp)",
-        nin: formData.nin || initialApplicant.nin || "",
-        cacNumber: formData.cacNumber || initialApplicant.cacNumber || "",
-        applicantId: initialApplicant.applicantId || null,
-        isRegistered: !!initialApplicant.applicantId,
-      };
     }
 
-    console.log("Submitting application with payload:", {
-      applicant,
-      formData,
-      files,
-    });
+    try {
+      const res = await submitApplicationMutation.mutateAsync({
+        serviceId: service.id,
+        applicantId: applicant?.applicantId || undefined,
+        formData,
+        files,
+      });
 
-    // try {
-    //   // Construct clean submission data
-    //   const res = await submitApplicationMutation.mutateAsync({
-    //     serviceId: service.id,
-    //     serviceCode: service.code,
-    //     serviceName: service.name,
-    //     revenueHead: service.revenueHead,
-    //     fullName: applicant.fullName || "Applicant",
-    //     phone: applicant.phone || "08012345678",
-    //     email: applicant.email || undefined,
-    //     address: applicant.address || "Odeda Local Government Area",
-    //     ward: applicant.ward || "Ward 7 (Itesi / Camp)",
-    //     nin: applicant.nin || undefined,
-    //     cacNumber: applicant.cacNumber || undefined,
-    //     applicantId: applicant.applicantId || undefined,
-    //     formData,
-    //     files,
-    //   });
+      console.log("Submission response:", res);
 
-    //   setSubmittedApp(res);
-    // } catch (err) {
-    //   console.error("Submission failed:", err);
-    // }
+      if (res.application.applicationNumber) {
+        router.push(`/dashboard/invoices/${res.invoice.invoiceNumber}`);
+
+        setSubmittedApp(res);
+      }
+    } catch (err) {
+      console.error("Submission failed:", err);
+    }
   };
 
   // Get fee from service data
@@ -326,8 +272,11 @@ export default function ServiceDetailPage({ params }: PageProps) {
               Statutory Application Submitted!
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm max-w-lg mx-auto">
-              Your application for <strong>{service.name}</strong> has been
-              transmitted to Odeda Local Government Authority.
+              Your application for{" "}
+              <strong>
+                {submittedApp.application?.service?.name || service?.name}
+              </strong>{" "}
+              has been transmitted to Odeda Local Government Authority.
             </CardDescription>
           </CardHeader>
 
@@ -340,7 +289,8 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     Application Number:
                   </span>
                   <span className="font-mono font-bold text-sm text-primary">
-                    {submittedApp.applicationNo}
+                    {submittedApp.application?.applicationNumber ||
+                      submittedApp.application?.applicationNo}
                   </span>
                 </div>
                 <div>
@@ -351,7 +301,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     variant="outline"
                     className="bg-amber-500/10 text-amber-700 text-xs border-amber-300 font-semibold mt-0.5"
                   >
-                    {submittedApp.status}
+                    {submittedApp.application?.status || submittedApp.status}
                   </Badge>
                 </div>
                 <div>
@@ -359,7 +309,9 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     Applicant Name:
                   </span>
                   <span className="font-semibold text-foreground">
-                    {submittedApp.fullName}
+                    {submittedApp.application?.formData?.fullName ||
+                      submittedApp.application?.applicant?.fullName ||
+                      submittedApp.fullName}
                   </span>
                 </div>
                 <div>
@@ -367,7 +319,10 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     Ward of Application:
                   </span>
                   <span className="font-semibold text-foreground">
-                    {submittedApp.ward || "Ward 7"}
+                    {submittedApp.application?.formData?.ward ||
+                      submittedApp.application?.ward ||
+                      submittedApp.ward ||
+                      "Ward 7"}
                   </span>
                 </div>
                 <div>
@@ -375,7 +330,9 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     Revenue Head:
                   </span>
                   <span className="font-semibold text-foreground">
-                    {submittedApp.revenueHead}
+                    {submittedApp.application?.service?.revenueHead ||
+                      submittedApp.application?.revenueHead ||
+                      submittedApp.revenueHead}
                   </span>
                 </div>
                 <div>
@@ -383,7 +340,12 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     Calculated Statutory Fee:
                   </span>
                   <span className="font-bold text-foreground">
-                    ₦{submittedApp.amount?.toLocaleString()}
+                    ₦
+                    {Number(
+                      submittedApp.application?.feeAmount ||
+                        submittedApp.invoice?.amount ||
+                        submittedApp.amount,
+                    )?.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -391,22 +353,77 @@ export default function ServiceDetailPage({ params }: PageProps) {
               <div className="border-t pt-3 flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5" />
-                  {new Date(submittedApp.createdAt).toLocaleDateString(
-                    "en-NG",
-                    {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}
+                  {new Date(
+                    submittedApp.application?.createdAt ||
+                      submittedApp.createdAt,
+                  ).toLocaleDateString("en-NG", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
                 <span className="font-mono text-[11px]">
-                  Ref: {submittedApp.id}
+                  Ref:{" "}
+                  {submittedApp.invoice?.invoiceNumber ||
+                    submittedApp.application?.applicationNumber ||
+                    submittedApp.id}
                 </span>
               </div>
             </div>
+
+            {/* Invoice Status */}
+            {submittedApp.invoice && (
+              <div className="bg-muted/20 border rounded-xl p-4 text-xs space-y-2">
+                <h5 className="font-bold text-foreground flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-primary" /> Invoice
+                  Information
+                </h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Invoice Number:
+                    </span>
+                    <span className="font-mono font-semibold text-sm">
+                      {submittedApp.invoice.invoiceNumber}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Payment Status:
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs font-semibold mt-0.5 ${
+                        submittedApp.invoice.paymentStatus === "paid"
+                          ? "bg-green-500/10 text-green-700 border-green-300"
+                          : "bg-amber-500/10 text-amber-700 border-amber-300"
+                      }`}
+                    >
+                      {submittedApp.invoice.paymentStatus}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Virtual Bank:
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {submittedApp.invoice.virtualBankName ||
+                        "Zenith Bank / Odeda Treasury"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Amount:
+                    </span>
+                    <span className="font-bold text-foreground">
+                      ₦{Number(submittedApp.invoice.amount)?.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Next Steps Guidance */}
             <div className="bg-muted/30 border rounded-xl p-4 text-xs space-y-2">
@@ -440,7 +457,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="gap-2">
-                <Link href="/dashboard/receipts">
+                <Link href={`/dashboard/receipts/${submittedApp.invoice?.id}`}>
                   <Receipt className="h-4 w-4" /> View Payment Receipts
                 </Link>
               </Button>

@@ -112,7 +112,7 @@ export default function ApplicationsPage() {
         if (app.createdById && app.createdById === currentUser.id) return true;
         if (userPhone && app.phone === userPhone) return true;
         if (userEmail && app.email === userEmail) return true;
-        if (userName && app.fullName.toLowerCase().includes(userName)) return true;
+        if (userName && app.fullName?.toLowerCase().includes(userName)) return true;
         return false;
       });
     }
@@ -122,10 +122,10 @@ export default function ApplicationsPage() {
   // Status Metrics
   const stats = React.useMemo(() => {
     const total = displayApplications.length;
-    const submitted = displayApplications.filter((a) => a.status.toLowerCase() === "submitted").length;
-    const underReview = displayApplications.filter((a) => a.status.toLowerCase().includes("review")).length;
-    const approved = displayApplications.filter((a) => a.status.toLowerCase() === "approved" || a.status.toLowerCase() === "completed").length;
-    const declined = displayApplications.filter((a) => a.status.toLowerCase() === "declined" || a.status.toLowerCase() === "rejected").length;
+    const submitted = displayApplications.filter((a) => a.status?.toLowerCase() === "submitted").length;
+    const underReview = displayApplications.filter((a) => a.status?.toLowerCase().includes("review")).length;
+    const approved = displayApplications.filter((a) => a.status?.toLowerCase() === "approved" || a.status?.toLowerCase() === "completed").length;
+    const declined = displayApplications.filter((a) => a.status?.toLowerCase() === "declined" || a.status?.toLowerCase() === "rejected").length;
     return { total, submitted, underReview, approved, declined };
   }, [displayApplications]);
 
@@ -177,7 +177,7 @@ export default function ApplicationsPage() {
     }
   };
 
-  const getStatusBadge = (status: ApplicationStatus) => {
+  const getStatusBadge = (status: string) => {
     const s = String(status).toLowerCase();
     if (s === "submitted") {
       return (
@@ -212,6 +212,46 @@ export default function ApplicationsPage() {
         {status}
       </Badge>
     );
+  };
+
+  // Helper function to get service name
+  const getServiceName = (app: Application) => {
+    return app.service?.name || app.serviceName || "Service";
+  };
+
+  // Helper function to get service category
+  const getServiceCategory = (app: Application) => {
+    return app.service?.category || app.category || "Service";
+  };
+
+  // Helper function to get revenue head
+  const getRevenueHead = (app: Application) => {
+    return app.service?.revenueHead || app.revenueHead || "";
+  };
+
+  // Helper function to get fee amount
+  const getFeeAmount = (app: Application) => {
+    return app.feeAmount || app.amount || 0;
+  };
+
+  // Helper function to get application number
+  const getApplicationNumber = (app: Application) => {
+    return app.applicationNumber || app.applicationNo || app.id;
+  };
+
+  // Helper function to get full name from formData
+  const getFullName = (app: Application) => {
+    if (app.fullName) return app.fullName;
+    if (app.formData?.fullName) return app.formData.fullName;
+    if (app.formData?.firstName && app.formData?.lastName) {
+      return `${app.formData.firstName} ${app.formData.lastName}`;
+    }
+    return "N/A";
+  };
+
+  // Helper function to get ward
+  const getWard = (app: Application) => {
+    return app.ward || app.formData?.ward || "Ward 7";
   };
 
   return (
@@ -383,28 +423,47 @@ export default function ApplicationsPage() {
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className="font-mono font-bold text-sm text-primary">
-                      {app.applicationNo}
+                      {getApplicationNumber(app)}
                     </span>
                     {getStatusBadge(app.status)}
                     <Badge variant="secondary" className="text-[10px] font-normal">
-                      {app.category || "Service"}
+                      {getServiceCategory(app)}
                     </Badge>
                     <span className="text-[11px] text-muted-foreground">
-                      Ward: <strong>{app.ward || "Ward 7"}</strong>
+                      Ward: <strong>{getWard(app)}</strong>
                     </span>
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-sm text-foreground">{app.serviceName}</h4>
+                    <h4 className="font-bold text-sm text-foreground">{getServiceName(app)}</h4>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
                       <span className="flex items-center gap-1">
                         <User className="h-3.5 w-3.5" />
-                        <strong className="text-foreground">{app.fullName}</strong>
+                        <strong className="text-foreground">{getFullName(app)}</strong>
                       </span>
-                      {app.phone && <span>• Phone: {app.phone}</span>}
-                      {app.nin && <span className="font-mono text-[11px]">NIN: {app.nin}</span>}
+                      {app.formData?.phone && <span>• Phone: {app.formData.phone}</span>}
+                      {app.formData?.nin && <span className="font-mono text-[11px]">NIN: {app.formData.nin}</span>}
                     </div>
                   </div>
+
+                  {/* Payment Status Indicator */}
+                  {app.invoice && (
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant="outline" 
+                        className={`text-[10px] ${
+                          app.invoice.paymentStatus === 'confirmed' 
+                            ? 'bg-emerald-500/10 text-emerald-700 border-emerald-300'
+                            : 'bg-amber-500/10 text-amber-700 border-amber-300'
+                        }`}
+                      >
+                        Payment: {app.invoice.paymentStatus}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground">
+                        ₦{Number(app.invoice.amount).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Decline reason notice banner if rejected */}
                   {isDeclined && app.declineReason && (
@@ -501,12 +560,12 @@ export default function ApplicationsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <DialogTitle className="text-lg font-black text-foreground">
-                      {selectedApp.serviceName}
+                      {getServiceName(selectedApp)}
                     </DialogTitle>
                     {getStatusBadge(selectedApp.status)}
                   </div>
                   <DialogDescription className="text-xs font-mono mt-0.5">
-                    Application No: {selectedApp.applicationNo} • Ref: {selectedApp.id}
+                    Application No: {getApplicationNumber(selectedApp)} • Ref: {selectedApp.id}
                   </DialogDescription>
                 </div>
 
@@ -515,7 +574,7 @@ export default function ApplicationsPage() {
                     Statutory Assessment
                   </span>
                   <span className="text-base font-black text-primary">
-                    ₦{(selectedApp.amount || selectedApp.feeAmount || 5000).toLocaleString()}
+                    ₦{Number(getFeeAmount(selectedApp)).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -543,36 +602,38 @@ export default function ApplicationsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                   <div>
                     <span className="text-muted-foreground text-[11px] block font-medium">Full Name:</span>
-                    <span className="font-semibold text-foreground">{selectedApp.fullName}</span>
+                    <span className="font-semibold text-foreground">{getFullName(selectedApp)}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[11px] block font-medium">Phone Number:</span>
-                    <span className="font-semibold text-foreground">{selectedApp.phone}</span>
+                    <span className="font-semibold text-foreground">{selectedApp.formData?.phone || "N/A"}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[11px] block font-medium">Ward of Residency:</span>
-                    <span className="font-semibold text-foreground">{selectedApp.ward || "Ward 7"}</span>
+                    <span className="font-semibold text-foreground">{getWard(selectedApp)}</span>
                   </div>
-                  <div className="sm:col-span-2">
-                    <span className="text-muted-foreground text-[11px] block font-medium">Address:</span>
-                    <span className="font-semibold text-foreground">{selectedApp.address}</span>
-                  </div>
-                  {selectedApp.email && (
+                  {selectedApp.formData?.address && (
+                    <div className="sm:col-span-2">
+                      <span className="text-muted-foreground text-[11px] block font-medium">Address:</span>
+                      <span className="font-semibold text-foreground">{selectedApp.formData.address}</span>
+                    </div>
+                  )}
+                  {selectedApp.formData?.email && (
                     <div>
                       <span className="text-muted-foreground text-[11px] block font-medium">Email:</span>
-                      <span className="font-semibold text-foreground">{selectedApp.email}</span>
+                      <span className="font-semibold text-foreground">{selectedApp.formData.email}</span>
                     </div>
                   )}
-                  {selectedApp.nin && (
+                  {selectedApp.formData?.nin && (
                     <div>
                       <span className="text-muted-foreground text-[11px] block font-medium">NIN:</span>
-                      <span className="font-mono font-semibold text-foreground">{selectedApp.nin}</span>
+                      <span className="font-mono font-semibold text-foreground">{selectedApp.formData.nin}</span>
                     </div>
                   )}
-                  {selectedApp.cacNumber && (
+                  {selectedApp.formData?.cacNumber && (
                     <div>
                       <span className="text-muted-foreground text-[11px] block font-medium">CAC Reg No:</span>
-                      <span className="font-mono font-semibold text-foreground">{selectedApp.cacNumber}</span>
+                      <span className="font-mono font-semibold text-foreground">{selectedApp.formData.cacNumber}</span>
                     </div>
                   )}
                 </div>
@@ -588,21 +649,61 @@ export default function ApplicationsPage() {
                 </div>
               )}
 
+              {/* Invoice Information */}
+              {selectedApp.invoice && (
+                <div className="border rounded-xl p-4 bg-blue-50/30 dark:bg-blue-950/20 space-y-2">
+                  <h5 className="font-bold text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5" /> Invoice Details
+                  </h5>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-muted-foreground text-[11px] block font-medium">Invoice Number:</span>
+                      <span className="font-mono font-semibold text-foreground">{selectedApp.invoice.invoiceNumber}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-[11px] block font-medium">Payment Status:</span>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-[10px] ${
+                          selectedApp.invoice.paymentStatus === 'confirmed' 
+                            ? 'bg-emerald-500/10 text-emerald-700 border-emerald-300'
+                            : 'bg-amber-500/10 text-amber-700 border-amber-300'
+                        }`}
+                      >
+                        {selectedApp.invoice.paymentStatus}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-[11px] block font-medium">Amount:</span>
+                      <span className="font-bold text-foreground">₦{Number(selectedApp.invoice.amount).toLocaleString()}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground text-[11px] block font-medium">Virtual Bank:</span>
+                      <span className="font-semibold text-foreground">{selectedApp.invoice.virtualBankName || "Zenith Bank / Odeda Treasury"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Dynamic Form Data Viewer */}
-              <div>
-                <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                  Application Parameters & Structured Data
-                </h5>
-                <FormDataViewer formData={selectedApp.formData} />
-              </div>
+              {selectedApp.formData && (
+                <div>
+                  <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                    Application Parameters & Structured Data
+                  </h5>
+                  <FormDataViewer formData={selectedApp.formData} />
+                </div>
+              )}
 
               {/* Uploaded Documents Viewer with Thumbnail & Lightbox Preview */}
-              <div>
-                <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                  Statutory Supporting Documents ({selectedApp.documents.length})
-                </h5>
-                <DocumentsViewer documents={selectedApp.documents} />
-              </div>
+              {selectedApp.applicationDocuments && selectedApp.applicationDocuments.length > 0 && (
+                <div>
+                  <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                    Statutory Supporting Documents ({selectedApp.applicationDocuments.length})
+                  </h5>
+                  <DocumentsViewer documents={selectedApp.applicationDocuments} />
+                </div>
+              )}
             </div>
 
             {/* Modal Footer Controls */}
@@ -617,7 +718,7 @@ export default function ApplicationsPage() {
               </Button>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {isAdmin && selectedApp.status.toLowerCase() === "submitted" && (
+                {isAdmin && selectedApp.status?.toLowerCase() === "submitted" && (
                   <Button
                     size="sm"
                     onClick={() => handleMoveToReview(selectedApp)}
@@ -628,7 +729,7 @@ export default function ApplicationsPage() {
                   </Button>
                 )}
 
-                {isAdmin && selectedApp.status.toLowerCase().includes("review") && (
+                {isAdmin && selectedApp.status?.toLowerCase().includes("review") && (
                   <>
                     <Button
                       size="sm"
@@ -649,8 +750,8 @@ export default function ApplicationsPage() {
                   </>
                 )}
 
-                {(selectedApp.status.toLowerCase() === "approved" ||
-                  selectedApp.status.toLowerCase() === "completed") && (
+                {(selectedApp.status?.toLowerCase() === "approved" ||
+                  selectedApp.status?.toLowerCase() === "completed") && (
                   <Button
                     size="sm"
                     onClick={() => setCertificateModalOpen(true)}
@@ -674,7 +775,7 @@ export default function ApplicationsPage() {
                 <AlertTriangle className="h-5 w-5" /> Decline Application
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Provide the specific statutory reason for declining {selectedApp.applicationNo} (Applicant: {selectedApp.fullName}).
+                Provide the specific statutory reason for declining {getApplicationNumber(selectedApp)} (Applicant: {getFullName(selectedApp)}).
               </DialogDescription>
             </DialogHeader>
 
@@ -741,13 +842,13 @@ export default function ApplicationsPage() {
                   This is to certify that
                 </span>
                 <h3 className="text-2xl font-black text-foreground">
-                  {selectedApp.fullName}
+                  {getFullName(selectedApp)}
                 </h3>
                 <p className="text-xs text-muted-foreground max-w-md mx-auto">
                   Has fulfilled all statutory conditions, documentation verifications, and bye-law requirements for
                 </p>
                 <h4 className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400">
-                  {selectedApp.serviceName}
+                  {getServiceName(selectedApp)}
                 </h4>
               </div>
 
@@ -755,12 +856,12 @@ export default function ApplicationsPage() {
                 <div>
                   <span className="text-[10px] text-muted-foreground block font-medium">Certificate No:</span>
                   <span className="font-mono font-bold text-foreground">
-                    {selectedApp.certificateNumber || `ODE/CERT/2026/${selectedApp.id}`}
+                    {selectedApp.certificateNumber || `ODE/CERT/2026/${selectedApp.id.slice(0, 8)}`}
                   </span>
                 </div>
                 <div>
                   <span className="text-[10px] text-muted-foreground block font-medium">Ward Domain:</span>
-                  <span className="font-semibold text-foreground">{selectedApp.ward || "Ward 7"}</span>
+                  <span className="font-semibold text-foreground">{getWard(selectedApp)}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-muted-foreground block font-medium">Issued Date:</span>
