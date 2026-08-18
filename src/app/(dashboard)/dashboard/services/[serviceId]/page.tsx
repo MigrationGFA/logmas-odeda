@@ -1,9 +1,18 @@
 "use client";
 
 import React, { useState, use } from "react";
-import { getOdedaServiceById, getConfiguredFeeForService } from "@/config/odedaServices";
+import {
+  getOdedaServiceById,
+  getConfiguredFeeForService,
+} from "@/config/odedaServices";
 import { PageHeader } from "@/components/dashboard/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -40,6 +49,7 @@ import ViewingCentreLicenceForm from "@/components/services/forms/ViewingCentreL
 import QuarryPermitForm from "@/components/services/forms/QuarryPermitForm";
 import StreetNamingForm from "@/components/services/forms/StreetNamingForm";
 import KioskLicenceForm from "@/components/services/forms/KioskLicenceForm";
+import { useServices } from "@/hooks/queries/useServices";
 
 interface PageProps {
   params: Promise<{ serviceId: string }>;
@@ -49,7 +59,13 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const serviceId = resolvedParams.serviceId;
   const router = useRouter();
-  const service = getOdedaServiceById(serviceId);
+
+  const { useGetServiceBySlug } = useServices();
+  const {
+    data: service,
+    isLoading: isServiceLoading,
+    error,
+  } = useGetServiceBySlug(serviceId);
 
   const currentUser = tokenManager.getUser();
   const userRole = currentUser?.role || "citizen";
@@ -57,6 +73,53 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
   const submitApplicationMutation = useSubmitApplication();
   const [submittedApp, setSubmittedApp] = useState<Application | null>(null);
+
+  // Loading UI
+  if (isServiceLoading) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto py-6 px-4">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm text-muted-foreground">
+            Loading service details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error UI
+  if (error) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto py-6 px-4">
+        <PageHeader
+          title="Error Loading Service"
+          subtitle="There was a problem loading the service details. Please try again."
+        />
+        <Button asChild variant="outline" onClick={() => router.refresh()}>
+          <Link href="/dashboard/services">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Services Catalogue
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (!service) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto py-6 px-4">
+        <PageHeader
+          title="Service Not Found"
+          subtitle="The requested Odeda LGA service could not be found."
+        />
+        <Button asChild variant="outline">
+          <Link href="/dashboard/services">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Services Catalogue
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   // Initialize applicant profile snapshot based on role
   const initialApplicant: ApplicantSnapshot = {
@@ -75,22 +138,6 @@ export default function ServiceDetailPage({ params }: PageProps) {
     applicantId: currentUser?.id || null,
     isRegistered: !!currentUser?.id,
   };
-
-  if (!service) {
-    return (
-      <div className="space-y-6 max-w-5xl mx-auto py-6 px-4">
-        <PageHeader
-          title="Service Not Found"
-          subtitle="The requested Odeda LGA service could not be found."
-        />
-        <Button asChild variant="outline">
-          <Link href="/dashboard/services">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Services Catalogue
-          </Link>
-        </Button>
-      </div>
-    );
-  }
 
   const handleSubmit = async (payload: any) => {
     let applicant: ApplicantSnapshot = initialApplicant;
@@ -120,7 +167,11 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
       applicant = {
         fullName: fallbackName,
-        phone: formData.phone || formData.phoneNo || initialApplicant.phone || "08012345678",
+        phone:
+          formData.phone ||
+          formData.phoneNo ||
+          initialApplicant.phone ||
+          "08012345678",
         email: formData.email || initialApplicant.email || "",
         address:
           formData.address ||
@@ -136,40 +187,60 @@ export default function ServiceDetailPage({ params }: PageProps) {
       };
     }
 
-    try {
-      // Construct clean submission data without sending feeAmount!
-      const res = await submitApplicationMutation.mutateAsync({
-        serviceId: service.id,
-        fullName: applicant.fullName || "Applicant",
-        phone: applicant.phone || "08012345678",
-        email: applicant.email || undefined,
-        address: applicant.address || "Odeda Local Government Area",
-        ward: applicant.ward || "Ward 7 (Itesi / Camp)",
-        nin: applicant.nin || undefined,
-        cacNumber: applicant.cacNumber || undefined,
-        applicantId: applicant.applicantId || undefined,
-        formData,
-        files,
-      });
+    console.log("Submitting application with payload:", {
+      applicant,
+      formData,
+      files,
+    });
 
-      setSubmittedApp(res);
-    } catch (err) {
-      console.error("Submission failed:", err);
-    }
+    // try {
+    //   // Construct clean submission data
+    //   const res = await submitApplicationMutation.mutateAsync({
+    //     serviceId: service.id,
+    //     serviceCode: service.code,
+    //     serviceName: service.name,
+    //     revenueHead: service.revenueHead,
+    //     fullName: applicant.fullName || "Applicant",
+    //     phone: applicant.phone || "08012345678",
+    //     email: applicant.email || undefined,
+    //     address: applicant.address || "Odeda Local Government Area",
+    //     ward: applicant.ward || "Ward 7 (Itesi / Camp)",
+    //     nin: applicant.nin || undefined,
+    //     cacNumber: applicant.cacNumber || undefined,
+    //     applicantId: applicant.applicantId || undefined,
+    //     formData,
+    //     files,
+    //   });
+
+    //   setSubmittedApp(res);
+    // } catch (err) {
+    //   console.error("Submission failed:", err);
+    // }
   };
 
-  const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
+  // Get fee from service data
+  const currentFee = service.feeConfig?.amount
+    ? parseFloat(service.feeConfig.amount)
+    : service.defaultFee || 0;
+
+  // Get requirements from service data
+  const serviceRequirements = service.requirements || [];
 
   const renderForm = () => {
     const commonProps = {
       service,
       onSubmit: handleSubmit,
       isSubmitting: submitApplicationMutation.isPending,
-      mode: (isFieldOfficer ? "field_officer" : userRole === "business_owner" ? "business_owner" : "citizen") as any,
+      mode: (isFieldOfficer
+        ? "field_officer"
+        : userRole === "business_owner"
+          ? "business_owner"
+          : "citizen") as any,
       initialApplicant,
     };
 
-    switch (service.id) {
+    // Map service code to appropriate form component
+    switch (service.code) {
       case "certificate_of_origin":
         return <CertificateOfOriginForm {...commonProps} />;
       case "club_registration":
@@ -202,7 +273,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-4 sm:py-6 px-3 sm:px-6">
       {/* Top Breadcrumb & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
             <Link
@@ -212,7 +283,9 @@ export default function ServiceDetailPage({ params }: PageProps) {
               <ArrowLeft className="h-3 w-3" /> Services Catalogue
             </Link>
             <span>/</span>
-            <span className="text-foreground font-medium">{service.category}</span>
+            <span className="text-foreground font-medium">
+              {service.category}
+            </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
             {service.name}
@@ -231,8 +304,13 @@ export default function ServiceDetailPage({ params }: PageProps) {
               ₦{currentFee.toLocaleString()}
             </span>
           </div>
-          <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
-            {service.timeline}
+          <Badge
+            variant="outline"
+            className="text-xs bg-primary/5 text-primary border-primary/20"
+          >
+            {service.estimatedDays
+              ? `${service.estimatedDays} days`
+              : "3-5 days"}
           </Badge>
         </div>
       </div>
@@ -248,7 +326,8 @@ export default function ServiceDetailPage({ params }: PageProps) {
               Statutory Application Submitted!
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm max-w-lg mx-auto">
-              Your application for <strong>{service.name}</strong> has been transmitted to Odeda Local Government Authority.
+              Your application for <strong>{service.name}</strong> has been
+              transmitted to Odeda Local Government Authority.
             </CardDescription>
           </CardHeader>
 
@@ -257,47 +336,75 @@ export default function ServiceDetailPage({ params }: PageProps) {
             <div className="bg-background border rounded-xl p-4 sm:p-5 space-y-4 shadow-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Application Number:</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Application Number:
+                  </span>
                   <span className="font-mono font-bold text-sm text-primary">
                     {submittedApp.applicationNo}
                   </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Status:</span>
-                  <Badge variant="outline" className="bg-amber-500/10 text-amber-700 text-xs border-amber-300 font-semibold mt-0.5">
+                  <span className="text-muted-foreground block text-[11px]">
+                    Status:
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-500/10 text-amber-700 text-xs border-amber-300 font-semibold mt-0.5"
+                  >
                     {submittedApp.status}
                   </Badge>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Applicant Name:</span>
-                  <span className="font-semibold text-foreground">{submittedApp.fullName}</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Applicant Name:
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {submittedApp.fullName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Ward of Application:</span>
-                  <span className="font-semibold text-foreground">{submittedApp.ward || "Ward 7"}</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Ward of Application:
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {submittedApp.ward || "Ward 7"}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Revenue Head:</span>
-                  <span className="font-semibold text-foreground">{submittedApp.revenueHead}</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Revenue Head:
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {submittedApp.revenueHead}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Calculated Statutory Fee:</span>
-                  <span className="font-bold text-foreground">₦{submittedApp.amount?.toLocaleString()}</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Calculated Statutory Fee:
+                  </span>
+                  <span className="font-bold text-foreground">
+                    ₦{submittedApp.amount?.toLocaleString()}
+                  </span>
                 </div>
               </div>
 
               <div className="border-t pt-3 flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5" />
-                  {new Date(submittedApp.createdAt).toLocaleDateString("en-NG", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {new Date(submittedApp.createdAt).toLocaleDateString(
+                    "en-NG",
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
                 </span>
-                <span className="font-mono text-[11px]">Ref: {submittedApp.id}</span>
+                <span className="font-mono text-[11px]">
+                  Ref: {submittedApp.id}
+                </span>
               </div>
             </div>
 
@@ -307,15 +414,27 @@ export default function ServiceDetailPage({ params }: PageProps) {
                 <Clock className="h-4 w-4 text-primary" /> What happens next?
               </h5>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground leading-relaxed pl-1">
-                <li>Odeda LGA Desk Officers will examine your documents against traditional council and departmental records.</li>
-                <li>You will receive SMS/dashboard updates if any additional inspections or verification are required.</li>
-                <li>Upon approval by the Executive Chairman, your official statutory certificate/licence will be generated.</li>
+                <li>
+                  Odeda LGA Desk Officers will examine your documents against
+                  traditional council and departmental records.
+                </li>
+                <li>
+                  You will receive SMS/dashboard updates if any additional
+                  inspections or verification are required.
+                </li>
+                <li>
+                  Upon approval by the Executive Chairman, your official
+                  statutory certificate/licence will be generated.
+                </li>
               </ol>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-              <Button asChild className="gap-2 bg-primary text-primary-foreground font-semibold">
+              <Button
+                asChild
+                className="gap-2 bg-primary text-primary-foreground font-semibold"
+              >
                 <Link href="/dashboard/applications">
                   <FileText className="h-4 w-4" /> View in My Applications
                 </Link>

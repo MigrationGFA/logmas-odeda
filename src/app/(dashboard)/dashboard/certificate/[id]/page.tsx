@@ -4,7 +4,7 @@ import { Printer, ArrowLeft, ShieldCheck, Loader2, FileQuestion, AlertCircle } f
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { QRCodeSVG } from "@/components/dashboard/qr-code";
-import { useGetCertificateData } from "@/hooks/queries/useStateOfOrigin";
+import { useGetCertificateData } from "@/hooks/queries/useServices";
 import React from "react";
 import Link from "next/link";
 

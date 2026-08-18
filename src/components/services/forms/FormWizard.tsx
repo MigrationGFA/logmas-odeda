@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Check, ChevronRight, ArrowLeft, ArrowRight, Shield, AlertCircle } from "lucide-react";
+import { Check, ChevronRight, ArrowLeft, ArrowRight, Shield, AlertCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
@@ -46,7 +46,15 @@ export function FormWizard({
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === steps.length - 1;
   const activeStep = steps[currentStepIndex];
-  const feeToDisplay = currentFee !== undefined ? currentFee : (getConfiguredFeeForService(service.id) || service.defaultFee);
+  
+  // Get fee from service data
+  const feeToDisplay = currentFee !== undefined 
+    ? currentFee 
+    : (service.feeConfig?.amount ? parseFloat(service.feeConfig.amount) : service.defaultFee || 0);
+
+  // Get requirements from service
+  const requirements = service.requirements || [];
+  const estimatedDays = service.estimatedDays || 3;
 
   return (
     <div className="space-y-6">
@@ -60,11 +68,26 @@ export function FormWizard({
             <span className="text-xs text-muted-foreground">
               {service.revenueHead}
             </span>
+            {service.certificateType && (
+              <span className="text-xs bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded">
+                {service.certificateType.replace('_', ' ')}
+              </span>
+            )}
           </div>
           <h3 className="font-bold text-lg text-foreground">{service.name}</h3>
           <p className="text-xs text-muted-foreground max-w-xl">
-            {service.feeDescription} • Official Statutory Portal
+            {service.description || service.feeDescription || "Official Statutory Portal"}
           </p>
+          <div className="flex flex-wrap gap-2 mt-1">
+            <span className="text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded">
+              {estimatedDays} days processing
+            </span>
+            {service.supportsRenewal && (
+              <span className="text-xs bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded">
+                Renewable
+              </span>
+            )}
+          </div>
         </div>
         <div className="bg-background/80 backdrop-blur-sm border border-primary/20 p-3 rounded-lg text-right sm:text-right shrink-0">
           <span className="text-[11px] uppercase tracking-wider text-muted-foreground block font-medium">
@@ -73,6 +96,11 @@ export function FormWizard({
           <span className="text-xl font-extrabold text-primary">
             ₦{feeToDisplay.toLocaleString()}
           </span>
+          {service.feeConfig?.status && (
+            <span className="text-[10px] text-muted-foreground block mt-0.5">
+              {service.feeConfig.status}
+            </span>
+          )}
         </div>
       </div>
 
@@ -149,6 +177,18 @@ export function FormWizard({
           {children}
         </div>
 
+        {/* Required Documents Summary */}
+        {currentStepIndex < steps.length - 1 && service.requirements && service.requirements.length > 0 && (
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-blue-500" />
+            <span className="text-xs text-muted-foreground">
+              Required documents: {service.requirements.map(req => 
+                req.replace('_', ' ').toUpperCase()
+              ).join(', ')}
+            </span>
+          </div>
+        )}
+
         {/* Wizard Navigation Footer */}
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2">
           {!isFirstStep ? (
@@ -170,7 +210,7 @@ export function FormWizard({
             <Button
               type="button"
               onClick={onNext}
-              disabled={!isStepValid}
+              disabled={!isStepValid || isSubmitting}
               className="w-full sm:w-auto gap-2 bg-primary text-primary-foreground ml-auto"
             >
               Next: {steps[currentStepIndex + 1]?.shortTitle || steps[currentStepIndex + 1]?.title || "Continue"}

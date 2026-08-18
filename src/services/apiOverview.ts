@@ -256,228 +256,10 @@ export type MetricsByRole<T extends Role> = T extends "citizen"
               ? FieldOfficerMetrics
               : DefaultMetrics;
 
-import { tokenManager } from "./apiAuth";
-
-function getMockDashboardOverview(): DashboardOverviewResponse {
-  const user = tokenManager.getUser();
-  const role = (user?.role || "super_admin") as Role;
-
-  const defaultRevenueTrend = [
-    { date: "Jan", amount: 1800000 },
-    { date: "Feb", amount: 2200000 },
-    { date: "Mar", amount: 2100000 },
-    { date: "Apr", amount: 2500000 },
-    { date: "May", amount: 3800000 },
-  ];
-
-  const defaultCategoryBreakdown = [
-    { category: "Market Tolls & Levies", amount: 4500000 },
-    { category: "Building Approvals", amount: 3200000 },
-    { category: "Business Trade Permits", amount: 2800000 },
-    { category: "Solid Minerals / Haulage", amount: 1950000 },
-  ];
-
-  if (role === "citizen") {
-    return {
-      success: true,
-      role: "citizen",
-      invoices: [],
-      receipts: [],
-      officers: [],
-      revenueTrend: [],
-      revenueTrendChart: [],
-      categoryBreakdown: [],
-      metrics: {
-        pendingPayments: 0,
-        approvedApplications: 2,
-        openComplaints: 0,
-        recentApplications: [
-          { id: "soo-001", status: "approved", createdAt: "2026-08-01" },
-        ],
-      } as unknown as DashboardMetrics["metrics"],
-    };
-  }
-
-  if (role === "business_owner") {
-    return {
-      success: true,
-      role: "business_owner",
-      invoices: [],
-      receipts: [],
-      officers: [],
-      revenueTrend: [],
-      revenueTrendChart: [],
-      categoryBreakdown: [],
-      metrics: {
-        activeNotices: 1,
-        totalPaid: 120000,
-        outstanding: 25000,
-        activePermits: 2,
-      } as unknown as DashboardMetrics["metrics"],
-      recentInvoices: [
-        { reference: "INV-BIZ-201", amount: 25000, customerName: "Bola Enterprises", status: "Active" },
-      ],
-    };
-  }
-
-  if (role === "ward_councillor") {
-    return {
-      success: true,
-      role: "ward_councillor",
-      invoices: [],
-      receipts: [],
-      officers: [],
-      revenueTrend: [],
-      revenueTrendChart: [],
-      categoryBreakdown: [],
-      applications: [
-        { id: "app-1", applicant: "Kehinde Adeyemi", ward: "Ward 1 (Odeda Secretariat)", status: "pending" },
-        { id: "app-2", applicant: "Chinedu Okafor", ward: "Ward 1 (Odeda Secretariat)", status: "approved" },
-      ],
-      metrics: {
-        totalConstituents: 14200,
-        pendingApprovals: 3,
-        approvedSOO: 48,
-        totalComplaints: 2,
-      } as unknown as DashboardMetrics["metrics"],
-    };
-  }
-
-  if (role === "auditor") {
-    return {
-      success: true,
-      role: "auditor",
-      invoices: [],
-      receipts: [],
-      officers: [],
-      revenueTrend: [],
-      revenueTrendChart: defaultRevenueTrend,
-      categoryBreakdown: defaultCategoryBreakdown,
-      anomalies: [
-        { id: "anom-1", reference: "INV-2026-092", customerName: "Odeda Granite Quarry", amount: 450000 },
-      ],
-      highValueTransactions: [
-        { id: "hvt-1", receiptNumber: "REC-884920", customerName: "Osiele Modern Market Co.", levyType: "Trade Permit", paymentMethod: "Digital Transfer", amount: 250000 },
-      ],
-      recentAudits: [
-        { id: "aud-1", action: "Receipt Audit Verified", target: "REC-884920", actor: "Folake Auditor", actorRole: "auditor", createdAt: "2026-08-05T14:20:00Z" },
-      ],
-      metrics: {
-        totalCollected: 12450000,
-        outstanding: 1450000,
-        receiptsAudited: 284,
-        auditEvents: 42,
-        permitsIssued: 310,
-        permitsPending: 15,
-        cashShare: 35,
-        activeOfficers: 12,
-        cashCollected: 4350000,
-        digitalCollected: 8100000,
-      } as unknown as DashboardMetrics["metrics"],
-    };
-  }
-
-  if (role === "treasurer") {
-    return {
-      success: true,
-      role: "treasurer",
-      invoices: [],
-      receipts: [],
-      officers: [],
-      revenueTrend: [],
-      revenueTrendChart: defaultRevenueTrend,
-      categoryBreakdown: defaultCategoryBreakdown,
-      metrics: {
-        totalRevenue: 12450000,
-        pendingAmount: 1450000,
-        activeOfficers: 14,
-        transactionCount: 382,
-      } as unknown as DashboardMetrics["metrics"],
-    };
-  }
-
-  if (role === "field_officer") {
-    return {
-      success: true,
-      role: "field_officer",
-      invoices: [],
-      receipts: [],
-      officers: [],
-      revenueTrend: [],
-      revenueTrendChart: [],
-      categoryBreakdown: [],
-      recentInvoices: [
-        { reference: "INV-FO-101", amount: 15000, customerName: "Odeda Central Store", status: "Active" },
-        { reference: "INV-FO-102", amount: 25000, customerName: "Osiele Agro Processing", status: "Active" },
-      ],
-      metrics: {
-        totalInvoicesGenerated: 64,
-        totalCollected: 840000,
-        pendingCount: 5,
-        overdueCount: 2,
-        channelBreakdown: { cash: 240000, pos: 350000, online: 150000, transfer: 100000 },
-      } as unknown as DashboardMetrics["metrics"],
-    };
-  }
-
-  if (role === "contractor" || role === "agent") {
-    return {
-      success: true,
-      role: "contractor",
-      invoices: [
-        { id: "inv-1", invoiceNumber: "INV-OD-001", status: "paid", amount: 85000, balanceDue: 0, customerName: "Camp/FUNAAB Retail Center", createdAt: "2026-08-01" },
-        { id: "inv-2", invoiceNumber: "INV-OD-002", status: "unpaid", amount: 45000, balanceDue: 45000, customerName: "Osiele Timber Hub", createdAt: "2026-08-03" },
-      ],
-      receipts: [
-        { id: "rec-1", invoiceId: "inv-1", amount: 85000, createdAt: "2026-08-01" },
-      ],
-      officers: [
-        { id: "off-1", name: "Tunji Field", phone: "08055556666", status: "active" },
-      ],
-      revenueTrend: [
-        { month: "Jan", amount: 350000 },
-        { month: "Feb", amount: 480000 },
-        { month: "Mar", amount: 520000 },
-      ],
-      revenueTrendChart: defaultRevenueTrend,
-      categoryBreakdown: defaultCategoryBreakdown,
-      metrics: {
-        totalRevenue: 1350000,
-        activePermits: 12,
-        overdueInvoices: 2,
-        wardCoverage: 4,
-      } as unknown as DashboardMetrics["metrics"],
-    };
-  }
-
-  return {
-    success: true,
-    role: role,
-    invoices: [],
-    receipts: [],
-    officers: [],
-    revenueTrend: [],
-    revenueTrendChart: defaultRevenueTrend,
-    categoryBreakdown: defaultCategoryBreakdown,
-    metrics: {
-      totalRevenue: 12450000,
-      activePermits: 412,
-      overdueInvoices: 18,
-      wardCoverage: 10,
-    } as unknown as DashboardMetrics["metrics"],
-  };
-}
-
 // Service functions
 export const overviewService = {
   // Get dashboard overview for current user
-  getDashboardOverview: async (): Promise<DashboardOverviewResponse> => {
-    try {
-      return await api.get<DashboardOverviewResponse>("/dashboard/overview");
-    } catch {
-      return getMockDashboardOverview();
-    }
-  },
+  getDashboardOverview: () => api.get<DashboardOverviewResponse>("/dashboard/overview"),
 
   // Type-safe getter for specific role
   getOverviewForRole: async <T extends Role>(
@@ -487,24 +269,15 @@ export const overviewService = {
     role: T;
     metrics: MetricsByRole<T>;
   }> => {
-    try {
-      const response = await api.get<DashboardOverviewResponse>("/dashboard/overview");
-      if (response.role !== role) {
-        throw new Error(`Role mismatch: expected ${role}, got ${response.role}`);
-      }
-      return response as unknown as {
-        success: boolean;
-        role: T;
-        metrics: MetricsByRole<T>;
-      };
-    } catch {
-      const mock = getMockDashboardOverview();
-      return {
-        success: true,
-        role: role,
-        metrics: mock.metrics as unknown as MetricsByRole<T>,
-      };
+    const response = await api.get<DashboardOverviewResponse>("/dashboard/overview");
+    if (response.role !== role) {
+      throw new Error(`Role mismatch: expected ${role}, got ${response.role}`);
     }
+    return response as unknown as {
+      success: boolean;
+      role: T;
+      metrics: MetricsByRole<T>;
+    };
   },
 };
 

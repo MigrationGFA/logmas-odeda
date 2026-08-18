@@ -42,11 +42,13 @@ function LoginPage() {
   };
 
   const searchParams = useSearchParams();
-  const reason = searchParams.get('reason');
+  const reason = searchParams.get("reason");
 
   useEffect(() => {
-    if (reason === 'suspended') {
-      toast.error('Your account has been suspended. Please contact the LGA Secretariat.');
+    if (reason === "suspended") {
+      toast.error(
+        "Your account has been suspended. Please contact the LGA Secretariat.",
+      );
     }
   }, [reason]);
 
@@ -232,6 +234,7 @@ function LoginPage() {
             </Link>
           </p>
 
+          {process.env.NODE_ENV === "development" && (
             <Card className="p-4 bg-secondary/40 border-border/40">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs font-semibold uppercase tracking-wider">
@@ -254,6 +257,7 @@ function LoginPage() {
                 ))}
               </div>
             </Card>
+          )}
         </div>
       </div>
     </div>

@@ -33,6 +33,7 @@ import {
   MapPin,
   Building2,
   Phone,
+  FileBadge,
 } from "lucide-react";
 import { QuickActions } from "@/components/dashboard/DashboardWidgets";
 import {

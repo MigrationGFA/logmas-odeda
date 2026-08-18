@@ -84,7 +84,7 @@ export interface Application {
   formData: Record<string, any>;
 
   // Uploaded documents
-  documents: ApplicationDocument[];
+  applicationDocuments: ApplicationDocument[];
 
   // Review & Admin Decision Fields
   declineReason?: string | null;

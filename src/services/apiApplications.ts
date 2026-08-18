@@ -19,7 +19,7 @@ import { getStoreSnapshot } from "@/lib/store";
 import { getOdedaServiceById, getConfiguredFeeForService } from "@/config/odedaServices";
 
 // Helper to normalize an application from backend or local storage
-function normalizeApplication(raw: any): Application {
+function normalizeApplication(raw: any): any {
   if (!raw) return raw;
   const service = getOdedaServiceById(raw.serviceId || "");
   const serviceName = raw.serviceName || service?.name || "Odeda LGA Statutory Service";
@@ -47,8 +47,8 @@ function normalizeApplication(raw: any): Application {
   const detailsObj = raw.formData || raw.details || {};
 
   // Normalize documents
-  const docs = Array.isArray(raw.documents)
-    ? raw.documents.map((d: any) => ({
+  const docs = Array.isArray(raw.applicationDocuments)
+    ? raw.applicationDocuments.map((d: any) => ({
         id: d.id || d._id || d.documentType,
         documentType: d.documentType || d.type || d.name?.split("_")[0] || "document",
         name: d.name || d.fileName || d.originalName || "document.pdf",
@@ -234,6 +234,8 @@ export const apiApplications = {
       } else if (res && Array.isArray(res.applications)) {
         list = res.applications;
       }
+
+      console.log("list",list)
 
       if (list.length > 0) {
         const normalized = list.map(normalizeApplication);

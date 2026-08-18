@@ -29,10 +29,10 @@ import {
   Send,
   FileText,
 } from "lucide-react";
-import { Application } from "@/services/apiStateOfOrigin";
+import { Application } from "@/services/apiServices";
 import { format } from "date-fns";
-import { useAdminStateOfOrigin } from "@/hooks/queries/useStateOfOrigin";
-import { useCouncillorStateOfOrigin } from "@/hooks/queries/useStateOfOrigin";
+import { useAdminStateOfOrigin } from "@/hooks/queries/useServices";
+import { useCouncillorStateOfOrigin } from "@/hooks/queries/useServices";
 import { tokenManager } from "@/services/apiAuth";
 import Link from "next/link";
 import { useStaffManagement } from "@/hooks/queries/useLgaAdmin";
