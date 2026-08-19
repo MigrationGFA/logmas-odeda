@@ -67,7 +67,7 @@ export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
   const [open, setOpen] = useState(false);
   const { createStaffAsync, isCreating } = useStaffManagement();
   const { data: wardsData } = useGetWards({ limit: 100 });
-  const wardList = wardsData || [];
+  const wardList = wardsData ?? [];
 
   const {
     register,
@@ -207,11 +207,11 @@ export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="l">None</SelectItem>
-                    {wardList.map((ward) => (
+                    {/* {wardList?.map((ward) => (
                       <SelectItem key={ward.id} value={ward.id}>
                         {ward.name}
                       </SelectItem>
-                    ))}
+                    ))} */}
                   </SelectContent>
                 </Select>
                 {errors.wardId && (

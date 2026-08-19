@@ -493,7 +493,7 @@ export default function ApplicationsPage() {
                     </Button>
                   )}
 
-                  {isAdmin && isUnderReview && (
+                  {/* {isAdmin && isUnderReview && (
                     <>
                       <Button
                         size="sm"
@@ -516,7 +516,7 @@ export default function ApplicationsPage() {
                         Decline
                       </Button>
                     </>
-                  )}
+                  )} */}
 
                   {/* Certificate button if approved */}
                   {isApproved && (

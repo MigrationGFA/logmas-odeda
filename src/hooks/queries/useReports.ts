@@ -24,33 +24,50 @@ export function useReportsOverview(params?: { from?: string; to?: string }) {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  const data = response;
+  // Extract data from response
+  const data = response || response; // Handle both response formats
   const stats = data?.stats;
-  const byLevy = data?.byLevy || [];
-  const byOfficer = data?.byOfficer || [];
-  const byServiceType = data?.byServiceType || [];
+  const byService = data?.byService || [];
   const invoices = data?.invoices || [];
   const receipts = data?.receipts || [];
   const period = data?.period;
+
+  // Calculate byServiceType from byService (if needed for backward compatibility)
+  const byServiceType = byService.map((service) => ({
+    type: service.code || service.id,
+    label: service.name,
+    transactions: service.transactions,
+    revenue: service.revenue,
+  }));
+
+  // Calculate byMethod from stats
+  const byMethod = stats?.byMethod || {
+    transfer: 0,
+    pos: 0,
+    cash: 0,
+    online: 0,
+  };
 
   // Calculate totals for summary
   const totalRevenue = stats?.totalRevenue || 0;
   const totalInvoices = invoices.length;
   const totalReceipts = receipts.length;
   
-  // Get top performing officer
-  const topOfficer = byOfficer[0];
+  // Get top performing service
+  const topService = byService[0];
   
-  // Get top levy category
-  const topLevy = byLevy[0];
+  // Get top revenue method
+  const topMethod = Object.entries(byMethod)
+    .sort((a, b) => b[1] - a[1])
+    .map(([key, value]) => ({ method: key, revenue: value }))[0];
 
   return {
     // Raw data
     data,
     stats,
-    byLevy,
-    byOfficer,
-    byServiceType,
+    byService, // Main service breakdown
+    byServiceType, // For backward compatibility
+    byMethod, // Payment method breakdown
     invoices,
     receipts,
     period,
@@ -59,8 +76,8 @@ export function useReportsOverview(params?: { from?: string; to?: string }) {
     totalRevenue,
     totalInvoices,
     totalReceipts,
-    topOfficer,
-    topLevy,
+    topService,
+    topMethod,
     
     // Status
     isLoading,

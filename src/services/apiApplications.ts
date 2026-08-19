@@ -234,13 +234,13 @@ getApplicationById: async (id: string): Promise<Application> => {
     const actorRole = user?.role || "lga_admin";
 
     try {
-      const res = await api.patch<any>(`/applications/${id}/under-review`, {
+      const res = await api.patch<any>(`/applications/admin/${id}/under-review`, {
         notes,
       });
-      if (res) return normalizeApplication(res);
+      if (res) return res;
     } catch (err) {
       try {
-        const res2 = await api.post<any>(`/applications/${id}/under-review`, {
+        const res2 = await api.post<any>(`/applications/admin/${id}/under-review`, {
           notes,
         });
         if (res2) return normalizeApplication(res2);
@@ -274,13 +274,13 @@ getApplicationById: async (id: string): Promise<Application> => {
     const actorRole = user?.role || "lga_admin";
 
     try {
-      const res = await api.patch<any>(`/applications/${id}/approve`, {
+      const res = await api.patch<any>(`/applications/admin/${id}/approve`, {
         notes,
       });
       if (res) return normalizeApplication(res);
     } catch (err) {
       try {
-        const res2 = await api.post<any>(`/applications/${id}/approve`, {
+        const res2 = await api.post<any>(`/applications/admin /${id}/approve`, {
           notes,
         });
         if (res2) return normalizeApplication(res2);
@@ -328,13 +328,13 @@ getApplicationById: async (id: string): Promise<Application> => {
     const actorRole = user?.role || "lga_admin";
 
     try {
-      const res = await api.patch<any>(`/applications/${id}/decline`, {
+      const res = await api.patch<any>(`/applications/admin/${id}/decline`, {
         declineReason,
       });
       if (res) return normalizeApplication(res);
     } catch (err) {
       try {
-        const res2 = await api.post<any>(`/applications/${id}/decline`, {
+        const res2 = await api.post<any>(`/applications/admin/${id}/decline`, {
           declineReason,
         });
         if (res2) return normalizeApplication(res2);

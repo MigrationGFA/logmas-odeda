@@ -140,7 +140,7 @@ export default function ServicesPage() {
                   </div>
                   <div className="flex justify-between text-muted-foreground font-medium">
                     <span>Configured Fee:</span>
-                    <span className="text-foreground font-bold">₦{getConfiguredFeeForService(service.id).toLocaleString()}</span>
+                    <span className="text-foreground font-bold">₦{service?.feeConfig?.amount?.toLocaleString() ?? 0}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground items-center pt-1">
                     <span className="flex items-center gap-1 text-[11px]">
