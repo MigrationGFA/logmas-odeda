@@ -205,7 +205,7 @@ export default function FieldOfficersPage() {
                   </TableCell>
                   <TableCell>{officer.ward}</TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                    {/* <div className="flex flex-wrap gap-1">
                       {officer.levies.slice(0, 2).map((levy: string) => (
                         <Badge key={levy} variant="outline" className="text-[10px]">
                           {levy.replace(/_/g, ' ')}
@@ -216,11 +216,11 @@ export default function FieldOfficersPage() {
                           +{officer.levies.length - 2}
                         </Badge>
                       )}
-                    </div>
+                    </div> */}
                   </TableCell>
                   <TableCell className="font-mono text-sm">{officer.invoicesIssued}</TableCell>
                   <TableCell className="font-mono text-sm">
-                    ₦{officer.totalCollected.toLocaleString()}
+                    {/* ₦{officer.totalCollected.toLocaleString()} */}
                   </TableCell>
                   <TableCell>
                     <Badge

@@ -13,7 +13,12 @@ export type RevenueCategory =
   | "property_tax";
 
 export type PermitStatus = "pending_payment" | "issued" | "expired" | "revoked";
-export type InvoiceStatus = "sent" | "paid" | "partially_paid" | "overdue" | "cancelled";
+export type InvoiceStatus =
+  | "sent"
+  | "paid"
+  | "partially_paid"
+  | "overdue"
+  | "cancelled";
 
 export interface Ward {
   id: string;
@@ -247,8 +252,8 @@ export interface PermitVerificationResponse {
   issuingAuthority: string;
 }
 
-export interface GetBusinessPermitsResponse{
-  permits:Permit[]
+export interface GetBusinessPermitsResponse {
+  permits: Permit[];
 }
 
 export interface ApiResponse<T> {
@@ -260,20 +265,23 @@ export interface ApiResponse<T> {
 // Service functions
 export const businessService = {
   // Business Profile
-  createBusiness: (data: CreateBusinessData) => api.post<Business>("/business", data),
+  createBusiness: (data: CreateBusinessData) =>
+    api.post<Business>("/business", data),
 
-  getMyBusiness: () => api.get<Business>("/business/my"),
-
-  updateMyBusiness: (data: UpdateBusinessData) => api.patch<Business>("/business/my", data),
+  updateMyBusiness: (data: UpdateBusinessData) =>
+    api.patch<Business>("/business/my", data),
 
   getMyPermits: async () => {
-  const response = await api.get<GetBusinessPermitsResponse>("/business/permits");
-  console.log('Response after unwrap:', response);
-  console.log('Is array?', Array.isArray(response));
-  return response.permits;
-},
+    const response =
+      await api.get<GetBusinessPermitsResponse>("/business/permits");
+    console.log("Response after unwrap:", response);
+    console.log("Is array?", Array.isArray(response));
+    return response.permits;
+  },
+  getMyBusiness: () => api.get<Business>("/business/my"),
 
-  getMyPermitById: (id: string) => api.get<PermitById>(`/business/permits/${id}`),
+  getMyPermitById: (id: string) =>
+    api.get<PermitById>(`/business/permits/${id}`),
 
   applyForPermit: (data: ApplyForPermitData) =>
     api.post<ApplyForPermitResponse>("/business/permits", data),
@@ -282,10 +290,14 @@ export const businessService = {
     api.post<ApplyForPermitResponse>(`/business/permits/${id}/renew`, data),
 
   // Business Invoices
-  getMyInvoices: (params?: { status?: InvoiceStatus; page?: number; limit?: number }) =>
-    api.get<PaginatedResponse<Invoice>>("/business/invoices", { params }),
+  getMyInvoices: (params?: {
+    status?: InvoiceStatus;
+    page?: number;
+    limit?: number;
+  }) => api.get<PaginatedResponse<Invoice>>("/business/invoices", { params }),
 
-  getMyInvoiceById: (id: string) => api.get<Invoice>(`/business/invoices/${id}`),
+  getMyInvoiceById: (id: string) =>
+    api.get<Invoice>(`/business/invoices/${id}`),
 
   // Public Verification
   verifyPermit: (code: string) =>

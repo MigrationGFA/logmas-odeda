@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader, StatCard } from "@/components/dashboard/shared";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,14 @@ import {
   Calendar,
   Loader2,
   ChevronDown,
+  Filter,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useReportsOverview, useReportsExport } from "@/hooks/queries/useReports";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useServices } from "@/hooks/queries/useServices";
 
 // ── Preset definitions ──────────────────────────────────────────
 // Each preset computes its own from/to as YYYY-MM-DD strings, sent as a custom
@@ -74,20 +79,28 @@ export default function ReportsPage() {
   const [activePreset, setActivePreset] = useState<PresetKey>("this_month");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [activeTab, setActiveTab] = useState("levy");
+  const [activeTab, setActiveTab] = useState("services");
+  const [selectedService, setSelectedService] = useState<string>("all");
 
   const [filterRange, setFilterRange] = useState<{ from?: string; to?: string } | undefined>(
     computePreset("this_month"),
   );
 
-  const { data, stats, byLevy, byOfficer, byServiceType, invoices, receipts, isLoading, refetch } =
-    useReportsOverview(filterRange);
+  // Fetch services for filter
+  const { services, isLoading: servicesLoading } = useServices();
+
+  // Pass service filter to reports hook
+  const { data, stats, byService, invoices, receipts, isLoading, refetch } =
+    useReportsOverview({
+      ...filterRange,
+      serviceId: selectedService !== "all" ? selectedService : undefined,
+    });
 
   const { downloadCSV } = useReportsExport();
 
   const handlePresetClick = (key: PresetKey) => {
     setActivePreset(key);
-    if (key === "custom") return; // wait for explicit Apply on custom range
+    if (key === "custom") return;
     setFilterRange(computePreset(key));
   };
 
@@ -106,12 +119,13 @@ export default function ReportsPage() {
     }
     const exportData = invoices.map((inv) => ({
       Reference: inv.reference,
+      "Application No": inv.applicationNumber || "—",
       Customer: inv.customerName,
-      Levy: inv.levyType,
-      Status: inv.status,
+      Service: inv.service?.name || "—",
+      "Revenue Head": inv.service?.revenueHead || "—",
+      Status: inv.paymentStatus,
       Amount: inv.amount,
-      "Due Date": inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—",
-      "Paid At": inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : "—",
+      "Created At": new Date(inv.createdAt).toLocaleDateString(),
     }));
     downloadCSV(exportData, "invoices_export");
   };
@@ -123,12 +137,14 @@ export default function ReportsPage() {
     }
     const exportData = receipts.map((rec) => ({
       "Receipt Number": rec.receiptNumber,
+      "Invoice Number": rec.invoiceNumber,
+      "Application No": rec.applicationNumber || "—",
       Customer: rec.customerName,
-      Levy: rec.levyType,
+      Service: rec.service?.name || "—",
       "Payment Method": rec.paymentMethod,
-      Officer: rec.officerName,
+      Officer: rec.officerName || "—",
       Amount: rec.amount,
-      "Paid At": new Date(rec.paidAt).toLocaleDateString(),
+      "Issued At": new Date(rec.issuedAt).toLocaleDateString(),
     }));
     downloadCSV(exportData, "receipts_export");
   };
@@ -142,7 +158,13 @@ export default function ReportsPage() {
     toast.info("Invoices exported. Receipts export also available in Receipts tab.");
   };
 
-  if (isLoading) {
+  // Filter byService data based on selected service
+  const filteredByService = useMemo(() => {
+    if (selectedService === "all") return byService;
+    return byService.filter((item) => item.id === selectedService);
+  }, [byService, selectedService]);
+
+  if (isLoading || servicesLoading) {
     return (
       <div>
         <PageHeader
@@ -235,6 +257,41 @@ export default function ReportsPage() {
         )}
       </Card>
 
+      {/* Service Filter */}
+      <div className="mb-6">
+        <Card className="p-4 bg-gradient-card border-border/40">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filter by Service:</span>
+            </div>
+            <Select value={selectedService} onValueChange={setSelectedService}>
+              <SelectTrigger className="w-[250px] text-sm">
+                <SelectValue placeholder="All Services" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Services</SelectItem>
+                {services?.map((service) => (
+                  <SelectItem key={service.id} value={service.id}>
+                    {service.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedService !== "all" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedService("all")}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5 mr-1" /> Clear Filter
+              </Button>
+            )}
+          </div>
+        </Card>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard
@@ -250,15 +307,15 @@ export default function ReportsPage() {
           color="primary"
         />
         <StatCard
-          label="POS"
-          value={`₦${(stats?.byMethod?.pos || 0).toLocaleString()}`}
-          icon={CreditCard}
+          label="Bank Transfer"
+          value={`₦${(stats?.byMethod?.transfer || 0).toLocaleString()}`}
+          icon={Banknote}
           color="info"
         />
         <StatCard
-          label="Cash"
-          value={`₦${(stats?.byMethod?.cash || 0).toLocaleString()}`}
-          icon={Banknote}
+          label="POS"
+          value={`₦${(stats?.byMethod?.pos || 0).toLocaleString()}`}
+          icon={CreditCard}
           color="warning"
         />
       </div>
@@ -266,17 +323,9 @@ export default function ReportsPage() {
       <Tabs defaultValue={activeTab}>
         <div className="flex justify-between">
           <TabsList>
-            <TabsTrigger value="type" onClick={() => setActiveTab("type")} className="gap-2">
+            <TabsTrigger value="services" onClick={() => setActiveTab("services")} className="gap-2">
               <TrendingUp className="h-4 w-4 md:hidden" />
-              <span className="hidden md:inline">By Service Type</span>
-            </TabsTrigger>
-            <TabsTrigger value="levy" onClick={() => setActiveTab("levy")} className="gap-2">
-              <Banknote className="h-4 w-4 md:hidden" />
-              <span className="hidden md:inline">By Levy</span>
-            </TabsTrigger>
-            <TabsTrigger value="officer" onClick={() => setActiveTab("officer")} className="gap-2">
-              <Wallet className="h-4 w-4 md:hidden" />
-              <span className="hidden md:inline">By Officer</span>
+              <span className="hidden md:inline">By Service</span>
             </TabsTrigger>
             <TabsTrigger value="invoices" onClick={() => setActiveTab("invoices")} className="gap-2">
               <CreditCard className="h-4 w-4 md:hidden" />
@@ -304,26 +353,29 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* By Service Type Tab — the 3-way SOO/Permit/Levy breakdown */}
-        <TabsContent value="type">
+        {/* By Service Tab */}
+        <TabsContent value="services">
           <Card className="bg-gradient-card border-border/40 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Service Type</TableHead>
+                  <TableHead>Service Name</TableHead>
+                  <TableHead>Revenue Head</TableHead>
                   <TableHead>Transactions</TableHead>
                   <TableHead className="text-right">Revenue</TableHead>
                   <TableHead className="text-right">% of Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {byServiceType.map((item) => {
-                  const pct = stats?.totalRevenue
-                    ? ((item.revenue / stats.totalRevenue) * 100).toFixed(1)
+                {filteredByService.map((item) => {
+                  const totalRevenue = stats?.totalRevenue || 0;
+                  const pct = totalRevenue > 0
+                    ? ((item.revenue / totalRevenue) * 100).toFixed(1)
                     : "0.0";
                   return (
-                    <TableRow key={item.type}>
-                      <TableCell className="font-medium">{item.label}</TableCell>
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{item.revenueHead}</TableCell>
                       <TableCell>{item.transactions}</TableCell>
                       <TableCell className="text-right font-mono">
                         ₦{item.revenue.toLocaleString()}
@@ -332,80 +384,12 @@ export default function ReportsPage() {
                     </TableRow>
                   );
                 })}
-                {byServiceType.length === 0 && (
+                {filteredByService.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No revenue data available for the selected period
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-        </TabsContent>
-
-        {/* By Levy Tab */}
-        <TabsContent value="levy">
-          <Card className="bg-gradient-card border-border/40 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Levy Category</TableHead>
-                  <TableHead>Transactions</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byLevy.map((item) => (
-                  <TableRow key={item.levy}>
-                    <TableCell className="font-medium capitalize">
-                      {item.levy.replace(/_/g, " ")}
-                    </TableCell>
-                    <TableCell>{item.transactions}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      ₦{item.revenue.toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {byLevy.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No revenue data available for the selected period
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-        </TabsContent>
-
-        {/* By Officer Tab */}
-        <TabsContent value="officer">
-          <Card className="bg-gradient-card border-border/40 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Officer</TableHead>
-                  <TableHead>Ward</TableHead>
-                  <TableHead>Invoices</TableHead>
-                  <TableHead className="text-right">Collected</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byOfficer.map((officer) => (
-                  <TableRow key={officer.id}>
-                    <TableCell className="font-medium">{officer.name}</TableCell>
-                    <TableCell>{officer.ward}</TableCell>
-                    <TableCell>{officer.invoicesIssued}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      ₦{officer.totalCollected.toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {byOfficer.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No officer data available for the selected period
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      {selectedService !== "all" 
+                        ? "No revenue data available for the selected service" 
+                        : "No revenue data available for the selected period"}
                     </TableCell>
                   </TableRow>
                 )}
@@ -420,9 +404,10 @@ export default function ReportsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ref</TableHead>
+                  <TableHead>Invoice No.</TableHead>
+                  <TableHead>Application No.</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Levy</TableHead>
+                  <TableHead>Service</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
@@ -431,9 +416,23 @@ export default function ReportsPage() {
                 {invoices.map((i) => (
                   <TableRow key={i.id}>
                     <TableCell className="font-mono text-xs">{i.reference}</TableCell>
+                    <TableCell className="font-mono text-xs">{i.applicationNumber || "—"}</TableCell>
                     <TableCell>{i.customerName}</TableCell>
-                    <TableCell>{i.levyType}</TableCell>
-                    <TableCell className="capitalize">{i.status}</TableCell>
+                    <TableCell className="text-xs">{i.service?.name || "—"}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-[10px] ${
+                          i.paymentStatus === 'confirmed' 
+                            ? 'bg-emerald-500/10 text-emerald-700 border-emerald-300'
+                            : i.paymentStatus === 'pending'
+                            ? 'bg-amber-500/10 text-amber-700 border-amber-300'
+                            : 'bg-gray-500/10 text-gray-700 border-gray-300'
+                        }`}
+                      >
+                        {i.paymentStatus}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-mono">
                       ₦{i.amount.toLocaleString()}
                     </TableCell>
@@ -441,7 +440,7 @@ export default function ReportsPage() {
                 ))}
                 {invoices.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No invoices found for the selected period
                     </TableCell>
                   </TableRow>
@@ -458,7 +457,9 @@ export default function ReportsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Receipt No.</TableHead>
+                  <TableHead>Invoice No.</TableHead>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Service</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Officer</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
@@ -468,8 +469,14 @@ export default function ReportsPage() {
                 {receipts.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-xs">{r.receiptNumber}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.invoiceNumber}</TableCell>
                     <TableCell>{r.customerName}</TableCell>
-                    <TableCell className="uppercase">{r.paymentMethod}</TableCell>
+                    <TableCell className="text-xs">{r.service?.name || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">
+                        {r.paymentMethod}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{r.officerName || "—"}</TableCell>
                     <TableCell className="text-right font-mono">
                       ₦{r.amount.toLocaleString()}
@@ -478,7 +485,7 @@ export default function ReportsPage() {
                 ))}
                 {receipts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No receipts found for the selected period
                     </TableCell>
                   </TableRow>

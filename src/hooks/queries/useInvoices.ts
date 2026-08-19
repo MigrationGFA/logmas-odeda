@@ -64,8 +64,8 @@ export function useInvoiceDetails(invoiceId: string) {
   const invoice = data;
 
   const isPayable = invoice
-    ? String(invoice.status) !== "paid" &&
-      String(invoice.status) !== "cancelled"
+    ? String(invoice.paymentStatus) !== "confirmed" &&
+      String(invoice.paymentStatus) !== "cancelled"
     : false;
 
   const paymentProgress = invoice

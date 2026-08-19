@@ -28,11 +28,11 @@ import { QuickActions } from "@/components/dashboard/DashboardWidgets";
 function CitizenOverview({ role }: { role: Role }) {
   // const pending = invoices.filter((i) => i.status !== "paid").reduce((s, i) => s + i.amount, 0);
 
-  const { citizenMetrics } = useOverview(role);
+  const { citizenMetrics:data } = useOverview(role);
 
-  const pending = citizenMetrics?.pendingPayments ?? 0;
-  const approvedApplications = citizenMetrics?.approvedApplications ?? 0;
-  const openComplaints = citizenMetrics?.openComplaints ?? 0;
+  const pending = data?.metrics?.pendingPayments ?? 0;
+  const approvedApplications = data?.metrics?.approvedApplications ?? 0;
+  const openComplaints = data?.metrics?.openComplaints ?? 0;
 
   // console.log("Citizen Metrics:", citizenMetrics);
 
@@ -68,9 +68,9 @@ function CitizenOverview({ role }: { role: Role }) {
       <div className="grid lg:grid-cols-3 gap-6">
         <Card className="p-6 bg-gradient-card border-border/40 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Apply for State of Origin</h3>
+            <h3 className="font-semibold">Recent Applications</h3>
             <Button asChild size="sm" className="bg-gradient-hero">
-              <Link href="/dashboard/applications">Apply now</Link>
+              <Link href="/dashboard/services">Apply now</Link>
             </Button>
           </div>
           <Table>
@@ -83,7 +83,7 @@ function CitizenOverview({ role }: { role: Role }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {citizenMetrics?.recentApplications?.slice(0, 3).map((a) => (
+              {data?.recentApplications?.slice(0, 3).map((a) => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{`APP-${a.id.split("-")[1]}`}</TableCell>
                   <TableCell>State of Origin</TableCell>

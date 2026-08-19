@@ -85,51 +85,51 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const navigate = useRouter();
   const { isLoadingUser } = useAuth();
-  let token = tokenManager.getAccessToken();
-  let user = tokenManager.getUser();
+  const token = tokenManager.getAccessToken();
+  const user = tokenManager.getUser();
 
   // DEV MODE ALLOWANCE: Auto-set demo admin user if not authenticated
-  if (typeof window !== "undefined" && (!token || !user)) {
-    const defaultDevUser = {
-      id: "mock-super-admin",
-      email: "admin@odeda.lg.gov.ng",
-      phone: "08012345678",
-      firstName: "Hon. Folusho Joseph",
-      lastName: "Badejo",
-      role: "super_admin",
-      isActive: true,
-      suspendedAt: null,
-      suspendedById: null,
-      suspensionReason: null,
-      passwordResetRequired: false,
-      lastLoginAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: null,
-      avatarUrl: null,
-      address: "Odeda LGA Secretariat, Odeda, Ogun State",
-      tokenVersion: 1,
-      nin: "12345678901",
-      createdById: null,
-      wardId: "ward-1",
-      assignedWardId: null,
-      contractorId: null,
-      commissionRate: 0,
-      agentId: null,
-      isWalkIn: false,
-      walkInRegisteredById: null,
-      notifyByEmail: true,
-      notifyBySms: true,
-      notifyByInApp: true,
-      ward: { id: "ward-1", name: "Odeda Ward 1" },
-      meta: null,
-      error: null,
-    };
-    tokenManager.setAccessToken("demo-dev-token");
-    tokenManager.setUser(defaultDevUser as any);
-    token = "demo-dev-token";
-    user = defaultDevUser as any;
-  }
+  // if (typeof window !== "undefined" && (!token || !user)) {
+  //   const defaultDevUser = {
+  //     id: "mock-super-admin",
+  //     email: "admin@odeda.lg.gov.ng",
+  //     phone: "08012345678",
+  //     firstName: "Hon. Folusho Joseph",
+  //     lastName: "Badejo",
+  //     role: "super_admin",
+  //     isActive: true,
+  //     suspendedAt: null,
+  //     suspendedById: null,
+  //     suspensionReason: null,
+  //     passwordResetRequired: false,
+  //     lastLoginAt: new Date().toISOString(),
+  //     createdAt: new Date().toISOString(),
+  //     updatedAt: new Date().toISOString(),
+  //     deletedAt: null,
+  //     avatarUrl: null,
+  //     address: "Odeda LGA Secretariat, Odeda, Ogun State",
+  //     tokenVersion: 1,
+  //     nin: "12345678901",
+  //     createdById: null,
+  //     wardId: "ward-1",
+  //     assignedWardId: null,
+  //     contractorId: null,
+  //     commissionRate: 0,
+  //     agentId: null,
+  //     isWalkIn: false,
+  //     walkInRegisteredById: null,
+  //     notifyByEmail: true,
+  //     notifyBySms: true,
+  //     notifyByInApp: true,
+  //     ward: { id: "ward-1", name: "Odeda Ward 1" },
+  //     meta: null,
+  //     error: null,
+  //   };
+  //   tokenManager.setAccessToken("demo-dev-token");
+  //   tokenManager.setUser(defaultDevUser as any);
+  //   token = "demo-dev-token";
+  //   user = defaultDevUser as any;
+  // }
 
   useEffect(() => {
     // If not loading and no token or no user, redirect to login

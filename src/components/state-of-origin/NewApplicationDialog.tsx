@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus, FileBadge, Loader2 } from "lucide-react";
-import { useCitizenStateOfOrigin } from "@/hooks/queries/useStateOfOrigin";
+import { useCitizenStateOfOrigin } from "@/hooks/queries/useServices";
 import { useWards } from "@/hooks/queries/useWards";
 
 import { getTestData } from "@/services/_mock";

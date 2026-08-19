@@ -141,11 +141,11 @@ export default function ReceiptDetail({params}:{params:Promise<{ id: string }>})
           <Row label="Verification Code" value={receipt.verificationCode} />
           <Row label="Invoice Ref." value={receipt.invoiceRef} />
           <Row label="Payment Method" value={receipt.paymentMethod.toUpperCase()} />
-          <Row label="Customer" value={receipt.customerName} />
-          <Row label="Phone" value={receipt.phone} />
-          <Row label="Levy Type" value={receipt.levyType} />
+          <Row label="Customer" value={receipt.serviceName} />
+          {/* <Row label="Phone" value={receipt.phone} /> */}
+          {/* <Row label="Levy Type" value={receipt.levyType} /> */}
           {receipt.officerName && <Row label="Officer" value={receipt.officerName} />}
-          {receipt.invoice?.address && <Row label="Address" value={receipt.invoice.address} />}
+          {/* {receipt.invoice?.address && <Row label="Address" value={receipt.invoice.address} />} */}
         </div>
 
         {/* QR Code Section */}

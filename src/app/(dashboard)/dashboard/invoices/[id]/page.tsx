@@ -58,6 +58,7 @@ export default function InvoiceDetail({
   // Use real API hooks
   const { invoice, isLoading, error, isPayable, paymentProgress } =
     useInvoiceDetails(invoiceId);
+
   const {
     recordPayment,
     isRecordingPayment,
@@ -70,8 +71,7 @@ export default function InvoiceDetail({
     isVerifyingPayment,
   } = useInvoicePayment(invoiceId);
 
-  // Also add this effect right after that line, to auto-verify if we're landing back
-  // from a Paystack redirect (reference stashed in sessionStorage by the hook):
+  // Auto-verify if we're landing back from a Paystack redirect
   React.useEffect(() => {
     const pendingRef = sessionStorage.getItem("pendingPaymentReference");
     if (pendingRef) {
@@ -80,7 +80,7 @@ export default function InvoiceDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // console.log(invoice,"invoice")
+  console.log(invoice, "invoice");
 
   const copy = (v: string, label: string) => {
     navigator.clipboard?.writeText(v);
@@ -116,13 +116,39 @@ export default function InvoiceDetail({
     );
   }
 
+  // Calculate amounts from the new data structure
+  const totalAmount = Number(invoice.amount) || 0;
+  const amountPaid =
+    invoice.payments?.reduce(
+      (sum, p) => (p.status === "confirmed" ? sum + Number(p.amount) : sum),
+      0,
+    ) || 0;
+  const balanceDue = totalAmount - amountPaid;
+
+  // Get customer information from application
+  const customerName =
+    invoice.application?.formData?.fullName ||
+    invoice.application?.applicant?.fullName ||
+    "N/A";
+  const customerPhone =
+    invoice.application?.formData?.phone ||
+    invoice.application?.applicant?.phone ||
+    "";
+
+  // Get service/levy information
+  const serviceName = invoice.application?.service?.name || "N/A";
+  const revenueHead = invoice.application?.service?.code || "";
+
+  // Format status for display
+  const status = invoice.paymentStatus || "pending";
+
   const handlePaymentConfirm = (
     method: "transfer" | "pos" | "cash",
     reference?: string,
   ) => {
     recordPayment({
       method: method === "transfer" ? "bank_transfer" : method,
-      amount: invoice.balanceDue,
+      amount: balanceDue,
       reference,
       narration: `Payment via ${method.toUpperCase()} at LGA office`,
     });
@@ -132,7 +158,7 @@ export default function InvoiceDetail({
     <div>
       <PageHeader
         title={`Invoice ${invoice.invoiceNumber}`}
-        subtitle={`Issued ${new Date(invoice.issuedAt).toLocaleDateString()} • Due ${new Date(invoice.dueDate).toLocaleDateString()}`}
+        subtitle={`Issued ${new Date(invoice.createdAt).toLocaleDateString()} • ${invoice.application?.applicationNumber ? `Application: ${invoice.application.applicationNumber}` : ""}`}
         action={
           <div className="flex gap-2">
             <Button asChild variant="outline">
@@ -156,17 +182,16 @@ export default function InvoiceDetail({
                   Total Due
                 </div>
                 <div className="text-3xl font-bold tracking-tight">
-                  ₦{invoice.totalAmount.toLocaleString()}
+                  ₦{totalAmount.toLocaleString()}
                 </div>
-                {invoice.balanceDue > 0 &&
-                  invoice.balanceDue < invoice.totalAmount && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Paid: ₦{invoice.amountPaid.toLocaleString()} • Balance: ₦
-                      {invoice.balanceDue.toLocaleString()}
-                    </div>
-                  )}
+                {balanceDue > 0 && balanceDue < totalAmount && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Paid: ₦{amountPaid.toLocaleString()} • Balance: ₦
+                    {balanceDue.toLocaleString()}
+                  </div>
+                )}
               </div>
-              <StatusBadge status={invoice.status} />
+              <StatusBadge status={status} />
             </div>
 
             <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
@@ -177,21 +202,22 @@ export default function InvoiceDetail({
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
-              <Field label="Customer" value={invoice.customerName} />
-              {invoice.customerPhone && (
-                <Field label="Phone" value={invoice.customerPhone} />
+              {/* <Field label="Customer" value={customerName} /> */}
+              {customerPhone && <Field label="Phone" value={customerPhone} />}
+              <Field label="Service/Levy" value={serviceName} />
+              {revenueHead && (
+                <Field label="Revenue Head" value={revenueHead} />
               )}
-              <Field label="Levy" value={invoice.levyType} />
-              {invoice.invoiceType !== "permit" && (
-                <Field label="Frequency" value={invoice.frequency} />
-              )}
-              <Field label="Quantity" value={`× ${invoice.quantity}`} />
               <Field
-                label="Unit Price"
-                value={`₦${invoice.unitPrice.toLocaleString()}`}
+                label="Application Number"
+                value={invoice.application?.applicationNumber || "N/A"}
               />
-              {invoice.fieldOfficer && (
-                <Field label="Field Officer" value={invoice.fieldOfficer} />
+              <Field
+                label="Status"
+                value={status.charAt(0).toUpperCase() + status.slice(1)}
+              />
+              {invoice.application?.ward && (
+                <Field label="Ward" value={invoice.application.ward} />
               )}
               {invoice.paidAt && (
                 <Field
@@ -201,10 +227,10 @@ export default function InvoiceDetail({
               )}
             </div>
 
-            {invoice.description && (
+            {invoice.application?.formData?.purpose && (
               <div className="mt-4 p-3 rounded-lg bg-muted/40 text-sm">
-                <span className="text-muted-foreground">Description: </span>
-                {invoice.description}
+                <span className="text-muted-foreground">Purpose: </span>
+                {invoice.application.formData.purpose}
               </div>
             )}
           </Card>
@@ -237,16 +263,19 @@ export default function InvoiceDetail({
                     <div className="text-xs uppercase tracking-wider text-muted-foreground">
                       Dynamic Virtual Account
                     </div>
-                    {invoice.virtualAccount ? (
+                    {invoice.virtualAccountNumber ? (
                       <>
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <div className="text-2xl font-mono font-bold">
-                              {invoice.virtualAccount.accountNumber}
+                              {invoice.virtualAccountNumber}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {invoice.virtualAccount.bankName} •{" "}
-                              {invoice.virtualAccount.accountName}
+                              {invoice.virtualBankName ||
+                                "Zenith Bank / Odeda Treasury"}{" "}
+                              •
+                              {invoice.application?.formData?.fullName ||
+                                "Applicant"}
                             </div>
                           </div>
                           <Button
@@ -254,7 +283,7 @@ export default function InvoiceDetail({
                             size="sm"
                             onClick={() =>
                               copy(
-                                invoice.virtualAccount!.accountNumber,
+                                invoice.virtualAccountNumber!,
                                 "Account number",
                               )
                             }
@@ -263,8 +292,8 @@ export default function InvoiceDetail({
                           </Button>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Transfer ₦{invoice.balanceDue.toLocaleString()} to
-                          this account. Payment auto-confirms within 2 mins.
+                          Transfer ₦{balanceDue.toLocaleString()} to this
+                          account. Payment auto-confirms within 2 mins.
                         </div>
                       </>
                     ) : (
@@ -273,7 +302,7 @@ export default function InvoiceDetail({
                         payment methods.
                       </div>
                     )}
-                    {/* remove ciizen for production */}
+                    {/* Remove citizen for production */}
                     {process.env.NODE_ENV === "development" && (
                       <Button
                         className="w-full bg-gradient-hero"
@@ -298,7 +327,7 @@ export default function InvoiceDetail({
                     </div>
                     <p className="text-sm text-muted-foreground">
                       You&apos;ll be redirected to Paystack to complete payment
-                      of ₦{invoice.totalAmount.toLocaleString()}.
+                      of ₦{totalAmount.toLocaleString()}.
                     </p>
                     <Button
                       className="w-full bg-gradient-hero"
@@ -323,7 +352,7 @@ export default function InvoiceDetail({
 
                 <TabsContent value="cash">
                   <CashConfirmDialog
-                    amount={invoice.balanceDue}
+                    amount={balanceDue}
                     onConfirm={(received, note) => handlePaymentConfirm("cash")}
                     isProcessing={isRecordingPayment}
                   />
@@ -347,9 +376,11 @@ export default function InvoiceDetail({
                       new Date(invoice.paidAt).toLocaleString()}
                   </p>
                 </div>
-                {invoice.receipt && (
+                {invoice.receipts && invoice.receipts.length > 0 && (
                   <Button asChild className="ml-auto bg-gradient-hero">
-                    <Link href={`/dashboard/receipts/${invoice.receipt.id}`}>
+                    <Link
+                      href={`/dashboard/receipts/${invoice.receipts[0].id}`}
+                    >
                       <ReceiptIcon className="h-4 w-4 mr-1.5" /> View receipt
                     </Link>
                   </Button>
@@ -360,27 +391,23 @@ export default function InvoiceDetail({
         </div>
 
         <div className="space-y-4">
-          {invoice.status !== "paid" && (
+          {status !== "confirmed" && (
             <Card className="p-5 bg-gradient-card border-border/40 text-center">
               <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
                 Scan to Pay
               </div>
               <div className="flex justify-center">
-                {/* <QRCodeSVG
-                  value={fullPaymentUrl}
-                  size={180}
-                /> */}
                 <a href={fullPaymentUrl} target="_blank" rel="noreferrer">
                   <QRCodeSVG value={fullPaymentUrl} size={180} />
                 </a>
               </div>
               <div className="mt-3 text-xs text-muted-foreground break-all">
-                {invoice.qrData}
+                {invoice.invoiceNumber}
               </div>
             </Card>
           )}
 
-          {isOfficer && invoice.status !== "paid" && (
+          {isOfficer && status !== "confirmed" && (
             <Card className="p-5 bg-gradient-card border-border/40 space-y-2">
               <h4 className="font-semibold text-sm mb-1">Send payment link</h4>
               <p className="text-xs text-muted-foreground mb-2">
@@ -402,7 +429,7 @@ export default function InvoiceDetail({
             </Card>
           )}
 
-          {invoice.payments.length > 0 && (
+          {invoice.payments && invoice.payments.length > 0 && (
             <Card className="p-5 bg-gradient-card border-border/40">
               <h4 className="font-semibold text-sm mb-3">Payment History</h4>
               <div className="space-y-2">
@@ -413,7 +440,7 @@ export default function InvoiceDetail({
                   >
                     <div className="flex-1">
                       <span className="font-medium">
-                        ₦{payment.amount.toLocaleString()}
+                        ₦{Number(payment.amount).toLocaleString()}
                       </span>
                       <span className="text-xs text-muted-foreground ml-2">
                         {payment.method}
@@ -438,7 +465,9 @@ export default function InvoiceDetail({
                       </Button>
                     ) : (
                       <span className="text-xs text-muted-foreground">
-                        {new Date(payment.confirmedAt).toLocaleDateString()}
+                        {payment.confirmedAt
+                          ? new Date(payment.confirmedAt).toLocaleDateString()
+                          : "Pending"}
                       </span>
                     )}
                   </div>
@@ -462,6 +491,8 @@ function Field({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+// POSConfirmDialog and CashConfirmDialog remain the same as in your original code
 
 function POSConfirmDialog({
   onConfirm,

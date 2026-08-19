@@ -52,11 +52,11 @@ export interface Application {
   category?: string;
   status: ApplicationStatus;
 
-  // Applicant snapshot details
-  fullName: string;
-  phone: string;
+  // Applicant snapshot details (may be absent; prefer reading from `formData` when service-specific)
+  fullName?: string;
+  phone?: string;
   email?: string | null;
-  address: string;
+  address?: string;
   ward?: string | null;
   nin?: string | null;
   cacNumber?: string | null;
@@ -84,7 +84,7 @@ export interface Application {
   formData: Record<string, any>;
 
   // Uploaded documents
-  documents: ApplicationDocument[];
+  applicationDocuments: ApplicationDocument[];
 
   // Review & Admin Decision Fields
   declineReason?: string | null;
@@ -125,13 +125,6 @@ export interface Application {
 
 export interface CreateApplicationData {
   serviceId: string;
-  fullName: string;
-  phone: string;
-  email?: string;
-  address: string;
-  ward?: string;
-  nin?: string;
-  cacNumber?: string;
   applicantId?: string | null; // Set when FO selects existing registered citizen/business
   formData: Record<string, any>;
   files?: Record<string, File | { name: string; url?: string; size?: number; type?: string }>;

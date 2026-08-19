@@ -30,10 +30,14 @@ export function useOverview(userRole: Role) {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
+  console.log(overviewData, "overviewData");
   // Type-safe getters for different roles
   const getCitizenMetrics = () => {
     if (userRole === "citizen" && overviewData?.metrics) {
-      return overviewData.metrics as DashboardMetrics["metrics"];
+      return {
+        metrics: overviewData.metrics,
+        recentApplications: overviewData.recentApplications,
+      };
     }
     return null;
   };

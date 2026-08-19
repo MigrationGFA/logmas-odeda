@@ -25,6 +25,7 @@ import {
   ArrowRight,
   Filter,
 } from "lucide-react";
+import { useServices } from "@/hooks/queries/useServices";
 
 const ICON_MAP: Record<string, any> = {
   FileBadge,
@@ -54,7 +55,11 @@ export default function ServicesPage() {
     "Urban Development",
   ];
 
-  const filteredServices = ODEDA_SERVICES.filter((service) => {
+  const {services} = useServices()
+
+  // console.log(services,"services")
+
+  const filteredServices = services.filter((service) => {
     const matchesSearch =
       service.name.toLowerCase().includes(search.toLowerCase()) ||
       service.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -135,11 +140,11 @@ export default function ServicesPage() {
                   </div>
                   <div className="flex justify-between text-muted-foreground font-medium">
                     <span>Configured Fee:</span>
-                    <span className="text-foreground font-bold">₦{getConfiguredFeeForService(service.id).toLocaleString()}</span>
+                    <span className="text-foreground font-bold">₦{service?.feeConfig?.amount?.toLocaleString() ?? 0}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground items-center pt-1">
                     <span className="flex items-center gap-1 text-[11px]">
-                      <Clock className="h-3 w-3 text-primary" /> {service.processingTime}
+                      <Clock className="h-3 w-3 text-primary" /> {service.estimatedDays}
                     </span>
                     {service.requiresInspection && (
                       <Badge variant="outline" className="text-[9px] border-amber-500/40 text-amber-600 dark:text-amber-400">
@@ -150,9 +155,9 @@ export default function ServicesPage() {
                 </div>
 
                 <div className="text-[11px] text-muted-foreground">
-                  <span className="font-semibold text-foreground">Required Documents ({service.requiredDocuments.length}):</span>{" "}
-                  {service.requiredDocuments.slice(0, 2).join(", ")}
-                  {service.requiredDocuments.length > 2 && "..."}
+                  <span className="font-semibold text-foreground">Required Documents ({service.requirements.length}):</span>{" "}
+                  {service.requirements.slice(0, 2).join(", ")}
+                  {service.requirements.length > 2 && "..."}
                 </div>
               </CardContent>
 

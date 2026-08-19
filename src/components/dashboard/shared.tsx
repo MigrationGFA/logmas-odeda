@@ -63,7 +63,7 @@ type BackendStatus =
   | "draft"
   | "submitted"
   | "payment_pending"
-  | "paid"
+  | "confirmed"
   | "unpaid"
   | "under_review"
   | "forwarded_to_councillor"
@@ -74,7 +74,7 @@ type BackendStatus =
 
 // Frontend display statuses (shorter, what you want to show)
 type DisplayStatus = 
-  | "paid"
+  | "confirmed"
   | "approved"
   | "pending"
   | "sent"
@@ -87,19 +87,19 @@ const statusTranslation: Record<BackendStatus, DisplayStatus> = {
   draft: "pending",
   submitted: "pending",
   payment_pending: "pending",
-  paid: "paid",
+  confirmed: "confirmed",
   under_review: "review",
   forwarded_to_councillor: "review",
   approved: "approved",
   rejected: "declined",
   certificate_issued: "approved",
   sent:"sent",
-  unpaid:"sent"
+  unpaid:"pending"
 };
 
 // Style mapping uses display statuses
 const styleMap: Record<DisplayStatus, string> = {
-  paid: "bg-success/15 text-success border-success/30",
+  confirmed: "bg-success/15 text-success border-success/30",
   approved: "bg-success/15 text-success border-success/30",
   pending: "bg-warning/15 text-warning-foreground border-warning/30",
   sent: "bg-warning/15 text-warning-foreground border-warning/30",
