@@ -31,7 +31,7 @@ function RaiseComplaintView() {
   } = useCitizenComplaints();
 
   const { data: myComplaintsData, refetch } = useGetMyComplaints({ limit: 10 });
-  const myComplaints = myComplaintsData ?? [];
+  const myComplaints = myComplaintsData?.data ?? [];
 
   const [sending, setSending]                   = useState(false);
   const [errors, setErrors]                     = useState<{ title?: string; description?: string }>({});

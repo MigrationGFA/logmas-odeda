@@ -56,7 +56,7 @@ function AdminComplaintsView({ readOnly }: { readOnly: boolean }) {
   // console.log(complaintsData, "complaintsData");
   const complaints = Array.isArray(complaintsData)
     ? complaintsData
-    : complaintsData || [];
+    : complaintsData?.data || [];
   const stats = {
     open: complaints.filter((c: { status: string }) => c.status === "open")
       .length,
@@ -135,7 +135,7 @@ function AdminComplaintsView({ readOnly }: { readOnly: boolean }) {
                 <TableHead>Ticket</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>To</TableHead>
+                {/* <TableHead>To</TableHead> */}
                 <TableHead>By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
@@ -152,7 +152,7 @@ function AdminComplaintsView({ readOnly }: { readOnly: boolean }) {
                     {complaint.title}
                   </TableCell>
                   <TableCell>{complaint.category || "General"}</TableCell>
-                  <TableCell>{complaint.assignedTo?.firstName} {complaint.assignedTo?.lastName || "N/A"}</TableCell>
+                  {/* <TableCell>{complaint.assignedTo?.firstName} {complaint.assignedTo?.lastName || "N/A"}</TableCell> */}
                   <TableCell>
                     {complaint.raisedBy?.firstName}{" "}
                     {complaint.raisedBy?.lastName}

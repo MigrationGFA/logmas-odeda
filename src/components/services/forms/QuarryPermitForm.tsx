@@ -12,11 +12,13 @@ import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
 import { ReviewSubmitStep, ReviewSection, ReviewRepeatableSection } from "./ReviewSubmitStep";
 import { Plus, Trash2, Mountain, HardHat, Cog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ApplicantSnapshot } from "../ApplicantSelectionStep";
 
 interface Props {
   service: OdedaService;
   onSubmit: (formData: Record<string, any>) => void;
   isSubmitting?: boolean;
+    initialApplicant?: ApplicantSnapshot;
 }
 
 interface MiningMachinery {
@@ -106,7 +108,7 @@ const DOCUMENTS: DocumentSpec[] = [
   },
 ];
 
-export default function QuarryPermitForm({ service, onSubmit, isSubmitting }: Props) {
+export default function QuarryPermitForm({ service, onSubmit, isSubmitting, initialApplicant }: Props) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
   const [declaration, setDeclaration] = useState(false);
@@ -268,22 +270,22 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting }: Pr
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
+  const currentFee = service.feeConfig.amount
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!declaration) return;
 
     onSubmit({
-      ...formData,
-      machinery: machinery.filter((m) => m.equipmentType.trim()),
-      engineers: engineers.filter((eng) => eng.fullName.trim()),
-      pits: pits.filter((p) => p.pitIdentifier.trim()),
-      uploadedFiles,
-      amount: currentFee,
-      revenueHead: service.revenueHead,
-      serviceName: service.name,
-      applicant: formData.companyName,
+      formData: {
+        ...formData,
+        machinery: machinery.filter((m) => m.equipmentType.trim()),
+        engineers: engineers.filter((eng) => eng.fullName.trim()),
+        pits: pits.filter((p) => p.pitIdentifier.trim()),
+      },
+      files: uploadedFiles,
+
+      applicant: initialApplicant || null,
     });
   };
 

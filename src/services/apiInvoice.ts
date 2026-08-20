@@ -240,7 +240,7 @@ export const invoicesService = {
       return {
         id: id,
         invoiceNumber: "ODE/INV/2026/000101",
-        status: "issued",
+        paymentStatus: "pending",
         issueDate: "2026-08-01",
         dueDate: "2026-08-15",
         totalAmount: "45000",
@@ -279,21 +279,16 @@ export const invoicesService = {
     }
   },
 
-  // Initialize online payment
-  initializeOnlinePayment: async (id: string): Promise<OnlinePaymentInitResponse> => {
-    try {
-      return await api.post<OnlinePaymentInitResponse>(`/invoices/${id}/pay-online`, {});
-    } catch {
-      const ref = `ODE-PAY-${Date.now()}`;
-      return {
-        authorizationUrl: `/invoices/${id}/checkout?ref=${ref}`,
-        accessCode: `acc-${ref}`,
-        reference: ref,
-      };
-    }
-  },
+  
+initializeOnlinePayment: async (id: string): Promise<OnlinePaymentInitResponse> => {
+  return await api.post<OnlinePaymentInitResponse>(`/invoices/${id}/pay-online`, {});
+},
 
-  // Field officer sends Paystack link via SMS + email
+verifyPayment: async (reference: string): Promise<VerifyPaymentResponse> => {
+  return await api.get<VerifyPaymentResponse>(`/payments/verify/${reference}`);
+},
+
+   // Field officer sends Paystack link via SMS + email
   sendPaymentLink: async (id: string): Promise<SendPaymentLinkResponse> => {
     try {
       return await api.post<SendPaymentLinkResponse>(`/invoices/${id}/send-payment-link`, {});
@@ -307,52 +302,6 @@ export const invoicesService = {
     }
   },
 
-  // Check payment status directly against Paystack
-  verifyPayment: async (reference: string): Promise<VerifyPaymentResponse> => {
-    try {
-      return await api.get<VerifyPaymentResponse>(`/payments/verify/${reference}`);
-    } catch {
-      return {
-        status: "confirmed",
-        payment: {
-          id: `pay-${reference}`,
-          invoiceId: "inv-001",
-          amount: 45000,
-          paymentMethod: "card",
-          reference: reference,
-          status: "confirmed",
-          createdAt: new Date().toISOString(),
-          receiptNumber: `ODE/RCP/2026/000101`,
-        },
-        invoice: {
-          id: "inv-001",
-          invoiceNumber: "ODE/INV/2026/000101",
-          status: "paid",
-          issueDate: "2026-08-01",
-          dueDate: "2026-08-15",
-          totalAmount: "45000",
-          paidAmount: "45000",
-          balanceDue: "0",
-          category: "Trade Permit",
-          customerName: "Bola Enterprises",
-          customerEmail: "business@logmas.gov.ng",
-          customerPhone: "08088889999",
-          items: [{ id: "item-1", description: "Annual Business Permit 2026", quantity: 1, unitPrice: 45000, total: 45000 }],
-          paymentHistory: [],
-        },
-        receipt: {
-          id: "rec-001",
-          receiptNumber: "ODE/RCP/2026/000101",
-          invoiceNumber: "ODE/INV/2026/000101",
-          amount: 45000,
-          customerName: "Bola Enterprises",
-          paymentMethod: "card",
-          createdAt: new Date().toISOString(),
-          verificationUrl: "https://logmas.gov.ng/receipts/verify/ODE-RCP-2026-000101",
-        },
-      };
-    }
-  },
 
   // DEV ONLY: Simulate payment
   simulatePayment: async (id: string): Promise<SimulatePaymentResponse> => {

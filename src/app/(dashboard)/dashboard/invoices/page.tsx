@@ -221,7 +221,7 @@ export default function InvoicesPage() {
                         </Link>
                       </Button> */}
 
-                      {invoice.status === "paid" && invoice.receiptId ? (
+                      {invoice.paymentStatus === "confirmed" && invoice?.receipt?.receiptId ? (
                         <Button asChild variant="outline" size="sm">
                           <Link
                             href={`/dashboard/receipts/${invoice.receiptId}`}
@@ -229,7 +229,7 @@ export default function InvoicesPage() {
                             Receipt
                           </Link>
                         </Button>
-                      ) : invoice.status !== "paid" ? (
+                      ) : (invoice.paymentStatus === "pending" || invoice.paymentStatus !== "confirmed") ? (
                         <Button asChild size="sm" className="bg-gradient-hero">
                           <Link
                             href={`/dashboard/invoices/${invoice.reference}`}

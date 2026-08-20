@@ -110,9 +110,9 @@ export default function ApplicationsPage() {
       list = list.filter((app) => {
         if (app.applicantId && app.applicantId === currentUser.id) return true;
         if (app.createdById && app.createdById === currentUser.id) return true;
-        if (userPhone && app.phone === userPhone) return true;
-        if (userEmail && app.email === userEmail) return true;
-        if (userName && app.fullName?.toLowerCase().includes(userName)) return true;
+        // if (userPhone && app.phone === userPhone) return true;
+        // if (userEmail && app.email === userEmail) return true;
+        // if (userName && app.fullName?.toLowerCase().includes(userName)) return true;
         return false;
       });
     }
@@ -236,12 +236,11 @@ export default function ApplicationsPage() {
 
   // Helper function to get application number
   const getApplicationNumber = (app: Application) => {
-    return app.applicationNumber || app.applicationNo || app.id;
+    return app.applicationNumber || app.id;
   };
 
   // Helper function to get full name from formData
   const getFullName = (app: Application) => {
-    if (app.fullName) return app.fullName;
     if (app.formData?.fullName) return app.formData.fullName;
     if (app.formData?.firstName && app.formData?.lastName) {
       return `${app.formData.firstName} ${app.formData.lastName}`;

@@ -44,26 +44,27 @@ export interface ApplicationApplicantInfo {
   cacNumber?: string | null;
 }
 
+export interface Services {
+  name: string;
+  code: string;
+  category: string;
+  revenueHead: string;
+  requirements: string[];
+  estimatedDays: number;
+}
+
 export interface Application {
   id: string;
-  applicationNo: string;
+  applicationNumber: string;
   serviceId: string;
   serviceName?: string;
   category?: string;
   status: ApplicationStatus;
 
-  // Applicant snapshot details (may be absent; prefer reading from `formData` when service-specific)
-  fullName?: string;
-  phone?: string;
-  email?: string | null;
-  address?: string;
-  ward?: string | null;
-  nin?: string | null;
-  cacNumber?: string | null;
-
+  service: Services;
   // Foreign keys & Relationships
   applicantId?: string | null; // ID of existing user account or null if unregistered
-  createdById?: string;        // ID of submitting user (FO, citizen, business owner)
+  createdById?: string; // ID of submitting user (FO, citizen, business owner)
   applicant?: {
     id: string;
     firstName?: string;
@@ -82,7 +83,7 @@ export interface Application {
 
   // Dynamic form data
   formData: Record<string, any>;
-
+  ward: string | null;
   // Uploaded documents
   applicationDocuments: ApplicationDocument[];
 
@@ -95,6 +96,13 @@ export interface Application {
   reviewNotes?: string | null;
   approvedAt?: string | null;
   declinedAt?: string | null;
+
+  invoice: {
+    amount: number;
+    paymentStatus: "confirmed" | "failed" | "pending";
+    invoiceNumber: string;
+    virtualBankName: string;
+  };
 
   // Output Credentials
   certificateNumber?: string | null;
@@ -127,7 +135,10 @@ export interface CreateApplicationData {
   serviceId: string;
   applicantId?: string | null; // Set when FO selects existing registered citizen/business
   formData: Record<string, any>;
-  files?: Record<string, File | { name: string; url?: string; size?: number; type?: string }>;
+  files?: Record<
+    string,
+    File | { name: string; url?: string; size?: number; type?: string }
+  >;
 }
 
 export interface ApplicantSearchResult {

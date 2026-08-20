@@ -46,12 +46,12 @@ interface MemberRecord {
 }
 
 const STEPS: FormStep[] = [
-  {
-    id: "applicant_info",
-    title: "Lead Applicant & Contact Details",
-    shortTitle: "Applicant",
-    description: "Provide contact details for the submitting officer / club representative.",
-  },
+  // {
+  //   id: "applicant_info",
+  //   title: "Lead Applicant & Contact Details",
+  //   shortTitle: "Applicant",
+  //   description: "Provide contact details for the submitting officer / club representative.",
+  // },
   {
     id: "club_profile",
     title: "Club / Association Profile",
@@ -340,7 +340,7 @@ export default function ClubRegistrationForm({
     });
   };
 
-  const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
+  const currentFee = service.feeConfig.amount
 
   const reviewSections: ReviewSection[] = [
     {
@@ -415,7 +415,7 @@ export default function ClubRegistrationForm({
       submitLabel="Submit Club Registration Application"
     >
       {/* STEP 0: Applicant Selection */}
-      {currentStepIndex === 0 && (
+      {/* {currentStepIndex === 0 && (
         <ApplicantSelectionStep
           mode={mode}
           value={applicant}
@@ -423,10 +423,10 @@ export default function ClubRegistrationForm({
           serviceName={service.name}
           serviceCategory={service.category}
         />
-      )}
+      )} */}
 
       {/* STEP 1: Club Profile */}
-      {currentStepIndex === 1 && (
+      {currentStepIndex === 0 && (
         <div className="space-y-4">
           <div className="border-b pb-3">
             <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
@@ -546,7 +546,7 @@ export default function ClubRegistrationForm({
       )}
 
       {/* STEP 2: Aims & Operations */}
-      {currentStepIndex === 2 && (
+      {currentStepIndex === 1 && (
         <div className="space-y-4">
           <div className="border-b pb-3">
             <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
@@ -656,7 +656,7 @@ export default function ClubRegistrationForm({
       )}
 
       {/* STEP 3: Executive Officers & Members */}
-      {currentStepIndex === 3 && (
+      {currentStepIndex === 2 && (
         <div className="space-y-6">
           {/* Officers Section */}
           <div className="space-y-4">
@@ -849,7 +849,7 @@ export default function ClubRegistrationForm({
       )}
 
       {/* STEP 4: Documents */}
-      {currentStepIndex === 4 && (
+      {currentStepIndex === 3 && (
         <DocumentUploadStep
           documents={DOCUMENTS}
           uploadedFiles={uploadedFiles}
@@ -860,7 +860,7 @@ export default function ClubRegistrationForm({
       )}
 
       {/* STEP 5: Review & Submit */}
-      {currentStepIndex === 5 && (
+      {currentStepIndex === 4 && (
         <ReviewSubmitStep
           serviceName={service.name}
           revenueHead={service.revenueHead}

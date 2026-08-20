@@ -24,16 +24,24 @@ import {
 import { useAdminComplaints } from "@/hooks/queries/useComplaints";
 import { useStaffManagement } from "@/hooks/queries/useLgaAdmin";
 
-function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boolean }) {
+function ManageDialog({
+  complaint,
+  readOnly,
+}: {
+  complaint: any;
+  readOnly: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(complaint.status);
-  const [selectedCouncillorId, setSelected] = useState(complaint.assignedToId ?? "");
+  const [selectedCouncillorId, setSelected] = useState(
+    complaint.assignedToId ?? "",
+  );
   const [newMessage, setNewMessage] = useState("");
 
   const {
     updateComplaint,
     isUpdating,
-    useGetComplaint, 
+    useGetComplaint,
     adminRespond,
     isAdminResponding,
   } = useAdminComplaints();
@@ -44,8 +52,11 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
 
   // Full thread only needs fetching once the dialog is actually open —
   // the table row's `complaint` prop is enough for the summary header.
-  const { data: activeComplaint, isLoading: loadingThread, refetch: refetchThread } =
-    useGetComplaint(open ? complaint.id : "");
+  const {
+    data: activeComplaint,
+    isLoading: loadingThread,
+    refetch: refetchThread,
+  } = useGetComplaint(open ? complaint.id : "");
 
   const current = activeComplaint ?? complaint;
   const isClosed = current.status === "closed";
@@ -60,7 +71,10 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
         },
         ...(activeComplaint.responses ?? []).map((r: any) => ({
           id: r.id,
-          from: r.responderId === activeComplaint.raisedById ? ("citizen" as const) : ("staff" as const),
+          from:
+            r.responderId === activeComplaint.raisedById
+              ? ("citizen" as const)
+              : ("staff" as const),
           text: r.message,
           time: new Date(r.createdAt).toLocaleString(),
         })),
@@ -69,7 +83,10 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
 
   const save = async () => {
     const payload: { assignedToId?: string; status?: string } = {};
-    if (selectedCouncillorId && selectedCouncillorId !== complaint.assignedToId) {
+    if (
+      selectedCouncillorId &&
+      selectedCouncillorId !== complaint.assignedToId
+    ) {
       payload.assignedToId = selectedCouncillorId;
     }
     if (status !== complaint.status) {
@@ -100,10 +117,12 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <DialogTitle className="text-base font-semibold leading-tight flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-primary" /> {complaint.ticketNumber}
+                <MessageSquare className="h-4 w-4 text-primary" />{" "}
+                {complaint.ticketNumber}
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
-                From {complaint.raisedBy?.firstName} {complaint.raisedBy?.lastName} • {complaint.ward?.name}
+                From {complaint.raisedBy?.firstName}{" "}
+                {complaint.raisedBy?.lastName} • {complaint.ward?.name}
               </p>
             </div>
             <Badge variant="outline">{complaint.category || "General"}</Badge>
@@ -119,26 +138,39 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
           ) : (
             <>
               {messages.map((msg) => (
-                <div key={msg.id} className={`p-4 ${msg.from === "staff" ? "bg-primary/5" : ""}`}>
+                <div
+                  key={msg.id}
+                  className={`p-4 ${msg.from === "staff" ? "bg-primary/5" : ""}`}
+                >
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className={`text-xs font-semibold ${msg.from === "staff" ? "text-primary" : "text-foreground"}`}
                     >
-                      {msg.from === "staff" ? "Staff" : `${complaint.raisedBy?.firstName ?? "Citizen"}`}
+                      {msg.from === "staff"
+                        ? "Staff"
+                        : `${complaint.raisedBy?.firstName ?? "Citizen"}`}
                     </span>
-                    <span className="text-xs text-muted-foreground">{msg.time}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {msg.time}
+                    </span>
                   </div>
-                  <p className="text-sm text-foreground leading-relaxed">{msg.text}</p>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {msg.text}
+                  </p>
                 </div>
               ))}
 
               {messages.length === 1 && (
-                <div className="p-6 text-center text-sm text-muted-foreground">No responses yet.</div>
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                  No responses yet.
+                </div>
               )}
 
               {current.resolutionNote && (
                 <div className="p-4 bg-success/5 border-t border-success/20">
-                  <p className="text-xs font-semibold text-success mb-1">Resolution</p>
+                  <p className="text-xs font-semibold text-success mb-1">
+                    Resolution
+                  </p>
                   <p className="text-sm">{current.resolutionNote}</p>
                 </div>
               )}
@@ -149,7 +181,7 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
         {/* Assign + status controls — locked once closed */}
         {!readOnly && (
           <div className="p-4 border-t space-y-3 shrink-0">
-            {!complaint.assignedTo && (
+            {/* {!complaint.assignedTo && (
               <div>
                 <Label>Assign to Ward Councillor</Label>
                 <select
@@ -167,32 +199,42 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
                   ))}
                 </select>
               </div>
-            )}
+            )} */}
 
             <div>
               <Label>Status</Label>
-              <Select value={status} onValueChange={setStatus} disabled={isClosed}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <Select
+                  value={status}
+                  onValueChange={setStatus}
+                  disabled={isClosed}
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="assigned">Assigned</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Close
-              </Button>
-              <Button onClick={save} disabled={isUpdating || isClosed} className="bg-gradient-hero">
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                {isUpdating ? "Saving..." : "Save"}
-              </Button>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setOpen(false)}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={save}
+                    disabled={isUpdating || isClosed}
+                    className="bg-gradient-hero"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                    {isUpdating ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -217,7 +259,11 @@ function ManageDialog({ complaint, readOnly }: { complaint: any; readOnly: boole
               disabled={isAdminResponding || !newMessage.trim()}
               className="bg-gradient-hero shrink-0"
             >
-              {isAdminResponding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {isAdminResponding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
           </div>
         )}

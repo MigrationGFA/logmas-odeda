@@ -95,7 +95,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
   }
 
   const IconComponent = ICON_MAP[service.icon] || FileBadge;
-  const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
+  const currentFee = service.feeConfig.amount
 
   // Filter related services in same category or adjacent
   const relatedServices = ODEDA_SERVICES.filter(

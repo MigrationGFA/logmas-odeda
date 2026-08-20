@@ -34,7 +34,7 @@ export function useSubmitApplication() {
     mutationFn: (payload: CreateApplicationData) => apiApplications.submitApplication(payload),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: applicationsKeys.all });
-      toast.success(`Application ${data.applicationNo} submitted successfully!`);
+      toast.success(`Application ${data.applicationNumber} submitted successfully!`);
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to submit statutory application");
@@ -50,7 +50,7 @@ export function useMoveToUnderReview() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: applicationsKeys.all });
       qc.invalidateQueries({ queryKey: applicationsKeys.detail(data.id) });
-      toast.success(`Application ${data.applicationNo} moved to Under Review`);
+      toast.success(`Application ${data.applicationNumber} moved to Under Review`);
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to update review status");
@@ -66,7 +66,7 @@ export function useApproveApplication() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: applicationsKeys.all });
       qc.invalidateQueries({ queryKey: applicationsKeys.detail(data.id) });
-      toast.success(`Application ${data.applicationNo} Approved & Certificate/Licence Issued!`);
+      toast.success(`Application ${data.applicationNumber} Approved & Certificate/Licence Issued!`);
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to approve application");
@@ -82,7 +82,7 @@ export function useDeclineApplication() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: applicationsKeys.all });
       qc.invalidateQueries({ queryKey: applicationsKeys.detail(data.id) });
-      toast.error(`Application ${data.applicationNo} Declined`);
+      toast.error(`Application ${data.applicationNumber} Declined`);
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to decline application");
