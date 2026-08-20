@@ -34,23 +34,55 @@ export interface User {
   deletedAt: string | null;
   avatarUrl: string | null;
   address: string | null;
-  tokenVersion:number;
+  tokenVersion: number;
+  
+  // Profile Information
+  dateOfBirth: string | null;
+  gender: string | null;
+  town: string | null;
+  occupation: string | null;
   nin: string | null;
+  cacNumber: string | null;
+  businessName: string | null;
+  businessType: string | null;
+  taxIdNumber: string | null;
+  
+  // New fields for onboarding
+  emergencyContact: string | null;
+  identificationType: string | null;
+  identificationNumber: string | null;
+  ownerRepresentative: string | null;
+  passportPhoto: string | null;
+  
+  // Onboarding status
+  onboardingCompleted: boolean;
+  emailVerifiedAt: string | null;
+  
+  // Relationships
   createdById: string | null;
-  wardId: string;
+  wardId: string | null;
   assignedWardId: string | null;
   contractorId: string | null;
   commissionRate: number;
   agentId: string | null;
   isWalkIn: boolean;
   walkInRegisteredById: string | null;
+  
+  // Notification preferences
   notifyByEmail: boolean;
   notifyBySms: boolean;
   notifyByInApp: boolean;
+  
+  // Nested relations
   ward: Ward | null;
+  createdBy: User | null;
+  suspendedBy: User | null;
+  
+  // Metadata
   meta: any | null;
   error: any | null;
 }
+
 
 // Ward Interface
 export interface Ward {

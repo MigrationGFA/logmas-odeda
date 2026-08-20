@@ -46,36 +46,39 @@ export function useAuth() {
   const currentUser = user ?? tokenManager.getUser();
 
   // Mutation: Login
-  const loginMutation = useMutation({
-    mutationFn: (credentials: LoginCredentials) =>
-      authService.login(credentials),
-    onSuccess: (response) => {
-      // console.log("✅ LOGIN SUCCESS:", response); // ← Add this
+const loginMutation = useMutation({
+  mutationFn: (credentials: LoginCredentials) =>
+    authService.login(credentials),
+  onSuccess: (response) => {
+    const { accessToken, refreshToken, user } = response;
 
-      const { accessToken, refreshToken, user } = response;
-      // console.log("🔐 Storing token:", accessToken?.substring(0, 20) + "...");
+    tokenManager.setAccessToken(accessToken);
+    tokenManager.setRefreshToken(refreshToken);
+    tokenManager.setUser(user ?? null);
 
-      tokenManager.setAccessToken(accessToken);
-      tokenManager.setRefreshToken(refreshToken);
-      tokenManager.setUser(user ?? null);
+    if (user) {
+      queryClient.setQueryData(authKeys.user(), user);
+      refetchUser();
+    }
 
-      // console.log("📦 localStorage check:", {
-      //   token: localStorage.getItem("logmas.auth.token")?.substring(0, 20),
-      //   refreshToken: localStorage
-      //     .getItem("logmas.auth.refreshToken")
-      //     ?.substring(0, 20),
-      // });
+    // Check if user needs onboarding
+    const isCitizenOrBusiness = user?.role === 'citizen' || user?.role === 'business_owner';
+    const needsOnboarding = isCitizenOrBusiness && !user?.onboardingCompleted;
 
-      if (user) {
-        queryClient.setQueryData(authKeys.user(), user);
-        refetchUser();
-      }
+    if (needsOnboarding) {
+      // Redirect to onboarding page
+      navigate.push("/onboarding");
+      toast.info("Please complete your profile to continue.");
+    } else {
+      // Redirect to dashboard
       navigate.push("/dashboard");
-    },
-    onError: (error) => {
-      console.error("❌ LOGIN FAILED:", error); // ← Add this too
-    },
-  });
+    }
+  },
+  onError: (error) => {
+    console.error("❌ LOGIN FAILED:", error);
+    // Handle error (already handled by toast in the component)
+  },
+});
 
   // Mutation: Register
   const registerMutation = useMutation({
@@ -85,7 +88,7 @@ export function useAuth() {
       // Or redirect to login page
       //   navigate({ to: "/dashboard" });
 
-      navigate.push("/login");
+     navigate.push(`/login?registered=true&email=${encodeURIComponent(user.email)}`);
     },
   });
 
