@@ -181,7 +181,7 @@ const NAV: Record<Role, { label: string; items: Item[] }[]> = {
       label: "Administration",
       items: [
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "Service Catalogue", url: "/dashboard/services", icon: Briefcase },
+        // { title: "Service Catalogue", url: "/dashboard/services", icon: Briefcase },
         { title: "Service Applications", url: "/dashboard/applications", icon: FileBadge },
         // { title: "Trade Permits", url: "/dashboard/permits", icon: Stamp },
         // { title: "Ward Management", url: "/dashboard/wards", icon: Map },

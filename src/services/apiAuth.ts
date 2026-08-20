@@ -102,6 +102,9 @@ export const authService = {
 
   // Login with email/password
   login: (credentials: LoginCredentials) => api.post<AuthResponse>("/auth/login", credentials),
+  verifyEmail: (token: string) => api.get<{message:string}>(`/auth/verify-email?token=${token}`),
+
+  resendEmail: (email: string) => api.post<any>("/auth/resend-verification", email),
 
   // Get current user profile
   getMe: () => api.get<User>("/auth/me"),

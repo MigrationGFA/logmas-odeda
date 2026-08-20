@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { toast } from "sonner";
 import { ShieldCheck, Loader2 } from "lucide-react";
@@ -20,10 +20,10 @@ import { useAuth } from "@/hooks/queries/useAuth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-
 // Form schema with validation
 const registerSchema = z.object({
-  name: z.string().min(2, "Full name must be at least 2 characters"),
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -45,7 +45,8 @@ export default function RegisterPage() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       phone: "",
       password: "",
@@ -55,25 +56,30 @@ export default function RegisterPage() {
 
   const selectedRole = watch("role");
 
-  const onSubmit = async(data: RegisterFormData) => {
-
-    const [firstName, lastName] = data.name.split(" ");
-    registerUser({
-      firstName,
-      lastName,
-      email: data.email,
-      // phone: data.phone || "",
-      password: data.password,
-      role: data.role,
-    });
+  const onSubmit = async (data: RegisterFormData) => {
+    await registerUser(
+      {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        // phone: data.phone || "",
+        password: data.password,
+        role: data.role,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Account created. Redirecting...");
+          navigate.push(
+            "/login?registered=true",
+          );
+        },
+      },
+    );
 
     // if (error) {
     //   toast.error(error);
     //   return;
     // }
-
-    toast.success("Account created. Redirecting...");
-    navigate.push("/dashboard")
   };
 
   const onGoogle = async () => {
@@ -98,56 +104,40 @@ export default function RegisterPage() {
           </div>
         </Link>
         <div className="bg-card border border-border/40 rounded-2xl p-6 md:p-8 shadow-elegant">
-          <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Join LOGMAS in less than a minute.</p>
-
-          {/* <Button
-            type="button"
-            variant="outline"
-            onClick={onGoogle}
-            disabled={isSubmitting}
-            className="w-full mt-5"
-          >
-            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
-              <path
-                fill="#4285f4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34a853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.99.66-2.25 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
-              />
-              <path
-                fill="#fbbc05"
-                d="M5.84 14.11A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.95l3.66-2.84z"
-              />
-              <path
-                fill="#ea4335"
-                d="M12 5.38c1.62 0 3.07.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
-              />
-            </svg>
-            Continue with Google
-          </Button> */}
-          {/* <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">or</span>
-            </div>
-          </div> */}
+          <h1 className="text-2xl font-bold tracking-tight">
+            Create your account
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Join LOGMAS in less than a minute.
+          </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <Label htmlFor="name">Full name</Label>
+              <Label htmlFor="name">First name</Label>
               <Input
                 id="name"
-                {...register("name")}
+                {...register("firstName")}
                 className="mt-1.5"
-                aria-invalid={errors.name ? "true" : "false"}
+                aria-invalid={errors.firstName ? "true" : "false"}
               />
-              {errors.name && (
-                <p className="text-sm text-destructive mt-1">{errors.name.message}</p>
+              {errors.firstName && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="name">Last name</Label>
+              <Input
+                id="name"
+                {...register("lastName")}
+                className="mt-1.5"
+                aria-invalid={errors.lastName ? "true" : "false"}
+              />
+              {errors.lastName && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.lastName.message}
+                </p>
               )}
             </div>
 
@@ -161,7 +151,9 @@ export default function RegisterPage() {
                 aria-invalid={errors.email ? "true" : "false"}
               />
               {errors.email && (
-                <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
@@ -183,7 +175,9 @@ export default function RegisterPage() {
                 aria-invalid={errors.password ? "true" : "false"}
               />
               {errors.password && (
-                <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
@@ -191,24 +185,32 @@ export default function RegisterPage() {
               <Label>I am registering as</Label>
               <Select
                 value={selectedRole}
-                onValueChange={(v) => setValue("role", v as RegisterFormData["role"])}
+                onValueChange={(v) =>
+                  setValue("role", v as RegisterFormData["role"])
+                }
               >
                 <SelectTrigger className="mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(ROLE_LABELS) as Role[]).filter(ele=>(ele === "citizen" || ele === "business_owner")).map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {ROLE_LABELS[r]}
-                    </SelectItem>
-                  ))}
+                  {(Object.keys(ROLE_LABELS) as Role[])
+                    .filter(
+                      (ele) => ele === "citizen" || ele === "business_owner",
+                    )
+                    .map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1.5">
                 Prototype: choose any role to preview that dashboard.
               </p>
               {errors.role && (
-                <p className="text-sm text-destructive mt-1">{errors.role.message}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {errors.role.message}
+                </p>
               )}
             </div>
 
@@ -229,7 +231,10 @@ export default function RegisterPage() {
 
           <p className="text-sm text-center text-muted-foreground mt-6">
             Already have an account?{" "}
-            <Link href="/login" className="text-primary font-semibold hover:underline">
+            <Link
+              href="/login"
+              className="text-primary font-semibold hover:underline"
+            >
               Sign in
             </Link>
           </p>

@@ -12,6 +12,7 @@ import {
 } from "@/services/apiAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useState } from "react";
 
 // Query keys for caching
 export const authKeys = {
@@ -85,6 +86,28 @@ export function useAuth() {
       //   navigate({ to: "/dashboard" });
 
       navigate.push("/login");
+    },
+  });
+
+   const [resendSuccess, setResendSuccess] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [resendError, setResendError] = useState<Error | null>(null);
+
+  const verifyEmailMutation = useMutation({
+    mutationFn: async ({ token }: { token: string }) => authService.verifyEmail(token),
+  })
+
+  const resendVerification = useMutation({
+    mutationFn: async ({ email }: { email: string })=> authService.resendEmail(email),
+    onSuccess: (data) => {
+      setResendSuccess(data.message || "Verification email sent successfully!");
+      setResendError(null);
+      // Clear success message after 5 seconds
+      setTimeout(() => setResendSuccess(null), 5000);
+    },
+    onError: (error: Error) => {
+      setResendError(error);
+      setResendSuccess(null);
     },
   });
 
@@ -215,6 +238,14 @@ export function useAuth() {
     // googleLogin: googleLoginMutation.mutate,
     // googleLoginAsync: googleLoginMutation.mutateAsync,
     // isGoogleLoggingIn: googleLoginMutation.isPending,
+
+      verifyEmail: verifyEmailMutation.mutateAsync,
+    isVerifying: verifyEmailMutation.isPending,
+    verifyError: verifyEmailMutation.error,
+    resendVerification: resendVerification.mutateAsync,
+    isResending: resendVerification.isPending,
+    resendError,
+    resendSuccess,
 
     logout: logoutMutation.mutate,
     logoutAsync: logoutMutation.mutateAsync,
