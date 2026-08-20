@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -45,12 +45,12 @@ interface CommunityStreet {
 }
 
 const STEPS: FormStep[] = [
-  {
-    id: "applicant_info",
-    title: "Lead CDA Representative & Contact",
-    shortTitle: "Representative",
-    description: "Provide contact details for the submitting CDA Chairman / Secretary.",
-  },
+  // {
+  //   id: "applicant_info",
+  //   title: "Lead CDA Representative & Contact",
+  //   shortTitle: "Representative",
+  //   description: "Provide contact details for the submitting CDA Chairman / Secretary.",
+  // },
   {
     id: "cda_profile",
     title: "CDA Identity & Community Profile",
@@ -130,10 +130,10 @@ export default function CdaRegistrationForm({
 
   const [applicant, setApplicant] = useState<ApplicantSnapshot>(
     initialApplicant || {
-      fullName: "",
-      phone: "",
+      fullName: "test",
+      phone: "08031234567",
       email: "",
-      address: "",
+      address: "knknvkrvkvr",
       ward: "Ward 7 (Itesi / Camp)",
       nin: "",
       cacNumber: "",
@@ -143,16 +143,16 @@ export default function CdaRegistrationForm({
   );
 
   const [formData, setFormData] = useState({
-    cdaName: "",
-    cdaAcronym: "",
+    cdaName: "SOme naem",
+    cdaAcronym: "lol",
     ward: WARDS[0] || "Odeda",
-    hostVillage: "",
-    baaleName: "",
-    baalePhone: "",
+    hostVillage: "nigga",
+    baaleName: "lefmlefmef",
+    baalePhone: "32232",
     estimatedPopulation: 3500,
     estimatedHouseholds: 420,
     primarySecurityArrangement: "Ogun State So-Safe Corps / Local Hunters Vigilante",
-    securityPostLocation: "",
+    securityPostLocation: "Near the Community Center",
     primaryWaterSource: "Community Solar Boreholes & Hand Pumps",
     electricityStatus: "Connected to IBEDC 33KV Grid (With Community Transformer)",
     priorityProject1: "Grading and drainage construction of main spine road",
@@ -165,39 +165,39 @@ export default function CdaRegistrationForm({
   const [officers, setOfficers] = useState<CdaOfficer[]>([
     {
       role: "CDA Chairman",
-      fullName: "",
-      phone: "",
-      email: "",
-      address: "",
-      occupation: "",
-      nin: "",
+      fullName: "John Doe",
+      phone: "08031234567",
+      email: "john.doe@example.com",
+      address: "123 Main Street, Odeda",
+      occupation: "Local Leader",
+      nin: "123456789012345",
     },
     {
       role: "General Secretary",
-      fullName: "",
-      phone: "",
-      email: "",
-      address: "",
-      occupation: "",
-      nin: "",
+      fullName: "Jane Smith",
+      phone: "08031234568",
+      email: "jane.smith@example.com",
+      address: "456 Another Street, Odeda",
+      occupation: "Administrative Officer",
+      nin: "123456789012346",
     },
     {
       role: "Treasurer",
-      fullName: "",
-      phone: "",
-      email: "",
-      address: "",
-      occupation: "",
-      nin: "",
+      fullName: "Michael Johnson",
+      phone: "08031234569",
+      email: "michael.johnson@example.com",
+      address: "789 Third Street, Odeda",
+      occupation: "Financial Officer",
+      nin: "123456789012347",
     },
     {
       role: "Chief Security Officer (CSO)",
-      fullName: "",
-      phone: "",
-      email: "",
-      address: "",
-      occupation: "",
-      nin: "",
+      fullName: "Sarah Williams",
+      phone: "08031234570",
+      email: "sarah.williams@example.com",
+      address: "101 Security Street, Odeda",
+      occupation: "Security Officer",
+      nin: "123456789012348",
     },
   ]);
 
@@ -276,9 +276,9 @@ export default function CdaRegistrationForm({
   };
 
   const validateStep = (index: number): boolean => {
-    if (index === 0) {
-      return !!applicant.fullName.trim() && !!applicant.phone.trim() && !!applicant.address.trim();
-    }
+    // if (index === 0) {
+    //   return !!applicant.fullName.trim() && !!applicant.phone.trim() && !!applicant.address.trim();
+    // }
     if (index === 1) {
       return !!formData.cdaName.trim() && !!formData.hostVillage.trim() && !!formData.baaleName.trim();
     }
@@ -324,6 +324,8 @@ export default function CdaRegistrationForm({
     const cleanOfficers = officers.filter((o) => o.fullName.trim().length > 0);
     const cleanStreets = streets.filter((s) => s.streetName.trim().length > 0);
 
+    console.log(applicant,"applican",formData)
+
     onSubmit({
       applicant,
       formData: {
@@ -337,7 +339,7 @@ export default function CdaRegistrationForm({
     });
   };
 
-  const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
+  const currentFee = service.feeConfig.amount;
 
   const reviewSections: ReviewSection[] = [
     {
@@ -411,7 +413,7 @@ export default function CdaRegistrationForm({
       submitLabel="Submit CDA Registration Application"
     >
       {/* STEP 0: Applicant Selection */}
-      {currentStepIndex === 0 && (
+      {/* {currentStepIndex === 0 && (
         <ApplicantSelectionStep
           mode={mode}
           value={applicant}
@@ -419,10 +421,10 @@ export default function CdaRegistrationForm({
           serviceName={service.name}
           serviceCategory={service.category}
         />
-      )}
+      )} */}
 
       {/* STEP 1: CDA Profile */}
-      {currentStepIndex === 1 && (
+      {currentStepIndex === 0 && (
         <div className="space-y-4 text-xs">
           <div className="border-b pb-3">
             <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
@@ -520,7 +522,7 @@ export default function CdaRegistrationForm({
       )}
 
       {/* STEP 2: Projects & Focus */}
-      {currentStepIndex === 2 && (
+      {currentStepIndex === 1 && (
         <div className="space-y-4 text-xs">
           <div className="border-b pb-3">
             <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
@@ -605,7 +607,7 @@ export default function CdaRegistrationForm({
       )}
 
       {/* STEP 3: Officers & Street Zones */}
-      {currentStepIndex === 3 && (
+      {currentStepIndex === 2 && (
         <div className="space-y-6">
           {/* Officers */}
           <div className="space-y-4">
@@ -788,7 +790,7 @@ export default function CdaRegistrationForm({
       )}
 
       {/* STEP 4: Documents */}
-      {currentStepIndex === 4 && (
+      {currentStepIndex === 3 && (
         <DocumentUploadStep
           documents={DOCUMENTS}
           uploadedFiles={uploadedFiles}
@@ -799,7 +801,7 @@ export default function CdaRegistrationForm({
       )}
 
       {/* STEP 5: Review & Submit */}
-      {currentStepIndex === 5 && (
+      {currentStepIndex === 4 && (
         <ReviewSubmitStep
           serviceName={service.name}
           revenueHead={service.revenueHead}

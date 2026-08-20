@@ -62,7 +62,7 @@ export function StatCard({
 type BackendStatus = 
   | "draft"
   | "submitted"
-  | "payment_pending"
+  | "pending"
   | "confirmed"
   | "unpaid"
   | "under_review"
@@ -86,7 +86,7 @@ type DisplayStatus =
 const statusTranslation: Record<BackendStatus, DisplayStatus> = {
   draft: "pending",
   submitted: "pending",
-  payment_pending: "pending",
+  pending: "pending",
   confirmed: "confirmed",
   under_review: "review",
   forwarded_to_councillor: "review",
