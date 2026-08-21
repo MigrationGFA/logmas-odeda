@@ -125,7 +125,7 @@ const DOCUMENTS: DocumentSpec[] = [
     required: true,
   },
   {
-    id: "coop_membership_doc",
+  id: "coop_membership_doc",
     label: "Cooperative Membership Card / CAC",
     description:
       "Membership slip if registered under a farmer group, or CAC certificate for corporate farms.",
