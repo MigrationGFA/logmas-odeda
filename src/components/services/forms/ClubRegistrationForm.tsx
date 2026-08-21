@@ -272,10 +272,10 @@ export default function ClubRegistrationForm({
   };
 
   const validateStep = (index: number): boolean => {
+    // if (index === 0) {
+    //   return !!applicant.fullName.trim() && !!applicant.phone.trim() && !!applicant.address.trim();
+    // }
     if (index === 0) {
-      return !!applicant.fullName.trim() && !!applicant.phone.trim() && !!applicant.address.trim();
-    }
-    if (index === 1) {
       return (
         !!formData.clubName.trim() &&
         !!formData.dateFounded &&
@@ -283,19 +283,19 @@ export default function ClubRegistrationForm({
         !!formData.phone.trim()
       );
     }
-    if (index === 2) {
+    if (index === 1) {
       return !!formData.primaryAims.trim() && !!formData.meetingVenue.trim();
     }
-    if (index === 3) {
+    if (index === 2) {
       const presidentValid = !!officers[0]?.fullName.trim() && !!officers[0]?.phone.trim();
       const secValid = !!officers[1]?.fullName.trim() && !!officers[1]?.phone.trim();
       return presidentValid && secValid;
     }
-    if (index === 4) {
+    if (index === 3) {
       const missing = DOCUMENTS.filter((d) => d.required && !uploadedFiles[d.id]);
       return missing.length === 0;
     }
-    if (index === 5) {
+    if (index === 4) {
       return declaration;
     }
     return true;

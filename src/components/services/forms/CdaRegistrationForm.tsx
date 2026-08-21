@@ -143,12 +143,12 @@ export default function CdaRegistrationForm({
   );
 
   const [formData, setFormData] = useState({
-    cdaName: "SOme naem",
-    cdaAcronym: "lol",
+    cdaName: "",
+    cdaAcronym: "",
     ward: WARDS[0] || "Odeda",
-    hostVillage: "nigga",
-    baaleName: "lefmlefmef",
-    baalePhone: "32232",
+    hostVillage: "",
+    baaleName: "",
+    baalePhone: "",
     estimatedPopulation: 3500,
     estimatedHouseholds: 420,
     primarySecurityArrangement: "Ogun State So-Safe Corps / Local Hunters Vigilante",
