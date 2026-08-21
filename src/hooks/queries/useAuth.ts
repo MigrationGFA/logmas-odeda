@@ -12,6 +12,7 @@ import {
 } from "@/services/apiAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useState } from "react";
 
 // Query keys for caching
 export const authKeys = {
@@ -43,36 +44,41 @@ export function useAuth() {
   });
 
   const currentUser = user ?? tokenManager.getUser();
+   const isUserDataFresh = !!user;
 
   // Mutation: Login
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginCredentials) =>
       authService.login(credentials),
     onSuccess: (response) => {
-      // console.log("✅ LOGIN SUCCESS:", response); // ← Add this
-
       const { accessToken, refreshToken, user } = response;
-      // console.log("🔐 Storing token:", accessToken?.substring(0, 20) + "...");
 
       tokenManager.setAccessToken(accessToken);
       tokenManager.setRefreshToken(refreshToken);
       tokenManager.setUser(user ?? null);
 
-      // console.log("📦 localStorage check:", {
-      //   token: localStorage.getItem("logmas.auth.token")?.substring(0, 20),
-      //   refreshToken: localStorage
-      //     .getItem("logmas.auth.refreshToken")
-      //     ?.substring(0, 20),
-      // });
-
       if (user) {
         queryClient.setQueryData(authKeys.user(), user);
         refetchUser();
       }
-      navigate.push("/dashboard");
+
+      // // Check if user needs onboarding
+      // const isCitizenOrBusiness =
+      //   user?.role === "citizen" || user?.role === "business_owner";
+      // const needsOnboarding = isCitizenOrBusiness && !user?.onboardingCompleted;
+
+      // if (needsOnboarding) {
+      //   // Redirect to onboarding page
+      //   navigate.push("/onboarding");
+      //   toast.info("Please complete your profile to continue.");
+      // } else {
+        // Redirect to dashboard
+        navigate.push("/dashboard");
+      // }
     },
     onError: (error) => {
-      console.error("❌ LOGIN FAILED:", error); // ← Add this too
+      console.error("❌ LOGIN FAILED:", error);
+      // Handle error (already handled by toast in the component)
     },
   });
 
@@ -84,7 +90,33 @@ export function useAuth() {
       // Or redirect to login page
       //   navigate({ to: "/dashboard" });
 
-      navigate.push("/login");
+      navigate.push(
+        `/login?registered=true&email=${encodeURIComponent(userData.user.email)}`,
+      );
+    },
+  });
+
+  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [resendError, setResendError] = useState<Error | null>(null);
+
+  const verifyEmailMutation = useMutation({
+    mutationFn: async ({ token }: { token: string }) =>
+      authService.verifyEmail(token),
+  });
+
+  const resendVerification = useMutation({
+    mutationFn: async ({ email }: { email: string }) =>
+      authService.resendEmail(email),
+    onSuccess: (data) => {
+      setResendSuccess(data.message || "Verification email sent successfully!");
+      setResendError(null);
+      // Clear success message after 5 seconds
+      setTimeout(() => setResendSuccess(null), 5000);
+    },
+    onError: (error: Error) => {
+      setResendError(error);
+      setResendSuccess(null);
     },
   });
 
@@ -176,6 +208,7 @@ export function useAuth() {
     user: currentUser,
     isAuthenticated: !!currentUser,
     isLoadingUser,
+    isUserDataFresh,
     userError,
     userWard: currentUser?.ward?.name,
 
@@ -215,6 +248,14 @@ export function useAuth() {
     // googleLogin: googleLoginMutation.mutate,
     // googleLoginAsync: googleLoginMutation.mutateAsync,
     // isGoogleLoggingIn: googleLoginMutation.isPending,
+
+    verifyEmail: verifyEmailMutation.mutateAsync,
+    isVerifying: verifyEmailMutation.isPending,
+    verifyError: verifyEmailMutation.error,
+    resendVerification: resendVerification.mutateAsync,
+    isResending: resendVerification.isPending,
+    resendError,
+    resendSuccess,
 
     logout: logoutMutation.mutate,
     logoutAsync: logoutMutation.mutateAsync,

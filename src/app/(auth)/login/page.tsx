@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ShieldCheck, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff, Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,16 +22,17 @@ export default function Page() {
 }
 
 function LoginPage() {
-  const { login, isLoggingIn, loginError } = useAuth();
-  //   const navigate = useNavigate();
+  const { login, isLoggingIn, loginError, resendVerification, isVerifying } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
-  // console.log(tokenManager.getAccessToken(),"lol")
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(
+    null,
+  );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     login({ email, password });
   };
 
@@ -43,21 +44,100 @@ function LoginPage() {
 
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason");
+  const registered = searchParams.get("registered");
+  const emailParam = searchParams.get("email");
+  const verified = searchParams.get("verified");
 
   useEffect(() => {
     if (reason === "suspended") {
       toast.error(
         "Your account has been suspended. Please contact the LGA Secretariat.",
       );
+    } else if (reason === "unverified") {
+      const message = emailParam
+        ? `Please verify your email address (${emailParam}) before signing in.`
+        : "Please verify your email address before signing in.";
+      setVerificationMessage(message);
+      if (emailParam) setEmail(emailParam);
+      toast.warning("Please verify your email to continue.");
     }
-  }, [reason]);
+  }, [reason, emailParam]);
+
+  useEffect(() => {
+    // Check for registration or email verification messages
+    if (registered === "true" && !verified) {
+      const message = emailParam
+        ? `A verification link has been sent to ${emailParam}. Please verify your email to access your account.`
+        : "Please verify your email address to access your account. A verification link has been sent to your email.";
+      setVerificationMessage(message);
+
+      // Auto-fill email if provided
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+
+      // Show toast notification
+      toast.info("Verification email sent! Please check your inbox.");
+
+      // Clear the URL parameters after displaying the message
+      const url = new URL(window.location.href);
+      url.searchParams.delete("registered");
+      // url.searchParams.delete("email");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [registered, emailParam, verified]);
+
+  // Handle email verification success
+  useEffect(() => {
+    if (verified === "true") {
+      const message =
+        "Your email has been verified successfully! You can now sign in to your account.";
+      setVerificationMessage(message);
+
+      // Show success toast
+      toast.success("Email verified successfully!");
+
+      // Clear the verification parameter
+      const url = new URL(window.location.href);
+      // url.searchParams.delete("verified");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [verified]);
 
   useEffect(() => {
     if (loginError) {
       toast.error(loginError.message || "Invalid email or password");
     }
   }, [loginError]);
-  // console.log(loginError,"loginError")
+
+  // Clear verification message after 10 seconds or when user starts typing
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.id === "email") {
+      setEmail(e.target.value);
+    } else if (e.target.id === "password") {
+      setPassword(e.target.value);
+    }
+    // Clear message when user starts typing
+    if (verificationMessage) {
+      setVerificationMessage(null);
+    }
+  };
+
+  // Handle resend verification
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error("Please enter your email address to resend verification.");
+      return;
+    }
+
+    try {
+      // Call your API to resend verification email
+      await resendVerification({ email });
+      toast.success(`Verification email resent to ${email}`);
+    } catch (error) {
+      toast.error("Failed to resend verification email. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
@@ -114,6 +194,7 @@ function LoginPage() {
               <span className="font-bold">LOGMAS</span>
             </Link>
           </div>
+
           <div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
               Welcome back
@@ -123,33 +204,84 @@ function LoginPage() {
             </p>
           </div>
 
-          {/* <Button
-            type="button"
-            variant="outline"
-            onClick={onGoogle}
-            disabled={isLoggingIn}
-            className="w-full"
-          >
-            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
-              <path
-                fill="#4285f4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34a853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.99.66-2.25 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
-              />
-              <path
-                fill="#fbbc05"
-                d="M5.84 14.11A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.95l3.66-2.84z"
-              />
-              <path
-                fill="#ea4335"
-                d="M12 5.38c1.62 0 3.07.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
-              />
-            </svg>
-            Continue with Google
-          </Button> */}
+          {/* Verification / Registration Message */}
+          {verificationMessage && (
+            <div
+              className={`rounded-lg p-4 animate-in fade-in slide-in-from-top-3 duration-300 ${
+                verified === "true"
+                  ? "bg-emerald-500/10 border border-emerald-500/30"
+                  : "bg-amber-500/10 border border-amber-500/30"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                  {verified === "true" ? (
+                    <svg
+                      className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  ) : (
+                    <MailCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-medium ${
+                      verified === "true"
+                        ? "text-emerald-800 dark:text-emerald-300"
+                        : "text-amber-800 dark:text-amber-300"
+                    }`}
+                  >
+                    {verificationMessage}
+                  </p>
+                  {!verified && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <p className="text-xs text-amber-700/70 dark:text-amber-400/70">
+                        Didn't receive the email?
+                      </p>
+                      <button
+                        onClick={handleResendVerification}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Resend verification
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setVerificationMessage(null)}
+                  className={`${
+                    verified === "true"
+                      ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200"
+                      : "text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200"
+                  } transition-colors`}
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -170,9 +302,10 @@ function LoginPage() {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleInputChange}
                 className="mt-1.5"
                 disabled={isLoggingIn}
+                placeholder="Enter your email address"
               />
             </div>
             <div>
@@ -191,9 +324,10 @@ function LoginPage() {
                   type={show ? "text" : "password"}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handleInputChange}
                   className="pr-10"
                   disabled={isLoggingIn}
+                  placeholder="Enter your password"
                 />
                 <button
                   type="button"

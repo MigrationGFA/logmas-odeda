@@ -171,7 +171,7 @@ export function useStaffManagement() {
   const createStaffMutation = useMutation({
     mutationFn: (data: CreateStaffData) => lgaAdminService.createStaff(data),
     onSuccess: (response) => {
-      toast.success(`Staff member "${response.name}" created`);
+      toast.success(`Staff member "${response.staff.firstName}" created`);
       queryClient.invalidateQueries({ queryKey: lgaAdminKeys.staff() });
     },
     onError: (error: any) => {

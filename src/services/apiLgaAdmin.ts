@@ -172,7 +172,10 @@ export interface Account {
   role: AccountRole;
   ward: string | null;
   status: AccountStatus;
+  isReset: boolean;
   lastLogin: string | null;
+  avatarUrl:string | null;
+  emailVerified: boolean |null;
   createdAt: string;
   suspendedAt?: string | null;
   suspensionReason?: string | null;

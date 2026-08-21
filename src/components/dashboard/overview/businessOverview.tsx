@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  FileText,
   MessageSquare,
   Receipt,
   ScrollText,

@@ -34,7 +34,7 @@ import {
   useGetWards,
   useStaffManagement,
 } from "@/hooks/queries/useLgaAdmin";
-import { ROLE_LABELS, MANAGEABLE_ROLES } from "@/lib/auth";
+import { ROLE_LABELS, MANAGEABLE_ROLES, Role } from "@/lib/auth";
 import { Textarea } from "../ui/textarea";
 import { Account } from "@/services/apiLgaAdmin";
 
@@ -46,20 +46,20 @@ const createAccountSchema = z
     email: z.string().email("Invalid email address"),
     phone: z.string().optional(),
     role: z.string().min(1, "Role is required"),
-    wardId: z.string().optional(),
+    // wardId: z.string().optional(),
   })
-  .refine(
-    (data) => {
-      const requiresWard = ["ward_councillor", "field_officer"].includes(
-        data.role,
-      );
-      return !requiresWard || !!data.wardId;
-    },
-    {
-      message: "Ward is required for this role",
-      path: ["wardId"],
-    },
-  );
+  // .refine(
+  //   (data) => {
+  //     const requiresWard = ["ward_councillor", "field_officer"].includes(
+  //       data.role,
+  //     );
+  //     return !requiresWard || !!data.wardId;
+  //   },
+  //   {
+  //     message: "Ward is required for this role",
+  //     path: ["wardId"],
+  //   },
+  // );
 
 type CreateAccountFormData = z.infer<typeof createAccountSchema>;
 
@@ -94,11 +94,11 @@ export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
   );
 
   const onSubmit = async (data: CreateAccountFormData) => {
-    console.log(showWardField, "showWardField");
-    if (showWardField && !data.wardId) {
-      toast.error("Please select a ward for the selected role.");
-      return;
-    }
+    // console.log(showWardField, "showWardField");
+    // if (showWardField && !data.wardId) {
+    //   toast.error("Please select a ward for the selected role.");
+    //   return;
+    // }
     const res = await createStaffAsync({
       ...data,
       role: data.role as any,
@@ -198,7 +198,7 @@ export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
                 </p>
               )}
             </div>
-            {showWardField && (
+            {/* {showWardField && (
               <div>
                 <Label>Ward</Label>
                 <Select onValueChange={(v) => setValue("wardId", v)}>
@@ -207,11 +207,11 @@ export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="l">None</SelectItem>
-                    {/* {wardList?.map((ward) => (
+                    {wardList?.map((ward) => (
                       <SelectItem key={ward.id} value={ward.id}>
                         {ward.name}
                       </SelectItem>
-                    ))} */}
+                    ))}
                   </SelectContent>
                 </Select>
                 {errors.wardId && (
@@ -220,7 +220,7 @@ export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
                   </p>
                 )}
               </div>
-            )}
+            )} */}
           </div>
           <DialogFooter>
             <Button
@@ -241,8 +241,6 @@ export function CreateAccountDialog({ onSuccess }: { onSuccess: () => void }) {
     </Dialog>
   );
 }
-
-export default CreateAccountDialog;
 
 export function ResetPasswordDialog({ account }: { account: Account }) {
   const [open, setOpen] = useState(false);
@@ -268,7 +266,7 @@ export function ResetPasswordDialog({ account }: { account: Account }) {
         <Button
           size="sm"
           variant="outline"
-          disabled={account.status !== "active"}
+          disabled={account.isReset}
         >
           <KeyRound className="h-3.5 w-3.5 mr-1" />
         </Button>
@@ -429,6 +427,68 @@ export function SuspendAccountDialog({ account }: { account: Account }) {
               : account.status === "active"
                 ? "Suspend Account"
                 : "Reactivate Account"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+import { Mail, MailCheck } from "lucide-react"; // add Mail/MailCheck to your existing lucide import
+import { useAuth } from "@/hooks/queries/useAuth";
+
+export function ResendVerificationDialog({ account }: { account: Account }) {
+  const [open, setOpen] = useState(false);
+  const { resendVerification, isResending } = useAuth();
+
+  const handleResend = async () => {
+    try {
+      await resendVerification({ email: account.email });
+      toast.success(`Verification email sent to ${account.email}`);
+      setOpen(false);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to resend verification email");
+    }
+  };
+
+  const isNOtCitizenOrBo = account.role ==="citizen" as Role || account.role === "business_owner" as Role
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" disabled={!isNOtCitizenOrBo || account.emailVerified }>
+          <MailCheck className="h-3.5 w-3.5 mr-1" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Resend verification email to {account.name}?</DialogTitle>
+          <DialogDescription>
+            A new verification link will be emailed to{" "}
+            <span className="font-medium">{account.email}</span>. Any previous
+            link will still work until it expires.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isResending}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="bg-gradient-hero"
+            onClick={handleResend}
+            disabled={isResending}
+          >
+            {isResending ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Mail className="h-4 w-4 mr-1.5" />
+            )}
+            {isResending ? "Sending..." : "Send email"}
           </Button>
         </DialogFooter>
       </DialogContent>
