@@ -44,41 +44,43 @@ export function useAuth() {
   });
 
   const currentUser = user ?? tokenManager.getUser();
+   const isUserDataFresh = !!user;
 
   // Mutation: Login
-const loginMutation = useMutation({
-  mutationFn: (credentials: LoginCredentials) =>
-    authService.login(credentials),
-  onSuccess: (response) => {
-    const { accessToken, refreshToken, user } = response;
+  const loginMutation = useMutation({
+    mutationFn: (credentials: LoginCredentials) =>
+      authService.login(credentials),
+    onSuccess: (response) => {
+      const { accessToken, refreshToken, user } = response;
 
-    tokenManager.setAccessToken(accessToken);
-    tokenManager.setRefreshToken(refreshToken);
-    tokenManager.setUser(user ?? null);
+      tokenManager.setAccessToken(accessToken);
+      tokenManager.setRefreshToken(refreshToken);
+      tokenManager.setUser(user ?? null);
 
-    if (user) {
-      queryClient.setQueryData(authKeys.user(), user);
-      refetchUser();
-    }
+      if (user) {
+        queryClient.setQueryData(authKeys.user(), user);
+        refetchUser();
+      }
 
-    // Check if user needs onboarding
-    const isCitizenOrBusiness = user?.role === 'citizen' || user?.role === 'business_owner';
-    const needsOnboarding = isCitizenOrBusiness && !user?.onboardingCompleted;
+      // // Check if user needs onboarding
+      // const isCitizenOrBusiness =
+      //   user?.role === "citizen" || user?.role === "business_owner";
+      // const needsOnboarding = isCitizenOrBusiness && !user?.onboardingCompleted;
 
-    if (needsOnboarding) {
-      // Redirect to onboarding page
-      navigate.push("/onboarding");
-      toast.info("Please complete your profile to continue.");
-    } else {
-      // Redirect to dashboard
-      navigate.push("/dashboard");
-    }
-  },
-  onError: (error) => {
-    console.error("❌ LOGIN FAILED:", error);
-    // Handle error (already handled by toast in the component)
-  },
-});
+      // if (needsOnboarding) {
+      //   // Redirect to onboarding page
+      //   navigate.push("/onboarding");
+      //   toast.info("Please complete your profile to continue.");
+      // } else {
+        // Redirect to dashboard
+        navigate.push("/dashboard");
+      // }
+    },
+    onError: (error) => {
+      console.error("❌ LOGIN FAILED:", error);
+      // Handle error (already handled by toast in the component)
+    },
+  });
 
   // Mutation: Register
   const registerMutation = useMutation({
@@ -88,20 +90,24 @@ const loginMutation = useMutation({
       // Or redirect to login page
       //   navigate({ to: "/dashboard" });
 
-     navigate.push(`/login?registered=true&email=${encodeURIComponent(user.email)}`);
+      navigate.push(
+        `/login?registered=true&email=${encodeURIComponent(user.email)}`,
+      );
     },
   });
 
-   const [resendSuccess, setResendSuccess] = useState<string | null>(null);
+  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [resendError, setResendError] = useState<Error | null>(null);
 
   const verifyEmailMutation = useMutation({
-    mutationFn: async ({ token }: { token: string }) => authService.verifyEmail(token),
-  })
+    mutationFn: async ({ token }: { token: string }) =>
+      authService.verifyEmail(token),
+  });
 
   const resendVerification = useMutation({
-    mutationFn: async ({ email }: { email: string })=> authService.resendEmail(email),
+    mutationFn: async ({ email }: { email: string }) =>
+      authService.resendEmail(email),
     onSuccess: (data) => {
       setResendSuccess(data.message || "Verification email sent successfully!");
       setResendError(null);
@@ -202,6 +208,7 @@ const loginMutation = useMutation({
     user: currentUser,
     isAuthenticated: !!currentUser,
     isLoadingUser,
+    isUserDataFresh,
     userError,
     userWard: currentUser?.ward?.name,
 
@@ -242,7 +249,7 @@ const loginMutation = useMutation({
     // googleLoginAsync: googleLoginMutation.mutateAsync,
     // isGoogleLoggingIn: googleLoginMutation.isPending,
 
-      verifyEmail: verifyEmailMutation.mutateAsync,
+    verifyEmail: verifyEmailMutation.mutateAsync,
     isVerifying: verifyEmailMutation.isPending,
     verifyError: verifyEmailMutation.error,
     resendVerification: resendVerification.mutateAsync,

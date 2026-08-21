@@ -84,56 +84,45 @@ const ONBOARDING_REQUIRED_ROUTES = ['/dashboard', '/dashboard/services', '/dashb
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const navigate = useRouter();
   const pathname = usePathname();
-  const { isLoadingUser, user } = useAuth();
+  const { isLoadingUser, isUserDataFresh, user } = useAuth();
   const token = tokenManager.getAccessToken();
 
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isOnboardingRoute = pathname === "/onboarding";
+  const isCitizenOrBusiness = user?.role === "citizen" || user?.role === "business_owner";
+  const needsOnboarding = isCitizenOrBusiness && !user?.onboardingCompleted;
+
+  // "ready" means: not loading, AND we're trusting fresh server data, not a stale cache.
+  const isReady = !isLoadingUser && isUserDataFresh;
+
+  let redirectTarget: string | null = null;
+  let redirectToastMessage: string | null = null;
+
+  if (!isLoadingUser && !token) {
+    redirectTarget = "/login";
+  } else if (isReady && user) {
+    if (needsOnboarding && !isOnboardingRoute && !isPublicRoute) {
+      redirectTarget = "/onboarding";
+      redirectToastMessage = "Please complete your profile to continue.";
+    } else if (isOnboardingRoute && !needsOnboarding) {
+      redirectTarget = "/dashboard";
+    } else if (isPublicRoute) {
+      redirectTarget = "/dashboard";
+    }
+  }
+
   useEffect(() => {
-    // If not loading and no token, redirect to login
-    if (!isLoadingUser && !token) {
-      navigate.push("/login");
-      return;
+    if (redirectTarget) {
+      navigate.push(redirectTarget);
+      if (redirectToastMessage) toast.info(redirectToastMessage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [redirectTarget]);
 
-    // If user is authenticated
-    if (!isLoadingUser && token && user) {
-      const isCitizenOrBusiness = user.role === 'citizen' || user.role === 'business_owner';
-      const isOnboardingRoute = pathname === '/onboarding';
-      const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-      
-      // Check if user needs onboarding
-      const needsOnboarding = isCitizenOrBusiness && !user.onboardingCompleted;
-      
-      // Redirect to onboarding if needed and not already on onboarding
-      if (needsOnboarding && !isOnboardingRoute && !isPublicRoute) {
-        navigate.push("/onboarding");
-        toast.info("Please complete your profile to continue.");
-        return;
-      }
-
-      // If on onboarding but onboarding is completed, redirect to dashboard
-      if (isOnboardingRoute && !needsOnboarding) {
-        navigate.push("/dashboard");
-        return;
-      }
-
-      // If on login/register but already authenticated, redirect to dashboard
-      if (isPublicRoute) {
-        navigate.push("/dashboard");
-        return;
-      }
-    }
-  }, [isLoadingUser, token, user, navigate, pathname]);
-
-  // Show loading state
-  if (isLoadingUser) {
+  // Block rendering children until we have FRESH data (not stale cache) and no redirect is pending.
+  if (isLoadingUser || !token || !isUserDataFresh || redirectTarget) {
     return <FullPageLoader />;
   }
 
-  // If no token, don't render children (will redirect)
-  if (!token) {
-    return <FullPageLoader />;
-  }
-
-  // Render children if authenticated
   return <>{children}</>;
 }
