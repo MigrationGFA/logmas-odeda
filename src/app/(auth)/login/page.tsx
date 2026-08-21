@@ -22,11 +22,14 @@ export default function Page() {
 }
 
 function LoginPage() {
-  const { login, isLoggingIn, loginError,resendVerification,isVerifying } = useAuth();
+  const { login, isLoggingIn, loginError, resendVerification, isVerifying } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
-  const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(
+    null,
+  );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,29 +53,36 @@ function LoginPage() {
       toast.error(
         "Your account has been suspended. Please contact the LGA Secretariat.",
       );
+    } else if (reason === "unverified") {
+      const message = emailParam
+        ? `Please verify your email address (${emailParam}) before signing in.`
+        : "Please verify your email address before signing in.";
+      setVerificationMessage(message);
+      if (emailParam) setEmail(emailParam);
+      toast.warning("Please verify your email to continue.");
     }
-  }, [reason]);
+  }, [reason, emailParam]);
 
   useEffect(() => {
     // Check for registration or email verification messages
     if (registered === "true" && !verified) {
-      const message = emailParam 
+      const message = emailParam
         ? `A verification link has been sent to ${emailParam}. Please verify your email to access your account.`
         : "Please verify your email address to access your account. A verification link has been sent to your email.";
       setVerificationMessage(message);
-      
+
       // Auto-fill email if provided
       if (emailParam) {
         setEmail(emailParam);
       }
-      
+
       // Show toast notification
       toast.info("Verification email sent! Please check your inbox.");
-      
+
       // Clear the URL parameters after displaying the message
       const url = new URL(window.location.href);
       url.searchParams.delete("registered");
-      url.searchParams.delete("email");
+      // url.searchParams.delete("email");
       window.history.replaceState({}, "", url.toString());
     }
   }, [registered, emailParam, verified]);
@@ -80,12 +90,13 @@ function LoginPage() {
   // Handle email verification success
   useEffect(() => {
     if (verified === "true") {
-      const message = "Your email has been verified successfully! You can now sign in to your account.";
+      const message =
+        "Your email has been verified successfully! You can now sign in to your account.";
       setVerificationMessage(message);
-      
+
       // Show success toast
       toast.success("Email verified successfully!");
-      
+
       // Clear the verification parameter
       const url = new URL(window.location.href);
       // url.searchParams.delete("verified");
@@ -118,7 +129,7 @@ function LoginPage() {
       toast.error("Please enter your email address to resend verification.");
       return;
     }
-    
+
     try {
       // Call your API to resend verification email
       await resendVerification({ email });
@@ -183,7 +194,7 @@ function LoginPage() {
               <span className="font-bold">LOGMAS</span>
             </Link>
           </div>
-          
+
           <div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
               Welcome back
@@ -195,11 +206,13 @@ function LoginPage() {
 
           {/* Verification / Registration Message */}
           {verificationMessage && (
-            <div className={`rounded-lg p-4 animate-in fade-in slide-in-from-top-3 duration-300 ${
-              verified === "true" 
-                ? "bg-emerald-500/10 border border-emerald-500/30"
-                : "bg-amber-500/10 border border-amber-500/30"
-            }`}>
+            <div
+              className={`rounded-lg p-4 animate-in fade-in slide-in-from-top-3 duration-300 ${
+                verified === "true"
+                  ? "bg-emerald-500/10 border border-emerald-500/30"
+                  : "bg-amber-500/10 border border-amber-500/30"
+              }`}
+            >
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">
                   {verified === "true" ? (
@@ -221,11 +234,13 @@ function LoginPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className={`text-sm font-medium ${
-                    verified === "true"
-                      ? "text-emerald-800 dark:text-emerald-300"
-                      : "text-amber-800 dark:text-amber-300"
-                  }`}>
+                  <p
+                    className={`text-sm font-medium ${
+                      verified === "true"
+                        ? "text-emerald-800 dark:text-emerald-300"
+                        : "text-amber-800 dark:text-amber-300"
+                    }`}
+                  >
                     {verificationMessage}
                   </p>
                   {!verified && (

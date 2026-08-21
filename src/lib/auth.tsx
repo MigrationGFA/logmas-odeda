@@ -59,10 +59,10 @@ export const ROLE_LABELS: Record<Role, string> = {
 
 export const MANAGEABLE_ROLES: Role[] = [
   "chairman",
-  "ward_councillor",
+  // "ward_councillor",
   "auditor",
   "treasurer",
-  "contractor",
+  // "contractor",
   "field_officer",
   "business_owner",
   "citizen",

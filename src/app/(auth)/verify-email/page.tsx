@@ -73,7 +73,7 @@ function Page() {
         setMessage(result.message || "Your email has been verified successfully!");
 
         setTimeout(() => {
-          router.push("/login?verified=true");
+          router.push(`/login?verified=true?email=${emailParam}`);
         }, 3000);
       } catch (error: any) {
         setStatus("error");

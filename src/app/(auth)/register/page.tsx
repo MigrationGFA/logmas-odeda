@@ -204,9 +204,9 @@ export default function RegisterPage() {
                     ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1.5">
+              {/* <p className="text-xs text-muted-foreground mt-1.5">
                 Prototype: choose any role to preview that dashboard.
-              </p>
+              </p> */}
               {errors.role && (
                 <p className="text-sm text-destructive mt-1">
                   {errors.role.message}

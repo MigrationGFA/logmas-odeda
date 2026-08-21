@@ -3,13 +3,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { PageHeader, StatCard, EmptyState } from "@/components/dashboard/shared";
+import {
+  PageHeader,
+  StatCard,
+  EmptyState,
+} from "@/components/dashboard/shared";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -40,16 +44,25 @@ import {
   Mail,
   Search,
   Loader2,
+  BadgeCheck,
+  BadgeAlert,
 } from "lucide-react";
 import { useGetAccounts } from "@/hooks/queries/useLgaAdmin";
-import { ROLE_LABELS, MANAGEABLE_ROLES } from "@/lib/auth";
+import { ROLE_LABELS, MANAGEABLE_ROLES, Role } from "@/lib/auth";
 import { useAuth } from "@/hooks/queries/useAuth";
 import {
   CreateAccountDialog,
+  ResendVerificationDialog,
   ResetPasswordDialog,
   SuspendAccountDialog,
 } from "@/components/lgaAdmin/CreateAccountDialog";
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Account } from "@/services/apiLgaAdmin";
+import { format } from "date-fns";
 
 type AccountStatus = "active" | "suspended" | "pending_reset";
 
@@ -59,8 +72,8 @@ const ROLE_ICON: Record<string, any> = {
   lga_admin: Building2,
   treasurer: Wallet,
   auditor: ShieldCheck,
-  ward_councillor: UserCog,
-  contractor: Briefcase,
+  // ward_councillor: UserCog,
+  // contractor: Briefcase,
   field_officer: UserCog,
   citizen: UserCircle,
   business_owner: Building2,
@@ -80,10 +93,57 @@ export default function AccountsPage() {
     limit: 20,
   });
 
+  const getVerificationBadge = (account: Account) => {
+    const isCitizenOrBusiness =
+      account.role === ("citizen" as Role) ||
+      account.role === ("business_owner" as Role);
+
+    if (!isCitizenOrBusiness) {
+      return <span className="text-muted-foreground text-sm">—</span>;
+    }
+
+    const isVerified = !!account.emailVerified;
+
+    return isVerified ? (
+      <Badge className="border-success/30 text-success bg-success/10 gap-1">
+        <BadgeCheck className="h-3 w-3" />
+        Verified
+      </Badge>
+    ) : (
+      <Badge className="border-warning/30 text-warning-foreground bg-warning/10 gap-1">
+        <BadgeAlert className="h-3 w-3" />
+        Unverified
+      </Badge>
+    );
+  };
+
+  const getPasswordResetBadge = (account: Account) => {
+
+
+  const needsReset = !!account.isReset;
+
+  return needsReset ? (
+    <Badge className="border-warning/30 text-warning-foreground bg-warning/10 gap-1">
+      <KeyRound className="h-3 w-3" />
+      Reset Required
+    </Badge>
+  ) : (
+    <Badge className="border-success/30 text-success bg-success/10 gap-1">
+      <ShieldCheck className="h-3 w-3" />
+      Set
+    </Badge>
+  );
+};
+
   const userRole = user?.role;
   const canManage = userRole === "super_admin" || userRole === "lga_admin";
 
-  const counts = data?.counts || { total: 0, active: 0, suspended: 0, pending: 0 };
+  const counts = data?.counts || {
+    total: 0,
+    active: 0,
+    suspended: 0,
+    pending: 0,
+  };
   const accountsList = useMemo(() => data?.accounts || [], [data?.accounts]);
   const meta = data?.meta;
 
@@ -107,7 +167,11 @@ export default function AccountsPage() {
   const getStatusBadge = (status: AccountStatus) => {
     switch (status) {
       case "active":
-        return <Badge className="border-success/30 text-success bg-success/10">Active</Badge>;
+        return (
+          <Badge className="border-success/30 text-success bg-success/10">
+            Active
+          </Badge>
+        );
       case "suspended":
         return (
           <Badge className="border-warning/30 text-warning-foreground bg-warning/10">
@@ -115,13 +179,15 @@ export default function AccountsPage() {
           </Badge>
         );
       case "pending_reset":
-        return <Badge className="border-info/30 text-info bg-info/10">Pending Reset</Badge>;
+        return (
+          <Badge className="border-info/30 text-info bg-info/10">
+            Pending Reset
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -143,7 +209,12 @@ export default function AccountsPage() {
           icon={Users}
           color="primary"
         />
-        <StatCard label="Active" value={String(counts.active)} icon={ShieldCheck} color="success" />
+        <StatCard
+          label="Active"
+          value={String(counts.active)}
+          icon={ShieldCheck}
+          color="success"
+        />
         <StatCard
           label="Suspended"
           value={String(counts.suspended)}
@@ -211,6 +282,8 @@ export default function AccountsPage() {
                       <TableHead>Ward</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Last Login</TableHead>
+                      <TableHead>Email Verified</TableHead>
+                      <TableHead>Password Reset</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -222,16 +295,21 @@ export default function AccountsPage() {
                           <TableCell>
                             <div className="flex items-center gap-2.5">
                               <Avatar className="h-9 w-9">
+                                {account.avatarUrl && (
+                                  <AvatarImage src={account.avatarUrl} />
+                                )}
                                 <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
                                   {account.name
                                     .split(" ")
                                     .map((n) => n[0])
                                     .slice(0, 2)
-                                    .join("")}
+                                    .join("").toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                <div className="font-medium text-sm">{account.name}</div>
+                                <div className="font-medium text-sm">
+                                  {account.name}
+                                </div>
                                 <div className="text-xs text-muted-foreground flex items-center gap-1">
                                   <Mail className="h-3 w-3" /> {account.email}
                                 </div>
@@ -241,43 +319,63 @@ export default function AccountsPage() {
                           <TableCell>
                             <Badge variant="outline" className="gap-1">
                               <Icon className="h-3 w-3" />
-                              {ROLE_LABELS[account.role as keyof typeof ROLE_LABELS] ||
-                                account.role}
+                              {ROLE_LABELS[
+                                account.role as keyof typeof ROLE_LABELS
+                              ] || account.role}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-sm">{account.ward || "—"}</TableCell>
-                          <TableCell>{getStatusBadge(account.status)}</TableCell>
+                          <TableCell className="text-sm">
+                            {account.ward || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(account.status)}
+                          </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {account.lastLogin
-                              ? new Date(account.lastLogin).toLocaleDateString()
+                              ? format(
+                                  new Date(account.lastLogin),
+                                  "MMM d, yyyy h:mm a",
+                                )
                               : "Never"}
                           </TableCell>
+                          <TableCell>{getVerificationBadge(account)}</TableCell>
+                          <TableCell>{getPasswordResetBadge(account)}</TableCell> 
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1.5">
-                              <ResetPasswordDialog
-                                account={account}
-                              />
-                              {/* <Button
-                                size="sm"
-                                variant="outline"
-                                // onClick={() => toggleStatus(a.id)}
-                                // title={account.status === "active" ? "Suspend" : "Activate"}
-                              >
-                                {account.status === "active" ? (
-                                  <>
-                                    <ShieldOff className="h-3.5 w-3.5 mr-1" />
-                                  </>
-                                ) : (
-                                  <>
-                                    <Power className="h-3.5 w-3.5 mr-1" />
-                                  </>
-                                )}
-                              </Button> */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <ResetPasswordDialog account={account} />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>Reset password</TooltipContent>
+                              </Tooltip>
 
-                              <SuspendAccountDialog
-                                account={account}
-                              
-                              />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <ResendVerificationDialog
+                                      account={account}
+                                    />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Resend verification email
+                                </TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <SuspendAccountDialog account={account} />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {account.status === "active"
+                                    ? "Suspend account"
+                                    : "Reactivate account"}
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -285,7 +383,10 @@ export default function AccountsPage() {
                     })}
                     {filteredAccounts.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                        <TableCell
+                          colSpan={6}
+                          className="py-10 text-center text-muted-foreground"
+                        >
                           No accounts found.
                         </TableCell>
                       </TableRow>

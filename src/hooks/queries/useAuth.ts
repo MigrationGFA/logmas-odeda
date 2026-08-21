@@ -91,7 +91,7 @@ export function useAuth() {
       //   navigate({ to: "/dashboard" });
 
       navigate.push(
-        `/login?registered=true&email=${encodeURIComponent(user.email)}`,
+        `/login?registered=true&email=${encodeURIComponent(userData.user.email)}`,
       );
     },
   });

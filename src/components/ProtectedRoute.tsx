@@ -91,17 +91,23 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const isOnboardingRoute = pathname === "/onboarding";
   const isCitizenOrBusiness = user?.role === "citizen" || user?.role === "business_owner";
   const needsOnboarding = isCitizenOrBusiness && !user?.onboardingCompleted;
+  const needsEmailVerification = isCitizenOrBusiness && !user?.emailVerifiedAt;
 
-  // "ready" means: not loading, AND we're trusting fresh server data, not a stale cache.
   const isReady = !isLoadingUser && isUserDataFresh;
 
   let redirectTarget: string | null = null;
   let redirectToastMessage: string | null = null;
+  let shouldClearSession = false;
 
   if (!isLoadingUser && !token) {
     redirectTarget = "/login";
   } else if (isReady && user) {
-    if (needsOnboarding && !isOnboardingRoute && !isPublicRoute) {
+    if (needsEmailVerification && !isPublicRoute) {
+      // Unverified users can't be left holding a valid session — clear it
+      // or they'll just get bounced straight back here from /login.
+      redirectTarget = `/login?reason=unverified&email=${encodeURIComponent(user.email)}`;
+      shouldClearSession = true;
+    } else if (needsOnboarding && !isOnboardingRoute && !isPublicRoute) {
       redirectTarget = "/onboarding";
       redirectToastMessage = "Please complete your profile to continue.";
     } else if (isOnboardingRoute && !needsOnboarding) {
@@ -113,16 +119,19 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     if (redirectTarget) {
+      if (shouldClearSession) {
+        tokenManager.clearAllTokens();
+      }
       navigate.push(redirectTarget);
       if (redirectToastMessage) toast.info(redirectToastMessage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redirectTarget]);
 
-  // Block rendering children until we have FRESH data (not stale cache) and no redirect is pending.
   if (isLoadingUser || !token || !isUserDataFresh || redirectTarget) {
     return <FullPageLoader />;
   }
 
-  return <>{children}</>;
+  // return <>{children}</>;
+   return <RedirectIfPasswordReset>{children}</RedirectIfPasswordReset>;
 }
