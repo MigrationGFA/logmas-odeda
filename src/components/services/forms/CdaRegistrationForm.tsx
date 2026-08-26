@@ -279,20 +279,20 @@ export default function CdaRegistrationForm({
     // if (index === 0) {
     //   return !!applicant.fullName.trim() && !!applicant.phone.trim() && !!applicant.address.trim();
     // }
-    if (index === 1) {
+    if (index === 0) {
       return !!formData.cdaName.trim() && !!formData.hostVillage.trim() && !!formData.baaleName.trim();
     }
-    if (index === 2) {
+    if (index === 1) {
       return !!formData.priorityProject1.trim() && !!formData.primarySecurityArrangement.trim();
     }
-    if (index === 3) {
+    if (index === 2) {
       return !!officers[0]?.fullName.trim() && !!officers[1]?.fullName.trim();
     }
-    if (index === 4) {
+    if (index === 3) {
       const missing = DOCUMENTS.filter((d) => d.required && !uploadedFiles[d.id]);
       return missing.length === 0;
     }
-    if (index === 5) {
+    if (index === 4) {
       return declaration;
     }
     return true;

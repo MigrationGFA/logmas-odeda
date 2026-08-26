@@ -56,6 +56,7 @@ import Link from "next/link";
 import { WARDS } from "@/lib/mock-data";
 import { ODEDA_SERVICES } from "@/config/odedaServices";
 import { tokenManager } from "@/services/apiAuth";
+import { getPublicCertificateUrl } from "@/lib/certificateTokens";
 import {
   useApplications,
   useMoveToUnderReview,
@@ -65,6 +66,7 @@ import {
 import { Application, ApplicationStatus } from "@/types/application";
 import { FormDataViewer } from "@/components/services/FormDataViewer";
 import { DocumentsViewer } from "@/components/services/DocumentsViewer";
+import { useServices } from "@/hooks/queries/useServices";
 
 export default function ApplicationsPage() {
   const currentUser = tokenManager.getUser();
@@ -94,6 +96,8 @@ export default function ApplicationsPage() {
     serviceId: serviceFilter !== "all" ? serviceFilter : undefined,
     wardId: wardFilter !== "all" ? wardFilter : undefined,
   });
+
+  const {services,isLoading:isServicing} = useServices()
 
   const moveToReviewMutation = useMoveToUnderReview();
   const approveMutation = useApproveApplication();
@@ -176,6 +180,8 @@ export default function ApplicationsPage() {
       // Error handled by mutation toast
     }
   };
+
+  console.log(selectedApp,"lol")
 
   const getStatusBadge = (status: string) => {
     const s = String(status).toLowerCase();
@@ -349,12 +355,12 @@ export default function ApplicationsPage() {
 
           <div>
             <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger className="text-xs h-9 truncate">
+              <SelectTrigger className="text-xs h-9 truncate" disabled={isServicing}>
                 <SelectValue placeholder="All Services" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statutory Services</SelectItem>
-                {ODEDA_SERVICES.map((s) => (
+                {services.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name}
                   </SelectItem>
@@ -522,10 +528,9 @@ export default function ApplicationsPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        setSelectedApp(app);
-                        setCertificateModalOpen(true);
-                      }}
+                     onClick={() => {
+                      window.open(getPublicCertificateUrl(app.id), "_blank");
+                    }}
                       className="text-xs h-8 gap-1.5 border-emerald-400 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 font-semibold"
                     >
                       <FileBadge className="h-3.5 w-3.5" />
