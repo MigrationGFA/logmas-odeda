@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
+import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
+import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
 import {
   FileBadge,
   Users,
@@ -28,6 +30,8 @@ import {
   FileCheck,
   QrCode,
   ShieldAlert,
+  CreditCard,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -46,11 +50,11 @@ const ICONS: Record<string, any> = {
   Store,
 };
 
-const FLOW = ["Online Application", "Fee Assessment", "Payment", "Inspection / Review", "Council Approval", "QR Certificate Download"];
-
 export default function ServicesPage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [showQuickApply, setShowQuickApply] = useState(false);
+  const [selectedQuickService, setSelectedQuickService] = useState<string>("certificate_of_origin");
 
   const categories = [
     "All",
@@ -70,6 +74,16 @@ export default function ServicesPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const handleApplyClick = (serviceId: string) => {
+    setSelectedQuickService(serviceId);
+    setShowQuickApply(true);
+    // Smooth scroll to quick apply
+    const el = document.getElementById("quick-apply-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SiteHeader />
@@ -77,9 +91,9 @@ export default function ServicesPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="bg-gradient-mesh border-b border-border/40">
-          <div className="container mx-auto px-4 py-16 md:py-20 text-center">
+          <div className="container mx-auto px-4 py-14 md:py-18 text-center max-w-4xl">
             <Badge variant="outline" className="mb-3">
-              Official LGA Directory
+              Official LGA Services & Portal
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
               Statutory Services & Licences for Odeda LGA
@@ -88,24 +102,56 @@ export default function ServicesPage() {
               Apply for Certificate of Origin, business permits, haulage passes, property rates, and trade licences online with end-to-end digital verification.
             </p>
 
-            {/* Workflow steps */}
-            <div className="mt-8 flex flex-wrap justify-center gap-2">
-              {FLOW.map((step, i) => (
-                <div key={step} className="flex items-center gap-2">
-                  <Badge className="bg-secondary text-secondary-foreground border border-primary/20 font-medium text-xs">
-                    {i + 1}. {step}
-                  </Badge>
-                  {i < FLOW.length - 1 && (
-                    <ArrowRight className="h-3 w-3 text-muted-foreground hidden sm:block" />
-                  )}
-                </div>
-              ))}
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button
+                onClick={() => {
+                  setShowQuickApply(true);
+                  const el = document.getElementById("quick-apply-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="bg-gradient-hero text-primary-foreground font-semibold shadow-elegant"
+              >
+                <Sparkles className="mr-2 h-4 w-4" /> First-Timer? Select Service & Pay
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="#services-catalog">Browse All 12 Services</Link>
+              </Button>
             </div>
           </div>
         </section>
 
+        {/* 6-Step Mandatory Application Process Banner Posted on Services Page Before Payment */}
+        <section className="bg-muted/20 border-b border-border/40 py-10">
+          <div className="container mx-auto px-4">
+            <ServiceApplicationGuideSteps
+              title="Official 6-Step Application & Payment Process"
+              subtitle="Please follow these steps for all services. First-time applicants will have an account automatically created with login details sent to their email upon payment."
+            />
+          </div>
+        </section>
+
+        {/* First Timer Interactive Application & Payment Section */}
+        <section id="quick-apply-section" className="container mx-auto px-4 py-12">
+          <PublicServiceApplyWidget
+            initialServiceId={selectedQuickService}
+            showStepGuide={false}
+          />
+        </section>
+
         {/* Filter and Services Grid */}
-        <section className="container mx-auto px-4 py-12 md:py-16">
+        <section id="services-catalog" className="container mx-auto px-4 py-12 md:py-16 border-t border-border/40">
+          <div className="mb-8">
+            <Badge variant="outline" className="mb-2">
+              Full Statutory Directory
+            </Badge>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+              Available Council Services & Tariffs
+            </h2>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
+              Select any service below to view SLA requirements or initiate your statutory payment and application.
+            </p>
+          </div>
+
           {/* Controls Bar */}
           <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center mb-8">
             <div className="relative flex-1 max-w-md">
@@ -161,7 +207,7 @@ export default function ServicesPage() {
                     </div>
 
                     <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
-                      <Link href={`/services/${s.id}`}>{s.title || s.name}</Link>
+                      <Link href={`/services/${s.id}`}>{s.name}</Link>
                     </h3>
                     <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
                       {s.description}
@@ -188,7 +234,7 @@ export default function ServicesPage() {
 
                     <div className="mt-4 space-y-1 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                         <span>Requires {s.requiredDocuments.length} verification documents</span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -202,8 +248,12 @@ export default function ServicesPage() {
                     <Button asChild variant="outline" size="sm" className="text-xs">
                       <Link href={`/services/${s.id}`}>Details & SLA</Link>
                     </Button>
-                    <Button asChild size="sm" className="bg-gradient-hero text-xs font-semibold">
-                      <Link href={`/dashboard/services/${s.id}`}>Apply Online</Link>
+                    <Button
+                      onClick={() => handleApplyClick(s.id)}
+                      size="sm"
+                      className="bg-gradient-hero text-xs font-semibold"
+                    >
+                      <CreditCard className="mr-1.5 h-3 w-3" /> Pay & Apply
                     </Button>
                   </div>
                 </Card>

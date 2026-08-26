@@ -232,10 +232,10 @@ import chairmanPhoto from "@/assets/chairman.jpg";
 
 export const LEADERSHIP = [
   {
-    name: "Hon. Executive Chairman",
+    name: "Hon. Dr. Waliat Folasade Adeyemo",
     role: "Executive Chairman",
-    bio: "Leading Odeda Local Government Area with a vision for digital transformation, agricultural empowerment, revenue transparency, and infrastructure growth across all 10 wards.",
-    initials: "OL",
+    bio: "Leading Odeda Local Government Area with a vision for purposeful, people-centred governance, digital transformation, agricultural empowerment, and infrastructure growth across all 10 wards.",
+    initials: "WA",
     accent: "primary",
     image: chairmanPhoto,
     party: "All Progressives Congress (APC)",

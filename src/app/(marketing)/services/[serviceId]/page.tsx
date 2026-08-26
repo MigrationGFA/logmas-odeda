@@ -3,6 +3,8 @@
 import React, { use, useState } from "react";
 import { getOdedaServiceById, ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
+import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
+import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +35,8 @@ import {
   ShieldAlert,
   ChevronRight,
   Sparkles,
+  UserCheck,
+  LogIn,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, any> = {
@@ -59,7 +63,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
   const serviceId = resolvedParams.serviceId;
   const service = getOdedaServiceById(serviceId);
 
-  const [activeTab, setActiveTab] = useState<"overview" | "requirements" | "workflow" | "faq">("overview");
+  const [activeTab, setActiveTab] = useState<"apply" | "requirements" | "workflow" | "faq">("apply");
 
   if (!service) {
     return (
@@ -95,12 +99,17 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
   }
 
   const IconComponent = ICON_MAP[service.icon] || FileBadge;
-  const currentFee = service.feeConfig.amount
+  const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
 
   // Filter related services in same category or adjacent
   const relatedServices = ODEDA_SERVICES.filter(
     (s) => s.id !== service.id && (s.category === service.category || Math.random() > 0.5)
   ).slice(0, 3);
+
+  const scrollToApply = () => {
+    const el = document.getElementById("apply-and-pay-section");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -202,32 +211,33 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                     {service.feeType === "fixed" ? (
                       <>
                         ₦{currentFee.toLocaleString()}{" "}
-                        <span className="text-xs font-normal text-muted-foreground">/ application</span>
+                        <span className="text-xs font-normal text-muted-foreground">/ statutory fee</span>
                       </>
                     ) : (
                       <span className="text-lg">{service.feeDescription}</span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Direct statutory fee payment with electronic receipt & automated council processing.
+                    Pay statutory fee online to instantly auto-create your account, receive login details via email, and complete your application form.
                   </p>
 
                   <div className="mt-6 space-y-2.5">
-                    <Button asChild className="w-full bg-gradient-hero shadow-elegant text-sm font-semibold h-11">
-                      <Link href={`/dashboard/services/${service.id}`}>
-                        Apply Online Now <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
+                    <Button
+                      onClick={scrollToApply}
+                      className="w-full bg-gradient-hero shadow-elegant text-sm font-semibold h-11"
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" /> Pay & Apply Online Now
                     </Button>
 
                     <Button asChild variant="outline" className="w-full text-xs h-10">
                       <Link href="/verify">
-                        <QrCode className="mr-2 h-3.5 w-3.5" /> Verify Issued Certificate
+                        <QrCode className="mr-2 h-3.5 w-3.5" /> Verify Existing Certificate
                       </Link>
                     </Button>
 
                     <Button asChild variant="ghost" className="w-full text-xs text-muted-foreground h-9">
                       <Link href="/contact">
-                        <HelpCircle className="mr-1.5 h-3.5 w-3.5" /> Have questions? Ask LGA Helpdesk
+                        <HelpCircle className="mr-1.5 h-3.5 w-3.5" /> Have questions? Contact LGA Helpdesk
                       </Link>
                     </Button>
                   </div>
@@ -237,18 +247,48 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
           </div>
         </section>
 
+        {/* 6-Step Statutory Application Guide Posted Before Payment on Service Page */}
+        <section className="bg-muted/20 border-b border-border/40 py-10">
+          <div className="container mx-auto px-4">
+            <ServiceApplicationGuideSteps
+              title={`Official 6-Step Application Process for ${service.name}`}
+              subtitle="Please follow these steps carefully. Payment must be made online, after which login credentials will be dispatched to your email for application form completion."
+            />
+          </div>
+        </section>
+
+        {/* Main Interactive Apply & Payment Section for this service */}
+        <section id="apply-and-pay-section" className="container mx-auto px-4 py-12">
+          <div className="mb-6">
+            <Badge variant="outline" className="mb-1 bg-primary/10 text-primary border-primary/20">
+              <Sparkles className="h-3 w-3 mr-1" /> Service Application Form
+            </Badge>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+              Apply & Settle Statutory Fee for {service.name}
+            </h2>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
+              Provide applicant payment details below to make payment online, auto-provision your account, and submit your documentation.
+            </p>
+          </div>
+
+          <PublicServiceApplyWidget
+            initialServiceId={service.id}
+            showStepGuide={false}
+          />
+        </section>
+
         {/* Content Tabs / Sections */}
-        <section className="container mx-auto px-4 py-12 md:py-16">
+        <section className="container mx-auto px-4 py-12 md:py-16 border-t border-border/40">
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-10">
               {/* Requirements & Documents */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <FileCheck className="h-5 w-5 text-primary" />
-                  <h2 className="text-2xl font-bold tracking-tight">Required Documents & Eligibility</h2>
+                  <h2 className="text-2xl font-bold tracking-tight">Required Documents & Eligibility (Step 4)</h2>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Please prepare clear digital copies (PDF, JPG, PNG under 5MB each) of the following statutory documents before starting your application:
+                  Before you log in to fill the application form, please prepare clear digital copies (PDF, JPG, PNG under 5MB each) of the following statutory documents:
                 </p>
 
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -263,81 +303,6 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                       <div className="font-medium text-foreground leading-snug">{doc}</div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Step by Step Statutory Workflow */}
-              <div className="pt-6 border-t border-border/40">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h2 className="text-2xl font-bold tracking-tight">Application & Issuance Workflow</h2>
-                </div>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Every application submitted to Odeda Local Government undergoes a verified, transparent approval pipeline:
-                </p>
-
-                <div className="space-y-4 relative before:absolute before:left-4 before:top-4 before:bottom-4 before:w-0.5 before:bg-border/60">
-                  <div className="relative flex items-start gap-4 pl-1">
-                    <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 z-10 shadow-sm">
-                      1
-                    </div>
-                    <div className="bg-card p-4 rounded-xl border border-border/60 flex-1">
-                      <h3 className="font-semibold text-sm">Online Submission</h3>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        Fill applicant details, upload the required statutory documents, and submit your application on the LOGMAS citizen portal.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-4 pl-1">
-                    <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 z-10 shadow-sm">
-                      2
-                    </div>
-                    <div className="bg-card p-4 rounded-xl border border-border/60 flex-1">
-                      <h3 className="font-semibold text-sm">Instant Invoice & Statutory Settle</h3>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        An official government invoice is generated with a unique reference number. Settle instantly via Card, Transfer, USSD, or Bank branch.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-4 pl-1">
-                    <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 z-10 shadow-sm">
-                      3
-                    </div>
-                    <div className="bg-card p-4 rounded-xl border border-border/60 flex-1">
-                      <h3 className="font-semibold text-sm">Desk & Field Verification</h3>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        {service.requiresInspection
-                          ? "Council Field Officers and Ward representatives carry out required inspections and document validation."
-                          : "Designated council officers verify provided credentials, identification records, and statutory eligibility."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-4 pl-1">
-                    <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 z-10 shadow-sm">
-                      4
-                    </div>
-                    <div className="bg-card p-4 rounded-xl border border-border/60 flex-1">
-                      <h3 className="font-semibold text-sm">Executive LGA Approval</h3>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        The Council Executive Chairman and authorized statutory officers sign off electronically on the approved application.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-4 pl-1">
-                    <div className="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 z-10 shadow-sm">
-                      5
-                    </div>
-                    <div className="bg-card p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/10 flex-1">
-                      <h3 className="font-semibold text-sm text-foreground">Official QR Certificate / Licence Issuance</h3>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        Download your official security-encoded statutory document complete with verifiable QR code and council digital watermark.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -357,16 +322,16 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                   </Card>
 
                   <Card className="p-4 bg-card border-border/60">
-                    <h3 className="font-semibold text-foreground">Can third parties verify the authenticity of my certificate?</h3>
+                    <h3 className="font-semibold text-foreground">What happens after I make payment online?</h3>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      Yes. Every certificate, permit, and licence features a cryptographically secured QR code that embassies, universities, banks, and government agencies can scan or verify online at logmas.gov.ng/verify.
+                      Your citizen portal account is automatically generated, and login credentials are sent directly to your registered email address. You can log in immediately to complete the application form and upload your documents.
                     </p>
                   </Card>
 
                   <Card className="p-4 bg-card border-border/60">
-                    <h3 className="font-semibold text-foreground">Can I apply if I reside outside Odeda LGA or Nigeria?</h3>
+                    <h3 className="font-semibold text-foreground">Can third parties verify the authenticity of my certificate?</h3>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      Yes. Descendants in the diaspora and non-resident indigenes can apply online, submit their proof of origin/identification, and pay securely using international cards.
+                      Yes. Every certificate, permit, and licence features a cryptographically secured QR code that embassies, universities, banks, and government agencies can scan or verify online at logmas.gov.ng/verify.
                     </p>
                   </Card>
                 </div>
@@ -442,3 +407,4 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
     </div>
   );
 }
+

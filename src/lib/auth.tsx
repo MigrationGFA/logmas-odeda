@@ -70,7 +70,7 @@ export const MANAGEABLE_ROLES: Role[] = [
 
 const ROLE_NAMES: Record<Role, string> = {
   super_admin: "Adewale Super",
-  chairman: "Hon. Folusho Joseph Badejo",
+  chairman: "Hon. Dr. Waliat Folasade Adeyemo",
   lga_admin: "Olumide Admin",
   treasurer: "Yetunde Treasurer",
   auditor: "Folake Auditor",

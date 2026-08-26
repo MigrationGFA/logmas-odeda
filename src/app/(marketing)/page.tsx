@@ -57,6 +57,8 @@ import bannerFour from "@/assets/banner4.png";
 import Link from "next/link";
 import Image from "next/image";
 import { Helmet } from "react-helmet-async";
+import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
+import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
 
 const ICONS: Record<string, any> = {
   FileBadge,
@@ -88,6 +90,7 @@ function HomePage() {
           <StatsSection />
           <WardsMap />
           <ServicesSection />
+          <QuickServicePaymentSection />
 
           <FeaturedServices />
           <InvestSection />
@@ -359,6 +362,31 @@ function ServicesSection() {
   );
 }
 
+function QuickServicePaymentSection() {
+  return (
+    <section id="first-timer-apply" className="bg-muted/20 border-y border-border/40 py-16 md:py-20">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <Badge variant="outline" className="mb-3 bg-primary/10 text-primary border-primary/20">
+            <Sparkles className="h-3 w-3 mr-1" /> First-Timer Fast Application & Payment
+          </Badge>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            Apply & Pay for Any Council Service Online
+          </h2>
+          <p className="mt-3 text-muted-foreground text-sm">
+            First-time applicants: Select your required statutory service, enter your details, see the fee, and make payment online. Your citizen portal account will be automatically created with login credentials sent to your email to continue your application on the dashboard.
+          </p>
+        </div>
+
+        <PublicServiceApplyWidget
+          initialServiceId="certificate_of_origin"
+          showStepGuide={true}
+        />
+      </div>
+    </section>
+  );
+}
+
 function FeaturedServices() {
   return (
     <section className="container mx-auto px-4 py-16 md:py-20">
@@ -600,31 +628,27 @@ function ChairmanSection() {
                 Local Government Area,
               </p>
               <p>
-                It is with profound humility and deep gratitude to Almighty God
-                that I welcome you to the official digital home of Odeda Local Government Area. Our administration is firmly committed to
-                building an Odeda LGA where every community — from{" "}
-                <strong>Odeda Secretariat</strong>, our headquarters, to Osiele, Obantoko, Olugbo, Alagbagba, Ilugun, Opeji, and Camp/FUNAAB corridor — feels the impact of
-                purposeful, people-centred governance.
+                It is with profound humility and gratitude to Almighty God
+                that I welcome you to the official digital home of Odeda Local Government Area, Ogun State.
               </p>
               <p>
-                Since assuming office, we have focused on the issues that matter
-                most to you: rehabilitating critical farm-to-market roads, strengthening security across our 10 wards, supporting our farmers, traders and
-                youths, and modernising council services via LOGMAS.
+                Our administration is committed to building an Odeda where every community across our ten wards feels the impact of purposeful, people-centred governance. We remain focused on improving infrastructure, supporting our farmers, traders and youths, strengthening grassroots development and making government more accessible to all.
               </p>
               <p>
-                Governance must be open, accountable and accessible. That is why
-                we are bringing every service — Certificate of Origin, Business Permit, Haulage Pass, Building Approval, demand notices, complaints and receipts — into one transparent digital
-                ecosystem you can reach from anywhere, at any time.
+                This platform is part of our commitment to open, transparent and accessible governance. Here, you can learn about who we are, what we do, our leadership, communities, programmes and projects, while also accessing essential Local Government services such as Certificate of Origin, Business Permit, Haulage Pass, Building-related services, Demand Notices, payments, official receipts, complaints and other services.
               </p>
               <p>
-                I invite you to explore this portal, engage with us, hold us
-                accountable, and partner with us in writing the next chapter of
-                our shared story. Together, with God's guidance and your
-                support, Odeda Local Government Area will continue to rise.
+                Through technology and initiatives like this platform, we are bringing government services closer to you—making them easier to access, more transparent and more convenient.
+              </p>
+              <p>
+                I invite you to explore this portal, stay informed, access our services, engage with us and join us in building a greater Odeda.
+              </p>
+              <p>
+                Together, with God&apos;s guidance and your support, Odeda Local Government will continue to rise.
               </p>
             </div>
             <div className="mt-6 pt-5 border-t border-border/40">
-              <div className="font-semibold">— Hon. Folusho Joseph Badejo</div>
+              <div className="font-semibold">Hon. Dr. Waliat Folasade Adeyemo</div>
               <div className="text-xs text-muted-foreground">
                 Executive Chairman, Odeda Local Government Area · Ogun State
               </div>

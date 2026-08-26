@@ -118,27 +118,33 @@ export default function LeadershipPage() {
                             </Badge>
                             <Quote className="h-8 w-8 text-gold mt-4" />
                             <div className="mt-3 space-y-3 text-sm md:text-base leading-relaxed">
-                                <p>Dear citizens, residents, farmers, investors and friends of Odeda LGA,</p>
+                                <p>Dear citizens, residents, farmers, investors and friends of Odeda Local Government Area,</p>
                                 <p>
-                                    It is with profound humility and deep gratitude to Almighty God that I welcome you
-                                    to the official digital home of Odeda Local Government Area. Our administration is
-                                    firmly committed to building an Odeda LGA where every community — from{" "}
-                                    <strong>Odeda Secretariat</strong> to Osiele, Obantoko, Olugbo, Alagbagba, Ilugun,
-                                    Opeji, and Camp/FUNAAB corridor — feels the impact of purposeful, transparent governance.
+                                    It is with profound humility and gratitude to Almighty God that I welcome you to the official digital home of Odeda Local Government Area, Ogun State.
                                 </p>
                                 <p>
-                                    Since assuming office, we have focused on the issues that matter most to you:
-                                    rehabilitating critical farm-to-market roads, streamlining quarry and solid mineral haulage,
-                                    strengthening security across our 10 wards, supporting our local farmers, traders and youths,
-                                    and modernising council service delivery via LOGMAS.
+                                    Our administration is committed to building an Odeda where every community across our ten wards feels the impact of purposeful, people-centred governance. We remain focused on improving infrastructure, supporting our farmers, traders and youths, strengthening grassroots development and making government more accessible to all.
                                 </p>
                                 <p>
-                                    Governance must be open, accountable and accessible. Together, with God&apos;s guidance
-                                    and your support, Odeda Local Government Area will continue to rise.
+                                    This platform is part of our commitment to open, transparent and accessible governance. Here, you can learn about who we are, what we do, our leadership, communities, programmes and projects, while also accessing essential Local Government services such as Certificate of Origin, Business Permit, Haulage Pass, Building-related services, Demand Notices, payments, official receipts, complaints and other services.
                                 </p>
-                                <p className="font-semibold not-italic">
-                                    — Hon. Folusho Joseph Badejo, Executive Chairman
+                                <p>
+                                    Through technology and initiatives like this platform, we are bringing government services closer to you—making them easier to access, more transparent and more convenient.
                                 </p>
+                                <p>
+                                    I invite you to explore this portal, stay informed, access our services, engage with us and join us in building a greater Odeda.
+                                </p>
+                                <p>
+                                    Together, with God&apos;s guidance and your support, Odeda Local Government will continue to rise.
+                                </p>
+                                <div className="pt-2">
+                                    <p className="font-semibold not-italic">
+                                        Hon. Dr. Waliat Folasade Adeyemo
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Executive Chairman, Odeda Local Government Area · Ogun State
+                                    </p>
+                                </div>
                             </div>
                             <div className="mt-6 flex flex-wrap gap-3">
                                 <Button asChild className="bg-gradient-hero shadow-elegant">

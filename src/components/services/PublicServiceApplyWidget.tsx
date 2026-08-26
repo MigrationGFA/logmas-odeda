@@ -1,0 +1,483 @@
+"use client";
+
+import React, { useState, useId } from "react";
+import { ODEDA_SERVICES, OdedaService, getOdedaServiceById, getConfiguredFeeForService } from "@/config/odedaServices";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { ServiceApplicationGuideSteps } from "./ServiceApplicationGuideSteps";
+import {
+  CreditCard,
+  User,
+  Mail,
+  Phone,
+  CheckCircle2,
+  Lock,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+  Building,
+  Key,
+  Copy,
+  ExternalLink,
+  RefreshCw,
+  FileCheck2,
+  LogIn,
+  AlertCircle,
+} from "lucide-react";
+import Link from "next/link";
+
+interface PublicServiceApplyWidgetProps {
+  initialServiceId?: string;
+  className?: string;
+  showStepGuide?: boolean;
+}
+
+export function PublicServiceApplyWidget({
+  initialServiceId = "certificate_of_origin",
+  className = "",
+  showStepGuide = true,
+}: PublicServiceApplyWidgetProps) {
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(initialServiceId);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaidSuccess, setIsPaidSuccess] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const selectedService = getOdedaServiceById(selectedServiceId) || ODEDA_SERVICES[0];
+  const statutoryFee = getConfiguredFeeForService(selectedService.id) || selectedService.defaultFee;
+
+  // Generated Mock Result for UI
+  const [successDetails, setSuccessDetails] = useState<{
+    reference: string;
+    generatedPass: string;
+    paidAmount: number;
+    serviceName: string;
+    email: string;
+    phone: string;
+    fullName: string;
+  } | null>(null);
+
+  const handleSubmitPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+
+    if (!fullName.trim()) {
+      setFormError("Please enter your full applicant name");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setFormError("Please enter a valid and correct email address to receive your login details");
+      return;
+    }
+    if (!phone.trim() || phone.length < 8) {
+      setFormError("Please enter a valid phone number for SMS status updates");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    // Simulate instant online payment and automatic account provisioning
+    setTimeout(() => {
+      const generatedRef = `OG-ODEDA-${Date.now().toString().slice(-6)}`;
+      const randomPassword = `Odeda@${Math.floor(1000 + Math.random() * 9000)}`;
+
+      setSuccessDetails({
+        reference: generatedRef,
+        generatedPass: randomPassword,
+        paidAmount: statutoryFee,
+        serviceName: selectedService.name,
+        email: email.trim(),
+        phone: phone.trim(),
+        fullName: fullName.trim(),
+      });
+
+      setIsProcessing(false);
+      setIsPaidSuccess(true);
+    }, 1200);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const handleReset = () => {
+    setIsPaidSuccess(false);
+    setSuccessDetails(null);
+    setFullName("");
+    setEmail("");
+    setPhone("");
+  };
+
+  return (
+    <div id="public-service-apply-container" className={`space-y-8 ${className}`}>
+      {/* 6-Step Application Process Banner Posted Before Payment */}
+      {showStepGuide && (
+        <ServiceApplicationGuideSteps
+          title="Official 6-Step Application & Payment Process"
+          subtitle="Follow these mandatory steps to pay, auto-create your citizen portal account, and complete your application form."
+        />
+      )}
+
+      {/* Main Interactive Form / Payment Box */}
+      <Card id="service-payment-card" className="p-6 md:p-8 bg-card border-border/80 shadow-elegant">
+        {!isPaidSuccess ? (
+          <div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/40 mb-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
+                    <Sparkles className="h-3 w-3 mr-1" /> First-Timer Fast Application
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px]">
+                    Instant Account Auto-Provisioning
+                  </Badge>
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
+                  Select Service & Make Online Payment
+                </h3>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                  Pay your statutory fee online to instantly generate your portal login credentials and proceed to the dashboard.
+                </p>
+              </div>
+
+              <div className="bg-muted/40 p-3.5 rounded-xl border border-border/60 text-right shrink-0">
+                <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                  Statutory Payable Amount
+                </div>
+                <div className="text-2xl font-bold text-foreground mt-0.5">
+                  ₦{statutoryFee.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-emerald-600 font-semibold flex items-center justify-end gap-1 mt-0.5">
+                  <ShieldCheck className="h-3 w-3" /> Official Government Treasury Fee
+                </div>
+              </div>
+            </div>
+
+            {formError && (
+              <div className="mb-6 p-3.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitPayment} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Left Column: Service & Fee Details */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="service-select" className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                      1. Select Statutory Service <span className="text-destructive">*</span>
+                    </Label>
+                    <select
+                      id="service-select"
+                      value={selectedServiceId}
+                      onChange={(e) => setSelectedServiceId(e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2.5 text-sm font-medium text-foreground focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
+                    >
+                      {ODEDA_SERVICES.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.category}) — ₦{(getConfiguredFeeForService(s.id) || s.defaultFee).toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Service info card */}
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/60 space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Selected Service:</span>
+                      <span className="font-semibold text-foreground">{selectedService.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Revenue Head:</span>
+                      <span className="font-mono text-[11px] text-foreground">{selectedService.revenueHead}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Processing Time SLA:</span>
+                      <span className="font-medium text-foreground">{selectedService.processingTime}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-border/40">
+                      <span className="text-muted-foreground font-medium">Total Statutory Fee:</span>
+                      <span className="font-bold text-sm text-primary">₦{statutoryFee.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Required Docs note */}
+                  <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 text-xs text-muted-foreground">
+                    <div className="font-semibold text-foreground flex items-center gap-1.5 mb-1">
+                      <FileCheck2 className="h-3.5 w-3.5 text-primary" /> Step 4 Note (Documents to Prepare):
+                    </div>
+                    <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                      {selectedService.requiredDocuments.slice(0, 3).map((d, i) => (
+                        <li key={i} className="truncate">{d}</li>
+                      ))}
+                      {selectedService.requiredDocuments.length > 3 && (
+                        <li>+{selectedService.requiredDocuments.length - 3} more statutory document(s)</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Right Column: Applicant Details Form */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="applicant-name" className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Applicant Full Name <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative mt-1.5">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="applicant-name"
+                        placeholder="e.g. Oladimeji Babatunde Adeyemi"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="pl-10 text-sm h-11 bg-background"
+                        required
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Enter full name exactly as it appears on your official identification document.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="applicant-email" className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Valid Email Address <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative mt-1.5">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="applicant-email"
+                        type="email"
+                        placeholder="e.g. applicant@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10 text-sm h-11 bg-background"
+                        required
+                      />
+                    </div>
+                    <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                      Step 3: Login credentials will be automatically generated and sent to this email.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="applicant-phone" className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Phone Number <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative mt-1.5">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="applicant-phone"
+                        type="tel"
+                        placeholder="e.g. 0803 123 4567"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="pl-10 text-sm h-11 bg-background"
+                        required
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Used for SMS notifications on application progress and LGA approvals.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notice & CTA Button */}
+              <div className="pt-4 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Lock className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>
+                    Secured by 256-bit encryption. Card, Bank Transfer & USSD accepted.
+                  </span>
+                </div>
+
+                <Button
+                  id="pay-statutory-fee-button"
+                  type="submit"
+                  disabled={isProcessing}
+                  size="lg"
+                  className="w-full md:w-auto min-w-[240px] bg-gradient-hero text-primary-foreground font-semibold shadow-elegant h-12"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Processing Payment & Account...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay ₦{statutoryFee.toLocaleString()} & Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          /* Payment Success & Account Auto-Created State */
+          <div id="payment-success-container" className="space-y-6 animate-in fade-in-50 duration-300">
+            <div className="text-center max-w-xl mx-auto py-2">
+              <div className="h-16 w-16 mx-auto rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3 shadow-inner">
+                <CheckCircle2 className="h-9 w-9" />
+              </div>
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 mb-2 text-xs font-semibold">
+                Payment Confirmed & Account Provisioned
+              </Badge>
+              <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+                Payment Successful!
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Your statutory fee of <strong className="text-foreground">₦{successDetails?.paidAmount.toLocaleString()}</strong> for <strong className="text-foreground">{successDetails?.serviceName}</strong> has been received.
+              </p>
+            </div>
+
+            {/* Generated Credentials & Instructions Card */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Credentials Box */}
+              <div className="p-5 rounded-2xl bg-secondary/50 border border-border/80 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Key className="h-4 w-4 text-primary" />
+                  <h4 className="font-semibold text-sm text-foreground">
+                    Your Auto-Created Account Details
+                  </h4>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  An account has been created for you automatically. Your login details have also been dispatched to <strong className="text-foreground">{successDetails?.email}</strong>.
+                </p>
+
+                <div className="space-y-2.5 text-xs bg-background p-4 rounded-xl border border-border/60">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Payment Reference:</span>
+                    <span className="font-mono font-bold text-foreground">{successDetails?.reference}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Login Email:</span>
+                    <span className="font-medium text-foreground">{successDetails?.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-border/40">
+                    <span className="text-muted-foreground font-medium">Temporary Password:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                        {successDetails?.generatedPass}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => copyToClipboard(successDetails?.generatedPass || "")}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {copiedKey && (
+                  <div className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Password copied to clipboard!
+                  </div>
+                )}
+              </div>
+
+              {/* Mandatory Next Steps Check (Steps 3-6) */}
+              <div className="p-5 rounded-2xl bg-muted/40 border border-border/80 space-y-3.5">
+                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                  <FileCheck2 className="h-4 w-4 text-primary" />
+                  Next Mandatory Steps to Complete:
+                </h4>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
+                    <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[10px]">
+                      3
+                    </span>
+                    <div>
+                      <span className="font-semibold text-foreground">Check Your Email</span>
+                      <p className="text-[11px] text-muted-foreground">
+                        Verify your inbox for confirmation and login instructions.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
+                    <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[10px]">
+                      4
+                    </span>
+                    <div>
+                      <span className="font-semibold text-foreground">Get Your Documents Ready</span>
+                      <p className="text-[11px] text-muted-foreground">
+                        Prepare clear digital copies (PDF/JPG) of required statutory documents.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
+                    <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[10px]">
+                      5
+                    </span>
+                    <div>
+                      <span className="font-semibold text-foreground">Log In with Credentials</span>
+                      <p className="text-[11px] text-muted-foreground">
+                        Sign into your portal dashboard using your email & password.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
+                    <span className="h-5 w-5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold flex items-center justify-center shrink-0 text-[10px]">
+                      6
+                    </span>
+                    <div>
+                      <span className="font-semibold text-foreground">Fill Application & Upload Documents</span>
+                      <p className="text-[11px] text-muted-foreground">
+                        Complete your application form and submit files step-by-step.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-border/40 flex flex-wrap items-center justify-between gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="text-xs"
+              >
+                Apply for Another Service
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <Button asChild variant="outline" size="sm" className="text-xs">
+                  <Link href="/login">
+                    <LogIn className="mr-1.5 h-3.5 w-3.5" /> Go to Login Page
+                  </Link>
+                </Button>
+                <Button asChild size="sm" className="bg-gradient-hero text-xs font-semibold shadow-elegant">
+                  <Link href={`/dashboard/services/${selectedService.id}`}>
+                    Continue Application on Dashboard <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}

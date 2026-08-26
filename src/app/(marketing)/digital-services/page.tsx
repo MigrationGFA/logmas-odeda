@@ -3,6 +3,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageShell, PageHero } from "@/components/page-shell";
+import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
+import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
 import Link from "next/link";
 import {
     FileBadge,
@@ -16,66 +18,57 @@ import {
     CreditCard,
     QrCode,
     LayoutDashboard,
+    Sparkles,
 } from "lucide-react";
-
-// export const metadata = {
-//     title: "Digital Services (LOGMAS) — Ijebu North East LGA",
-//     description:
-//         "Access the LOGMAS e-government portal: apply for certificates, pay levies, verify receipts and track requests online.",
-//     openGraph: {
-//         title: "Digital Services — LOGMAS Portal",
-//         description: "E-government for Ijebu North East LGA.",
-//     },
-// };
 
 const MODULES = [
     {
         icon: FileBadge,
-        title: "State of Origin",
-        desc: "Apply, pay and download QR-verified certificates.",
-        to: "/login",
+        title: "Certificate of Origin",
+        desc: "Apply, pay ₦3,500 statutory fee and download QR-verified indigene certificates.",
+        to: "/services/certificate_of_origin",
     },
     {
         icon: Store,
-        title: "Market Levy",
-        desc: "Settle daily, weekly and monthly market levies.",
-        to: "/login",
+        title: "Market Stall & Levies",
+        desc: "Settle daily, weekly and monthly market levies with instant receipts.",
+        to: "/services/market_stall_allocation",
     },
     {
         icon: Truck,
         title: "Heavy-Duty Vehicle Levy",
-        desc: "Haulage operators pay and receive digital receipts.",
-        to: "/login",
+        desc: "Haulage and transport operators pay and receive verifiable passes.",
+        to: "/services/heavy_duty_haulage",
     },
     {
         icon: ScrollText,
-        title: "Demand Notices",
-        desc: "View, download and pay official demand notices.",
-        to: "/login",
+        title: "Trade Permits & Licences",
+        desc: "View and pay statutory trade permits and liquor licences online.",
+        to: "/services/liquor_licence",
     },
     {
         icon: Receipt,
-        title: "Payments & Receipts",
-        desc: "Track every transaction, download digital receipts.",
-        to: "/login",
+        title: "Club & CDA Registration",
+        desc: "Formalize community associations and social clubs with official certificates.",
+        to: "/services/club_registration",
     },
     {
         icon: MessageSquare,
-        title: "Complaints",
-        desc: "Raise issues and track responses end-to-end.",
+        title: "Complaints & Inquiries",
+        desc: "Raise citizen service issues and track responses end-to-end.",
         to: "/complaints",
     },
     {
         icon: QrCode,
         title: "Public Verification",
-        desc: "Verify certificates and receipts via QR or code.",
+        desc: "Verify certificates and receipts via QR or certificate serial number.",
         to: "/verify",
     },
     {
         icon: CreditCard,
-        title: "Business Registration",
-        desc: "Register, manage and renew business profiles.",
-        to: "/register",
+        title: "All Statutory Services",
+        desc: "Browse the full directory of 12+ Odeda Local Government services.",
+        to: "/services",
     },
 ];
 
@@ -89,17 +82,51 @@ export default function DigitalServices() {
             >
                 <div className="flex flex-wrap gap-3">
                     <Button asChild className="bg-gradient-hero shadow-elegant">
-                        <Link href="/login">
-                            Open LOGMAS Portal <ArrowRight className="ml-1.5 h-4 w-4" />
+                        <Link href="/services">
+                            <Sparkles className="mr-2 h-4 w-4" /> Apply for a Service Online
                         </Link>
                     </Button>
                     <Button asChild variant="outline">
-                        <Link href="/verify">Verify a document</Link>
+                        <Link href="/verify">Verify a Document</Link>
                     </Button>
                 </div>
             </PageHero>
 
-            <section className="container mx-auto px-4 py-14">
+            {/* 6-Step Mandatory Application Process Banner */}
+            <section className="bg-muted/20 border-b border-border/40 py-12">
+                <div className="container mx-auto px-4 max-w-6xl">
+                    <ServiceApplicationGuideSteps
+                        title="Official 6-Step Application & Payment Process"
+                        subtitle="Please review these mandatory steps before paying for any statutory service. First-time applicants have an account created automatically upon payment."
+                    />
+                </div>
+            </section>
+
+            {/* First-Timer Instant Application & Payment Widget */}
+            <section className="container mx-auto px-4 py-14 max-w-6xl">
+                <div className="text-center max-w-2xl mx-auto mb-10">
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+                        First-Timer Fast Service Payment
+                    </h2>
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                        Select any service, enter your name, email, and phone number, view the statutory fee, and make payment online to auto-create your account.
+                    </p>
+                </div>
+
+                <PublicServiceApplyWidget
+                    initialServiceId="certificate_of_origin"
+                    showStepGuide={false}
+                />
+            </section>
+
+            {/* Services Modules Grid */}
+            <section className="container mx-auto px-4 py-14 border-t border-border/40">
+                <div className="mb-8 text-center max-w-2xl mx-auto">
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Key Public Service Modules</h2>
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                        Click on any module to view requirements or apply online with official SLA processing.
+                    </p>
+                </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {MODULES.map((m) => (
                         <Link key={m.title} href={m.to} className="block">
@@ -110,7 +137,7 @@ export default function DigitalServices() {
                                 <h3 className="font-semibold">{m.title}</h3>
                                 <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{m.desc}</p>
                                 <div className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
-                                    Access <ArrowRight className="h-3 w-3" />
+                                    Access Service <ArrowRight className="h-3 w-3" />
                                 </div>
                             </Card>
                         </Link>
@@ -118,7 +145,7 @@ export default function DigitalServices() {
                 </div>
             </section>
 
-            <section className="bg-secondary/40 py-14">
+            <section className="bg-secondary/40 py-14 border-t border-border/40">
                 <div className="container mx-auto px-4 grid md:grid-cols-3 gap-5">
                     {[
                         {

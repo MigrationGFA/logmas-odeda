@@ -126,7 +126,7 @@ const INITIAL_SEED_APPLICATIONS: OdedaApplication[] = [
     paymentMethod: "card",
     certificateNumber: "ODE/COO/2026/000001",
     issuedAt: "2026-08-02T11:00:00Z",
-    issuedBy: "Folusho Joseph Badejo (Chairman)",
+    issuedBy: "Dr. Waliat Folasade Adeyemo (Chairman)",
     qrToken: "QR-ODE-COO-000001",
     verificationCode: "VER-COO-001",
     createdAt: "2026-08-01T09:00:00Z",
