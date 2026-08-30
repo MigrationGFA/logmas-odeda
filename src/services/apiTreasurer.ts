@@ -24,100 +24,206 @@ export type BillingCycle =
   | "yearly"
   | "one_time";
 
-export interface LevyConfig {
-  id: string;
-  name: string;
-  category: {
-    createdAt: string;
-    description: string;
-    id: string;
-    isActive: boolean;
-    name: string;
-    slug: string;
-    type: "LEVY" | "PERMIT";
-    updatedAt: string;
+// Treasury Overview Types
+export interface TreasuryOverviewResponse {
+  period: {
+    from: string;
+    to: string;
   };
-  description?: string;
+  summary: {
+    totalInvoices: number;
+    totalInvoiced: number;
+    totalCollected: number;
+    totalOutstanding: number;
+    collectionRate: string;
+    confirmedTransactions: number;
+    totalPaymentTransactions: number;
+  };
+  paymentMethods: Array<{
+    method: string;
+    totalCollected: number;
+    transactions: number;
+  }>;
+  applicationStatuses: Array<{
+    status: string;
+    count: number;
+  }>;
+  revenueByService: Array<{
+    serviceId: string;
+    serviceName: string;
+    serviceCode: string;
+    totalCollected: number;
+    transactions: number;
+  }>;
+  recentPayments: Array<{
+    id: string;
+    amount: number;
+    method: string;
+    status: string;
+    reference: string;
+    gatewayRef: string | null;
+    createdAt: string;
+    confirmedAt: string | null;
+    invoice: {
+      id: string;
+      invoiceNumber: string;
+      amount: number;
+      application: {
+        applicationNumber: string;
+        fullName: string;
+        service: {
+          name: string;
+          code: string;
+        };
+      };
+    };
+  }>;
+}
+
+// Service Fee Types
+export interface ServiceFeeConfig {
+  id: string;
+  serviceId: string;
   amount: number;
-  billingCycle: BillingCycle;
-  penaltyRate?: number;
-  mode: "fixed" | "variable";
-  isActive: boolean;
-  effectiveFrom: string;
-  effectiveTo?: string;
-  configuredById: string;
-  createdAt: string;
-  updatedAt: string;
-  configuredBy?: {
+  status: "ACTIVE" | "INACTIVE";
+  updatedById: string | null;
+  updatedBy?: {
     id: string;
     firstName: string;
     lastName: string;
   };
-  _count?: {
-    invoices: number;
-  };
-}
-
-export interface PermitConfig {
-  id: string;
-  name: string;
-  code: string;
-  category: {
-    createdAt: string;
-    description: string;
-    id: string;
-    isActive: boolean;
-    name: string;
-    slug: string;
-    type: "LEVY" | "PERMIT";
-    updatedAt: string;
-  };
-  baseAmount: number;
-  isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  _count?: {
-    permits: number;
+}
+
+export interface ServiceWithFee {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  revenueHead: string;
+  description: string;
+  requirements: string[];
+  estimatedDays: number;
+  certificateType: string;
+  supportsRenewal: boolean;
+  isActive: boolean;
+  feeConfig: ServiceFeeConfig | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertServiceFeeData {
+  amount: number;
+  status?: boolean; // true = ACTIVE, false = INACTIVE
+}
+
+// Reconciliation Types
+export interface ReconciliationInvoice {
+  id: string;
+  invoiceNumber: string;
+  invoiceAmount: number;
+  paymentStatus: string;
+  totalCollected: number;
+  outstanding: number;
+  paymentCount: number;
+  confirmedPaymentCount: number;
+  paidAt: string | null;
+  createdAt: string;
+  transactionRef: string | null;
+  application: {
+    id: string;
+    applicationNumber: string;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+    service: {
+      id: string;
+      code: string;
+      name: string;
+      category: string;
+    };
+  };
+  payments: Array<{
+    id: string;
+    amount: number;
+    method: string;
+    status: string;
+    reference: string;
+    gatewayRef: string | null;
+    confirmedAt: string | null;
+    createdAt: string;
+  }>;
+  receipts: Array<{
+    id: string;
+    receiptNumber: string;
+    verificationCode: string;
+    amountPaid: number;
+    issuedAt: string;
+  }>;
+  virtualAccount: {
+    bankName: string | null;
+    accountNumber: string | null;
+    reference: string | null;
   };
 }
 
-export interface CreateLevyConfigData {
+export interface ReconciliationResponse {
+  period: {
+    from: string;
+    to: string;
+  };
+  summary: {
+    totalInvoiced: number;
+    totalCollected: number;
+    totalOutstanding: number;
+    variance: number;
+    invoiceCount: number;
+  };
+  data: ReconciliationInvoice[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+// Field Officers Types
+export interface FieldOfficer {
+  id: string;
   name: string;
-  mode: "fixed" | "variable";
-  categoryId: string;
-  description?: string;
-  amount: number;
-  billingCycle?: BillingCycle;
-  penaltyRate?: number;
-  effectiveFrom?: string;
-  effectiveTo?: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  ward: {
+    id: string;
+    name: string;
+  } | null;
+  status: "active" | "suspended" | "deactivated";
+  totalCollected: number;
+  createdAt: string;
+  createdBy: {
+    id: string;
+    name: string;
+  } | null;
 }
 
-export interface UpdateLevyConfigData {
-  name?: string;
-  description?: string;
-  amount?: number;
-  mode: "fixed" | "variable";
-  billingCycle?: BillingCycle;
-  penaltyRate?: number;
-  effectiveTo?: string;
+export interface FieldOfficersResponse {
+  stats: {
+    totalOfficers: number;
+    active: number;
+    suspended: number;
+    deactivated: number;
+    totalCollected: number;
+  };
+  officers: FieldOfficer[];
 }
 
-export interface CreatePermitConfigData {
-  name: string;
-  code: string;
-  category: RevenueCategory;
-  baseAmount: number;
-}
 
-export interface UpdatePermitConfigData {
-  name?: string;
-  code?: string;
-  baseAmount?: number;
-  isActive?: boolean;
-}
 
-// Revenue Analytics Types
+
+// Revenue Analytics Types (existing)
 export interface RevenueOverview {
   period: {
     from: string;
@@ -194,55 +300,6 @@ export interface RevenueByWard {
   }>;
 }
 
-export interface ReconciliationReport {
-  period: {
-    from: string;
-    to: string;
-  };
-  summary: {
-    totalInvoiced: number;
-    totalCollected: number;
-    totalOutstanding: number;
-    variance: number;
-  };
-  data: Array<{
-    id: string;
-    invoiceNumber: string;
-    status: InvoiceStatus;
-    totalAmount: number;
-    amountPaid: number;
-    balanceDue: number;
-    createdAt: string;
-    business?: {
-      id: string;
-      businessName: string;
-      ownerName: string;
-    };
-    payments: Array<{
-      id: string;
-      amount: number;
-      method: string;
-      confirmedAt: string;
-    }>;
-    receipt?: {
-      id: string;
-      receiptNumber: string;
-    };
-    createdBy: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      role: string;
-    };
-  }>;
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
-
 export interface InvoiceListResponse {
   data: Array<{
     id: string;
@@ -279,32 +336,6 @@ export interface InvoiceListResponse {
     limit: number;
     totalPages: number;
   };
-}
-
-export interface FieldOfficer {
-  id: string;
-  name: string;
-  email: string;
-  ward: string;
-  levies: string[];
-  invoicesIssued: number;
-  totalCollected: number;
-  status: "active" | "suspended" | "deactivated";
-  createdBy: string;
-  contractorId: string | null;
-}
-
-export interface FieldOfficersResponse {
-  success: boolean;
-  
-    stats: {
-      totalOfficers: number;
-      active: number;
-      suspended: number;
-      totalCollected: number;
-    };
-    officers: FieldOfficer[];
-
 }
 
 export interface InvoiceDetails {
@@ -382,49 +413,67 @@ export interface PaginatedResponse<T> {
 
 // Service functions
 export const treasurerService = {
-  // Levy Configurations
-  createLevyConfig: (data: CreateLevyConfigData) =>
-    api.post<{
-      config: LevyConfig;
-      warning?: string;
-      existingConfigId?: string;
-    }>("/treasurer/levy-configs", data),
+  // ============================================================
+  // NEW: Service Fee Management (from updated controllers)
+  // ============================================================
+  
+  /**
+   * GET /treasurer/fees
+   * List all active services with their fee configuration
+   */
+  listServiceFees: () =>
+    api.get<ServiceWithFee[]>("/treasurer/fees"),
 
-  listLevyConfigs: (params?: {
-    isActive?: boolean;
+  /**
+   * GET /treasurer/fees/:serviceId
+   * Get a specific service with its fee configuration
+   */
+  getServiceFee: (serviceId: string) =>
+    api.get<ServiceWithFee>(`/treasurer/fees/${serviceId}`),
+
+  /**
+   * PATCH /treasurer/fees/:serviceId
+   * Create or update service fee configuration
+   */
+  upsertServiceFee: (serviceId: string, data: UpsertServiceFeeData) =>
+    api.patch<ServiceFeeConfig>(`/treasurer/fees/${serviceId}`, data),
+
+  /**
+   * GET /treasurer/revenue
+   * Get treasury overview with revenue analytics
+   */
+  getTreasuryOverview: (params?: { from?: string; to?: string }) =>
+    api.get<TreasuryOverviewResponse>("/treasurer/revenue", { params }),
+
+  /**
+   * GET /treasurer/reconciliation
+   * Get reconciliation report with pagination
+   */
+  getReconciliation: (params?: {
+    from?: string;
+    to?: string;
     page?: number;
     limit?: number;
   }) =>
-    api.get<LevyConfig[]>("/treasurer/levy-configs", {
-      params,
-    }),
+    api.get<ReconciliationResponse>("/treasurer/reconciliation", { params }),
 
-  getLevyConfigById: (id: string) =>
-    api.get<LevyConfig>(`/treasurer/levy-configs/${id}`),
-
-  updateLevyConfig: (id: string, data: UpdateLevyConfigData) =>
-    api.patch<LevyConfig>(`/treasurer/levy-configs/${id}`, data),
-
-  toggleLevyConfig: (id: string) =>
-    api.patch<LevyConfig>(`/treasurer/levy-configs/${id}/toggle`),
-
-  // Permit Configurations
-  listPermitConfigs: (params?: {
-    isActive?: boolean;
+  /**
+   * GET /treasurer/field-officers
+   * Get field officers list with collection data
+   */
+  getFieldOfficers: (params?: {
+    from?: string;
+    to?: string;
     page?: number;
     limit?: number;
   }) =>
-    api.get<PermitConfig[]>("/treasurer/permit-configs", {
-      params,
-    }),
+    api.get<FieldOfficersResponse>("/treasurer/field-officers", { params }),
 
-  createPermitConfig: (data: CreatePermitConfigData) =>
-    api.post<PermitConfig>("/treasurer/permit-configs", data),
 
-  updatePermitConfig: (id: string, data: UpdatePermitConfigData) =>
-    api.patch<PermitConfig>(`/treasurer/permit-configs/${id}`, data),
-
-  // Revenue Analytics
+  // ============================================================
+  // EXISTING: Revenue Analytics (kept as-is)
+  // ============================================================
+  
   getRevenueOverview: (params?: { from?: string; to?: string }) =>
     api.get<RevenueOverview>("/treasurer/revenue", { params }),
 
@@ -435,25 +484,13 @@ export const treasurerService = {
     limit?: number;
   }) => api.get<RevenueByOfficer>("/treasurer/revenue/by-officer", { params }),
 
-  getFieldOfficers: (params?: {
-    from?: string;
-    to?: string;
-    page?: number;
-    limit?: number;
-  }) => api.get<FieldOfficersResponse>("/treasurer/field-officers", { params }),
-
   getRevenueByWard: (params?: { from?: string; to?: string }) =>
     api.get<RevenueByWard>("/treasurer/revenue/by-ward", { params }),
 
-  // Reconciliation
-  getReconciliation: (params?: {
-    from?: string;
-    to?: string;
-    page?: number;
-    limit?: number;
-  }) => api.get<ReconciliationReport>("/treasurer/reconciliation", { params }),
-
-  // Invoice Management
+  // ============================================================
+  // EXISTING: Invoice Management (kept as-is)
+  // ============================================================
+  
   getAllInvoices: (params?: {
     from?: string;
     to?: string;

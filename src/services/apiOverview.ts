@@ -8,7 +8,7 @@ export type Role =
   | "lga_admin"
   | "chairman"
   | "ward_councillor"
-|"agent"
+  | "agent"
   | "contractor"
   | "field_officer"
   | "super_admin"
@@ -16,7 +16,11 @@ export type Role =
 
 export type InvoiceStatus = "pending" | "paid" | "overdue" | "cancelled";
 export type PermitStatus = "pending" | "issued" | "expired" | "revoked";
-export type ApplicationStatus = "pending" | "approved" | "rejected" | "forwarded_to_councillor";
+export type ApplicationStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "forwarded_to_councillor";
 export type ComplaintStatus = "open" | "in_progress" | "closed";
 
 // Citizen Metrics
@@ -90,8 +94,8 @@ export interface ContractorOverviewData {
   receipts: ContractorReceipt[];
   officers: ContractorOfficer[];
   revenueTrend: ContractorRevenueTrend[];
-  role:Role,
-  success:boolean
+  role: Role;
+  success: boolean;
 }
 
 // Ward Councillor Metrics
@@ -119,6 +123,8 @@ export interface TreasurerMetrics {
   pendingAmount: number;
   activeOfficers: number;
   transactionCount: number;
+  invoiceGeneratedCount: number;
+  pendingInvoiceCount: number;
 }
 
 export interface AuditorMetrics {
@@ -159,7 +165,6 @@ export interface RecentAudit {
   createdAt: string;
 }
 
-
 // Field Officer Metrics
 export interface FieldOfficerMetrics {
   totalInvoicesGenerated: number;
@@ -184,7 +189,11 @@ export interface DefaultMetrics {
 export type DashboardMetrics =
   | {
       metrics: CitizenMetrics;
-      recentApplications?: Array<{ id: string; status: ApplicationStatus; createdAt: string }>;
+      recentApplications?: Array<{
+        id: string;
+        status: ApplicationStatus;
+        createdAt: string;
+      }>;
     }
   | {
       metrics: BusinessOwnerMetrics;
@@ -199,29 +208,30 @@ export type DashboardMetrics =
   | { metrics: CouncillorMetrics }
   | {
       metrics: TreasurerMetrics;
-      revenueTrendChart: Array<{ date: string; amount: number }>;
+      revenueTrendChart: Array<{ month: number; amount: number }>; // Changed from date to month
       categoryBreakdown: Array<{ category: string; amount: number }>;
     }
-  | { 
-      contractorData: ContractorOverviewData;  // New: Full contractor data for UI
+  | {
+      contractorData: ContractorOverviewData; // New: Full contractor data for UI
     }
   | { metrics: FieldOfficerMetrics }
-  | { metrics: DefaultMetrics; message?: string }   | {
+  | { metrics: DefaultMetrics; message?: string }
+  | {
       metrics: AuditorMetrics;
       anomalies: Anomaly[];
       highValueTransactions: HighValueTransaction[];
       recentAudits: RecentAudit[];
-    }
+    };
 
 // API Response Types
 export interface DashboardOverviewResponse {
   success: boolean;
- invoices: ContractorInvoice[];
+  invoices: ContractorInvoice[];
   receipts: ContractorReceipt[];
   officers: ContractorOfficer[];
   revenueTrend: ContractorRevenueTrend[];
-  applications?: CouncillorApplication[];  
-  role:Role,
+  applications?: CouncillorApplication[];
+  role: Role;
   metrics: DashboardMetrics[keyof DashboardMetrics];
   recentInvoices?: Array<{
     reference: string;
@@ -229,10 +239,14 @@ export interface DashboardOverviewResponse {
     customerName: string;
     status: string;
   }>;
-  //  contractorData?: ContractorOverviewData;  
+  //  contractorData?: ContractorOverviewData;
   revenueTrendChart: Array<{ date: string; amount: number }>;
   categoryBreakdown: Array<{ category: string; amount: number }>;
-  recentApplications?: Array<{ id: string; status: ApplicationStatus; createdAt: string }>;
+  recentApplications?: Array<{
+    id: string;
+    status: ApplicationStatus;
+    createdAt: string;
+  }>;
   anomalies?: Anomaly[];
   highValueTransactions?: HighValueTransaction[];
   recentAudits?: RecentAudit[];
@@ -250,16 +264,17 @@ export type MetricsByRole<T extends Role> = T extends "citizen"
         ? TreasurerMetrics
         : T extends "ward_councillor"
           ? CouncillorMetrics
-          // : T extends "contractor"
-          //   ? ContractorMetrics
-            : T extends "field_officer"
-              ? FieldOfficerMetrics
-              : DefaultMetrics;
+          : // : T extends "contractor"
+            //   ? ContractorMetrics
+            T extends "field_officer"
+            ? FieldOfficerMetrics
+            : DefaultMetrics;
 
 // Service functions
 export const overviewService = {
   // Get dashboard overview for current user
-  getDashboardOverview: () => api.get<DashboardOverviewResponse>("/dashboard/overview"),
+  getDashboardOverview: () =>
+    api.get<DashboardOverviewResponse>("/dashboard/overview"),
 
   // Type-safe getter for specific role
   getOverviewForRole: async <T extends Role>(
@@ -269,7 +284,9 @@ export const overviewService = {
     role: T;
     metrics: MetricsByRole<T>;
   }> => {
-    const response = await api.get<DashboardOverviewResponse>("/dashboard/overview");
+    const response = await api.get<DashboardOverviewResponse>(
+      "/dashboard/overview",
+    );
     if (response.role !== role) {
       throw new Error(`Role mismatch: expected ${role}, got ${response.role}`);
     }
@@ -282,7 +299,9 @@ export const overviewService = {
 };
 
 // Helper functions for type checking
-export const isCitizenMetrics = (metrics: unknown): metrics is CitizenMetrics => {
+export const isCitizenMetrics = (
+  metrics: unknown,
+): metrics is CitizenMetrics => {
   return (
     typeof metrics === "object" &&
     metrics !== null &&
@@ -292,7 +311,9 @@ export const isCitizenMetrics = (metrics: unknown): metrics is CitizenMetrics =>
   );
 };
 
-export const isBusinessOwnerMetrics = (metrics: unknown): metrics is BusinessOwnerMetrics => {
+export const isBusinessOwnerMetrics = (
+  metrics: unknown,
+): metrics is BusinessOwnerMetrics => {
   return (
     typeof metrics === "object" &&
     metrics !== null &&
@@ -303,7 +324,9 @@ export const isBusinessOwnerMetrics = (metrics: unknown): metrics is BusinessOwn
   );
 };
 
-export const isManagementMetrics = (metrics: unknown): metrics is ManagementMetrics => {
+export const isManagementMetrics = (
+  metrics: unknown,
+): metrics is ManagementMetrics => {
   return (
     typeof metrics === "object" &&
     metrics !== null &&
@@ -314,7 +337,9 @@ export const isManagementMetrics = (metrics: unknown): metrics is ManagementMetr
   );
 };
 
-export const isCouncillorMetrics = (metrics: unknown): metrics is CouncillorMetrics => {
+export const isCouncillorMetrics = (
+  metrics: unknown,
+): metrics is CouncillorMetrics => {
   return (
     typeof metrics === "object" &&
     metrics !== null &&
@@ -333,7 +358,9 @@ export const isCouncillorMetrics = (metrics: unknown): metrics is CouncillorMetr
 // };
 
 // Update the runtime type-guard check function below
-export const isFieldOfficerMetrics = (metrics: unknown): metrics is FieldOfficerMetrics => {
+export const isFieldOfficerMetrics = (
+  metrics: unknown,
+): metrics is FieldOfficerMetrics => {
   return (
     typeof metrics === "object" &&
     metrics !== null &&

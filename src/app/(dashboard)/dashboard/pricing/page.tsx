@@ -60,14 +60,14 @@ export default function RevenueFrameworkPage() {
       <Tabs defaultValue="fee_configuration" className="w-full space-y-4">
         <TabsList className="mb-2 bg-muted/60 p-1 flex-wrap h-auto">
           <TabsTrigger value="fee_configuration" className="text-xs">
-            1. Service Fee Configuration
+            Service Fee Configuration
           </TabsTrigger>
-          <TabsTrigger value="assessments" className="text-xs">
+          {/* <TabsTrigger value="assessments" className="text-xs">
             2. Assessments & Invoice Authorisation
           </TabsTrigger>
           <TabsTrigger value="reconciliation" className="text-xs">
             3. Real-time Payments & Bank Reconciliation
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="fee_configuration">

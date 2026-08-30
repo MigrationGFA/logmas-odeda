@@ -3,22 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   treasurerService,
-  CreateLevyConfigData,
-  UpdateLevyConfigData,
-  CreatePermitConfigData,
-  UpdatePermitConfigData,
   RevenueCategory,
   InvoiceStatus,
+  UpsertServiceFeeData,
+  ServiceFeeConfig,
 } from "@/services/apiTreasurer";
+import { serviceKey } from "./useServices";
 
 export const treasurerKeys = {
   all: ["treasurer"] as const,
-  levyConfigs: () => [...treasurerKeys.all, "levy-configs"] as const,
-  levyConfigsList: (params?: any) => [...treasurerKeys.levyConfigs(), params] as const,
-  levyConfig: (id: string) => [...treasurerKeys.levyConfigs(), id] as const,
-  permitConfigs: () => [...treasurerKeys.all, "permit-configs"] as const,
-  permitConfigsList: (params?: any) => [...treasurerKeys.permitConfigs(), params] as const,
-  permitConfig: (id: string) => [...treasurerKeys.permitConfigs(), id] as const,
   revenue: () => [...treasurerKeys.all, "revenue"] as const,
   revenueOverview: (params?: any) => [...treasurerKeys.revenue(), "overview", params] as const,
   revenueByOfficer: (params?: any) => [...treasurerKeys.revenue(), "by-officer", params] as const,
@@ -27,127 +20,103 @@ export const treasurerKeys = {
   invoices: () => [...treasurerKeys.all, "invoices"] as const,
   invoicesList: (params?: any) => [...treasurerKeys.invoices(), params] as const,
   invoice: (id: string) => [...treasurerKeys.invoices(), id] as const,
+  
+  // NEW: Service Fee Management Keys
+  serviceFees: () => [...treasurerKeys.all, "service-fees"] as const,
+  serviceFeesList: () => [...treasurerKeys.serviceFees(), "list"] as const,
+  serviceFee: (serviceId: string) => [...treasurerKeys.serviceFees(), serviceId] as const,
+  
+  // NEW: Treasury Overview Keys
+  treasuryOverview: (params?: any) => [...treasurerKeys.all, "treasury-overview", params] as const,
+  
+  // NEW: Field Officers Keys
+  fieldOfficers: (params?: any) => [...treasurerKeys.all, "field-officers", params] as const,
 };
 
-// Levy Configuration Hooks
-export function useLevyConfigs() {
+// ============================================================
+// NEW: Service Fee Management Hooks
+// ============================================================
+
+export function useServiceFees() {
   const queryClient = useQueryClient();
 
-  const useGetLevyConfigs = (params?: { isActive?: boolean; page?: number; limit?: number }) => {
+  const useGetServiceFees = () => {
     return useQuery({
-      queryKey: treasurerKeys.levyConfigsList(params),
-      queryFn: () => treasurerService.listLevyConfigs(params),
+      queryKey: treasurerKeys.serviceFeesList(),
+      queryFn: () => treasurerService.listServiceFees(),
     });
   };
 
-  const useGetLevyConfig = (id: string) => {
+  const useGetServiceFee = (serviceId: string) => {
     return useQuery({
-      queryKey: treasurerKeys.levyConfig(id),
-      queryFn: () => treasurerService.getLevyConfigById(id),
-      enabled: !!id,
+      queryKey: treasurerKeys.serviceFee(serviceId),
+      queryFn: () => treasurerService.getServiceFee(serviceId),
+      enabled: !!serviceId,
     });
   };
 
-  const createLevyConfigMutation = useMutation({
-    mutationFn: (data: CreateLevyConfigData) => treasurerService.createLevyConfig(data),
-    onSuccess: (response) => {
-      console.log(response, "response");
-      toast.success(`Levy configuration "${response.config.name}" created`);
-      if (response.warning) {
-        toast.warning(response.warning);
-      }
-      queryClient.invalidateQueries({ queryKey: treasurerKeys.levyConfigs() });
-    },
-    onError: (error: any) => {
-      console.error(error.message);
-      toast.error(error.message || "Failed to create levy configuration");
-    },
-  });
-
-  const updateLevyConfigMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateLevyConfigData }) =>
-      treasurerService.updateLevyConfig(id, data),
-    onSuccess: () => {
-      toast.success("Levy configuration updated");
-      queryClient.invalidateQueries({ queryKey: treasurerKeys.levyConfigs() });
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to update levy configuration");
-    },
-  });
-
-  const toggleLevyConfigMutation = useMutation({
-    mutationFn: (id: string) => treasurerService.toggleLevyConfig(id),
-    onSuccess: (data) => {
-      toast.success(`Levy configuration ${data.isActive ? "activated" : "deactivated"}`);
-      queryClient.invalidateQueries({ queryKey: treasurerKeys.levyConfigs() });
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to toggle levy configuration");
-    },
-  });
+const upsertServiceFeeMutation = useMutation({
+  mutationFn: ({ serviceId, data }: { serviceId: string; data: UpsertServiceFeeData }) =>
+    treasurerService.upsertServiceFee(serviceId, data),
+  onSuccess: (data: ServiceFeeConfig) => {
+    // toast.success(`Service fee configured successfully`);
+    queryClient.invalidateQueries({ queryKey: treasurerKeys.serviceFees() });
+    queryClient.invalidateQueries({ queryKey: treasurerKeys.treasuryOverview() });
+    queryClient.invalidateQueries({ queryKey: serviceKey.all });
+  },
+  onError: (error: any) => {
+    toast.error(error.message || "Failed to configure service fee");
+  },
+});
 
   return {
-    useGetLevyConfigs,
-    useGetLevyConfig,
-    createLevyConfig: createLevyConfigMutation.mutate,
-    createLevyConfigAsync: createLevyConfigMutation.mutateAsync,
-    isCreating: createLevyConfigMutation.isPending,
-    updateLevyConfig: updateLevyConfigMutation.mutate,
-    updateLevyConfigAsync: updateLevyConfigMutation.mutateAsync,
-    isUpdating: updateLevyConfigMutation.isPending,
-    toggleLevyConfig: toggleLevyConfigMutation.mutate,
-    toggleLevyConfigAsync: toggleLevyConfigMutation.mutateAsync,
-    isToggling: toggleLevyConfigMutation.isPending,
+    useGetServiceFees,
+    useGetServiceFee,
+    upsertServiceFee: upsertServiceFeeMutation.mutate,
+    upsertServiceFeeAsync: upsertServiceFeeMutation.mutateAsync,
+    isUpserting: upsertServiceFeeMutation.isPending,
   };
 }
 
-// Permit Configuration Hooks
-export function usePermitConfigs() {
-  const queryClient = useQueryClient();
+// ============================================================
+// NEW: Treasury Overview Hooks
+// ============================================================
 
-  const useGetPermitConfigs = (params?: { isActive?: boolean; page?: number; limit?: number }) => {
+export function useTreasuryOverview() {
+  const useGetTreasuryOverview = (params?: { from?: string; to?: string }) => {
     return useQuery({
-      queryKey: treasurerKeys.permitConfigsList(params),
-      queryFn: () => treasurerService.listPermitConfigs(params),
+      queryKey: treasurerKeys.treasuryOverview(params),
+      queryFn: () => treasurerService.getTreasuryOverview(params),
     });
   };
 
-  const createPermitConfigMutation = useMutation({
-    mutationFn: (data: CreatePermitConfigData) => treasurerService.createPermitConfig(data),
-    onSuccess: () => {
-      toast.success("Permit configuration created");
-      queryClient.invalidateQueries({ queryKey: treasurerKeys.permitConfigs() });
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to create permit configuration");
-    },
-  });
-
-  const updatePermitConfigMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdatePermitConfigData }) =>
-      treasurerService.updatePermitConfig(id, data),
-    onSuccess: () => {
-      toast.success("Permit configuration updated");
-      queryClient.invalidateQueries({ queryKey: treasurerKeys.permitConfigs() });
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to update permit configuration");
-    },
-  });
-
-  return {
-    useGetPermitConfigs,
-    createPermitConfig: createPermitConfigMutation.mutate,
-    createPermitConfigAsync: createPermitConfigMutation.mutateAsync,
-    isCreating: createPermitConfigMutation.isPending,
-    updatePermitConfig: updatePermitConfigMutation.mutate,
-    updatePermitConfigAsync: updatePermitConfigMutation.mutateAsync,
-    isUpdating: updatePermitConfigMutation.isPending,
-  };
+  return { useGetTreasuryOverview };
 }
 
-// Revenue Analytics Hooks
+// ============================================================
+// NEW: Field Officers Hooks
+// ============================================================
+
+export function useFieldOfficers() {
+  const useGetFieldOfficers = (params?: {
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    return useQuery({
+      queryKey: treasurerKeys.fieldOfficers(params),
+      queryFn: () => treasurerService.getFieldOfficers(params),
+    });
+  };
+
+  return { useGetFieldOfficers };
+}
+
+// ============================================================
+// EXISTING: Revenue Analytics Hooks (kept as-is)
+// ============================================================
+
 export function useRevenueAnalytics() {
   const useGetRevenueOverview = (params?: { from?: string; to?: string }) => {
     return useQuery({
@@ -182,7 +151,10 @@ export function useRevenueAnalytics() {
   };
 }
 
-// Reconciliation Hook
+// ============================================================
+// EXISTING: Reconciliation Hook (kept as-is)
+// ============================================================
+
 export function useReconciliation() {
   const useGetReconciliation = (params?: {
     from?: string;
@@ -199,7 +171,10 @@ export function useReconciliation() {
   return { useGetReconciliation };
 }
 
-// Invoice Management Hooks (Treasurer)
+// ============================================================
+// EXISTING: Invoice Management Hooks (kept as-is)
+// ============================================================
+
 export function useTreasurerInvoices() {
   const queryClient = useQueryClient();
 
@@ -246,6 +221,11 @@ export function useTreasurerInvoices() {
     isMarkingOverdue: markInvoiceOverdueMutation.isPending,
   };
 }
+
+// ============================================================
+// EXISTING: Field Officers Hook (kept for backward compatibility)
+// ============================================================
+
 export type TreasurerRole = "treasurer" | "lga_admin" | "super_admin" | "contractor" | "chairman";
 
 export function useTreasurerOfficer(role?: TreasurerRole) {
@@ -264,19 +244,24 @@ export function useTreasurerOfficer(role?: TreasurerRole) {
   });
 }
 
-// Combined Treasurer Hook
+// ============================================================
+// Combined Treasurer Hook (kept as-is)
+// ============================================================
+
 export function useTreasurer() {
-  const levyConfigs = useLevyConfigs();
-  const permitConfigs = usePermitConfigs();
   const revenueAnalytics = useRevenueAnalytics();
   const reconciliation = useReconciliation();
   const invoices = useTreasurerInvoices();
+  const serviceFees = useServiceFees();
+  const treasuryOverview = useTreasuryOverview();
+  const fieldOfficers = useFieldOfficers();
 
   return {
-    levyConfigs,
-    permitConfigs,
     revenueAnalytics,
     reconciliation,
     invoices,
+    serviceFees,
+    treasuryOverview,
+    fieldOfficers,
   };
 }

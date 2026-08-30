@@ -6,6 +6,7 @@ import {
   FieldOfficerMetrics,
   AuditorMetrics,
   CouncillorMetrics,
+  TreasurerMetrics,
 } from "@/services/apiOverview";
 import { useAuth } from "./useAuth";
 
@@ -59,16 +60,17 @@ export function useOverview(userRole: Role) {
     return null;
   };
 
-  const getTreasurerMetrics = () => {
-    if (userRole === "treasurer") {
-      return {
-        metrics: overviewData?.metrics,
-        revenueTrendChart: overviewData?.revenueTrendChart,
-        categoryBreakdown: overviewData?.categoryBreakdown,
-      };
-    }
-    return null;
-  };
+const getTreasurerMetrics = () => {
+  if (userRole === "treasurer" && overviewData) {
+    return {
+      metrics: overviewData.metrics as TreasurerMetrics,
+      revenueTrendChart: overviewData.revenueTrendChart || [],
+      categoryBreakdown: overviewData.categoryBreakdown || [],
+    };
+  }
+  return null;
+};
+
   const getCouncillorMetrics = () => {
     if (userRole === "ward_councillor" && overviewData) {
       return {
