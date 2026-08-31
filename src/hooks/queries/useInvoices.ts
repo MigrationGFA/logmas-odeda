@@ -116,7 +116,7 @@ export function useInvoicePayment(invoiceId: string) {
 
       console.log(response.paymentUrl,"paymentUrl")
 
-      window.location.href = `${response.paymentUrl}/dashboard/payment/verify`;
+      window.location.href = `${response.paymentUrl}/payment/verify`;
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to initialize payment");

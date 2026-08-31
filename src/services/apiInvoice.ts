@@ -234,49 +234,14 @@ export const invoicesService = {
 
   // Get single invoice by ID with full details
   getInvoiceById: async (id: string): Promise<InvoiceDetails> => {
-    try {
       return await api.get<InvoiceDetails>(`/invoices/${id}`);
-    } catch {
-      return {
-        id: id,
-        invoiceNumber: "ODE/INV/2026/000101",
-        paymentStatus: "pending",
-        issueDate: "2026-08-01",
-        dueDate: "2026-08-15",
-        totalAmount: "45000",
-        paidAmount: "0",
-        balanceDue: "45000",
-        category: "Trade Permit",
-        customerName: "Bola Enterprises",
-        customerEmail: "business@logmas.gov.ng",
-        customerPhone: "08088889999",
-        items: [{ id: "item-1", description: "Annual Business Trade Permit", quantity: 1, unitPrice: 45000, total: 45000 }],
-        paymentHistory: [],
-      };
-    }
   },
 
   // Record payment (cash/POS - field officer only)
   recordPayment: async (id: string, data: PaymentData): Promise<PaymentResponse> => {
-    try {
+   
       return await api.post<PaymentResponse>(`/invoices/${id}/pay`, data);
-    } catch {
-      return {
-        payment: {
-          id: `pay-${Date.now()}`,
-          invoiceId: id,
-          amount: data.amount || 25000,
-          paymentMethod: data.method || "cash",
-          reference: `ODE/PAY/2026/${Math.floor(100000 + Math.random() * 899999)}`,
-          status: "confirmed",
-          createdAt: new Date().toISOString(),
-          receiptNumber: `ODE/RCP/2026/${Math.floor(100000 + Math.random() * 899999)}`,
-        },
-        receiptUrl: `/receipts/REC-${id}`,
-        smsSent: true,
-        emailSent: true,
-      };
-    }
+
   },
 
   
@@ -305,15 +270,8 @@ verifyPayment: async (reference: string): Promise<VerifyPaymentResponse> => {
 
   // DEV ONLY: Simulate payment
   simulatePayment: async (id: string): Promise<SimulatePaymentResponse> => {
-    try {
+
       return await api.post<SimulatePaymentResponse>(`/invoices/${id}/simulate-payment`, {});
-    } catch {
-      return {
-        success: true,
-        invoiceId: id,
-        amount: 45000,
-        receiptNumber: `ODE/RCP/2026/${Math.floor(100000 + Math.random() * 899999)}`,
-      };
-    }
+   
   },
 };

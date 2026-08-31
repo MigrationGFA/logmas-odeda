@@ -181,7 +181,7 @@ export default function ApplicationsPage() {
     }
   };
 
-  console.log(selectedApp,"lol")
+  // console.log(selectedApp,"lol")
 
   const getStatusBadge = (status: string) => {
     const s = String(status).toLowerCase();
@@ -251,6 +251,7 @@ export default function ApplicationsPage() {
     if (app.formData?.firstName && app.formData?.lastName) {
       return `${app.formData.firstName} ${app.formData.lastName}`;
     }
+    if(app.applicant) return `${app.applicant.firstName} ${app.applicant.lastName}`
     return "N/A";
   };
 
@@ -569,7 +570,7 @@ export default function ApplicationsPage() {
                     {getStatusBadge(selectedApp.status)}
                   </div>
                   <DialogDescription className="text-xs font-mono mt-0.5">
-                    Application No: {getApplicationNumber(selectedApp)} • Ref: {selectedApp.id}
+                    Application No: {getApplicationNumber(selectedApp)}
                   </DialogDescription>
                 </div>
 
@@ -594,7 +595,7 @@ export default function ApplicationsPage() {
                   </h5>
                   {selectedApp.applicantId ? (
                     <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 text-[10px] border-emerald-300">
-                      Registered User (ID: {selectedApp.applicantId})
+                      Registered User
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="bg-amber-500/10 text-amber-700 text-[10px] border-amber-300">
@@ -610,34 +611,34 @@ export default function ApplicationsPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[11px] block font-medium">Phone Number:</span>
-                    <span className="font-semibold text-foreground">{selectedApp.formData?.phone || "N/A"}</span>
+                    <span className="font-semibold text-foreground">{selectedApp.applicant?.phone || "N/A"}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[11px] block font-medium">Ward of Residency:</span>
                     <span className="font-semibold text-foreground">{getWard(selectedApp)}</span>
                   </div>
-                  {selectedApp.formData?.address && (
+                  {selectedApp.applicant?.address && (
                     <div className="sm:col-span-2">
                       <span className="text-muted-foreground text-[11px] block font-medium">Address:</span>
-                      <span className="font-semibold text-foreground">{selectedApp.formData.address}</span>
+                      <span className="font-semibold text-foreground">{selectedApp.applicant.address}</span>
                     </div>
                   )}
-                  {selectedApp.formData?.email && (
+                  {selectedApp.applicant?.email && (
                     <div>
                       <span className="text-muted-foreground text-[11px] block font-medium">Email:</span>
-                      <span className="font-semibold text-foreground">{selectedApp.formData.email}</span>
+                      <span className="font-semibold text-foreground">{selectedApp.applicant.email}</span>
                     </div>
                   )}
-                  {selectedApp.formData?.nin && (
+                  {selectedApp.applicant?.nin && (
                     <div>
                       <span className="text-muted-foreground text-[11px] block font-medium">NIN:</span>
-                      <span className="font-mono font-semibold text-foreground">{selectedApp.formData.nin}</span>
+                      <span className="font-mono font-semibold text-foreground">{selectedApp.applicant.nin}</span>
                     </div>
                   )}
-                  {selectedApp.formData?.cacNumber && (
+                  {selectedApp.applicant?.cacNumber && (
                     <div>
                       <span className="text-muted-foreground text-[11px] block font-medium">CAC Reg No:</span>
-                      <span className="font-mono font-semibold text-foreground">{selectedApp.formData.cacNumber}</span>
+                      <span className="font-mono font-semibold text-foreground">{selectedApp.applicant.cacNumber}</span>
                     </div>
                   )}
                 </div>
@@ -682,8 +683,8 @@ export default function ApplicationsPage() {
                       <span className="font-bold text-foreground">₦{Number(selectedApp.invoice.amount).toLocaleString()}</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-muted-foreground text-[11px] block font-medium">Virtual Bank:</span>
-                      <span className="font-semibold text-foreground">{selectedApp.invoice.virtualBankName || "Zenith Bank / Odeda Treasury"}</span>
+                      <span className="text-muted-foreground text-[11px] block font-medium">Payment Method:</span>
+                      <span className="font-semibold text-foreground">{selectedApp.invoice.payments[0].method || "online"}</span>
                     </div>
                   </div>
                 </div>

@@ -73,6 +73,9 @@ export interface Application {
     email?: string;
     phone?: string;
     role?: string;
+    address: string;
+    nin:string;
+    cacNumber:string
   } | null;
   createdBy?: {
     id: string;
@@ -102,6 +105,10 @@ export interface Application {
     paymentStatus: "confirmed" | "failed" | "pending";
     invoiceNumber: string;
     virtualBankName: string;
+
+    payments: {
+      method:string
+    }
   };
 
   // Output Credentials
