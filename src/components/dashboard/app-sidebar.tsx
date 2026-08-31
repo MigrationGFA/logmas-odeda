@@ -146,7 +146,7 @@ const NAV: Record<Role, { label: string; items: Item[] }[]> = {
       items: [
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
         // { title: "Revenue Analytics", url: "/dashboard/reports", icon: BarChart3 },
-        { title: "Levy Pricing", url: "/dashboard/levies", icon: Tag },
+        { title: "Service Pricing", url: "/dashboard/pricing", icon: Tag },
         // { title: "Trade Permits", url: "/dashboard/permits", icon: Stamp },
         { title: "Reconciliation", url: "/dashboard/invoices", icon: Wallet },
         // { title: "Payments", url: "/dashboard/invoices", icon: CreditCard },
@@ -237,7 +237,7 @@ const NAV: Record<Role, { label: string; items: Item[] }[]> = {
         // { title: "Manage LGAs", url: "/dashboard/customers", icon: Building2 },
         { title: "Ward Management", url: "/dashboard/wards", icon: Map },
         { title: "Account Management", url: "/dashboard/accounts", icon: KeyRound },
-        { title: "Global Configurations", url: "/dashboard/levies", icon: Tag },
+        { title: "Global Configurations", url: "/dashboard/pricing", icon: Tag },
         { title: "User Management", url: "/dashboard/field-officers", icon: Users },
         { title: "System Analytics", url: "/dashboard/reports", icon: BarChart3 },
         { title: "Trade Permits", url: "/dashboard/permits", icon: Stamp },

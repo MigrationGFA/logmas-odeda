@@ -26,6 +26,7 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   "/dashboard": ALL_ROLES,
 
   // Finance / config
+  "/dashboard/pricing": ["treasurer", "super_admin"],
   "/dashboard/levies": ["treasurer", "super_admin"],
 
   // Audit & admin oversight
