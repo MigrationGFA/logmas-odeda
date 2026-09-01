@@ -35,8 +35,13 @@ import {
   Clock,
   ArrowRight,
   Filter,
+  Plus,
+  Edit3,
 } from "lucide-react";
 import { useServices } from "@/hooks/queries/useServices";
+import { tokenManager } from "@/services/apiAuth";
+import { CreateServiceModal } from "@/components/treasurer/CreateServiceModal";
+import { EditServiceModal } from "@/components/treasurer/EditServiceModal";
 
 const ICON_MAP: Record<string, any> = {
   FileBadge,
@@ -57,6 +62,16 @@ export default function ServicesPage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<any | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const currentUser = tokenManager.getUser();
+  const canManageServices =
+    currentUser?.role === "treasurer" ||
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super_admin";
+
   const categories = [
     "All",
     "Certificates",
@@ -66,9 +81,7 @@ export default function ServicesPage() {
     "Urban Development",
   ];
 
-  const { services, isLoading } = useServices();
-
-  // console.log(services,"services")
+  const { services, isLoading, refetch } = useServices();
 
   const filteredServices = services.filter((service) => {
     const matchesSearch =
@@ -82,10 +95,22 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Odeda LGA Government Services Catalogue"
-        subtitle="Select an official local government service to apply, obtain statutory assessments, or pay levies online."
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageHeader
+          title="Odeda LGA Government Services Catalogue"
+          subtitle="Select an official local government service to apply, obtain statutory assessments, or pay levies online."
+        />
+
+        {canManageServices && (
+          <Button
+            onClick={() => setCreateModalOpen(true)}
+            className="bg-primary text-primary-foreground gap-1.5 font-semibold text-xs h-9 shrink-0 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            Create Service
+          </Button>
+        )}
+      </div>
 
       {/* Filters and Search Bar */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
@@ -236,10 +261,25 @@ export default function ServicesPage() {
                     </div>
                   </CardContent>
 
-                  <CardFooter className="pt-2">
+                  <CardFooter className="pt-2 flex gap-2">
+                    {canManageServices && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingService(service);
+                          setEditModalOpen(true);
+                        }}
+                        className="text-xs px-2.5 h-9 gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                    )}
                     <Button
                       asChild
-                      className="w-full gap-2 text-xs font-semibold"
+                      className="flex-1 gap-1.5 text-xs font-semibold h-9"
                       size="sm"
                     >
                       <Link href={`/dashboard/services/${service.id}`}>
@@ -270,6 +310,21 @@ export default function ServicesPage() {
           </Button>
         </Card>
       )}
+
+      {/* Treasurer / Admin Create Service Modal */}
+      <CreateServiceModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={() => refetch()}
+      />
+
+      {/* Treasurer / Admin Edit Service Modal */}
+      <EditServiceModal
+        service={editingService}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }

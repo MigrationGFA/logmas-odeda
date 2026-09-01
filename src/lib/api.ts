@@ -57,6 +57,18 @@ const axiosInstance = axios.create({
 
 // Request interceptor for adding token
 axiosInstance.interceptors.request.use((config) => {
+  if (
+    config.headers?.Authorization === "" ||
+    config.headers?.Authorization === false ||
+    config.headers?.["skip-auth"]
+  ) {
+    if (config.headers) {
+      delete (config.headers as any).Authorization;
+      delete (config.headers as any)["skip-auth"];
+    }
+    return config;
+  }
+
   const token = getAuthToken();
   if (token) {
     config.headers = config.headers ?? {};
@@ -258,7 +270,7 @@ export const api = {
   upload: <T>(url: string, formData: FormData, config?: AxiosRequestConfig) =>
     request<T>({
       ...config,
-      method: "POST",
+      method: config?.method || "POST",
       url,
       data: formData,
       headers: {

@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
+import { useServices } from "@/hooks/queries/useServices";
 import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
 import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
 import {
@@ -32,6 +34,7 @@ import {
   ShieldAlert,
   CreditCard,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -50,11 +53,34 @@ const ICONS: Record<string, any> = {
   Store,
 };
 
-export default function ServicesPage() {
+function ServicesPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlServiceId = searchParams ? searchParams.get("serviceId") : null;
+
+  const { services: servicesData, isLoading } = useServices();
+
+  const services = useMemo(() => {
+    const list = Array.isArray(servicesData) ? servicesData : (servicesData as any)?.data || [];
+    if (list && list.length > 0) {
+      return list;
+    }
+    return ODEDA_SERVICES ?? [];
+  }, [servicesData]);
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [showQuickApply, setShowQuickApply] = useState(false);
-  const [selectedQuickService, setSelectedQuickService] = useState<string>("certificate_of_origin");
+  const [selectedQuickService, setSelectedQuickService] = useState<string>(
+    urlServiceId || "certificate_of_origin"
+  );
+
+  // Sync state when URL serviceId changes
+  useEffect(() => {
+    if (urlServiceId) {
+      setSelectedQuickService(urlServiceId);
+    }
+  }, [urlServiceId]);
 
   const categories = [
     "All",
@@ -65,18 +91,25 @@ export default function ServicesPage() {
     "Urban Development",
   ];
 
-  const filteredServices = ODEDA_SERVICES.filter((service) => {
+  const filteredServices = services.filter((service: any) => {
     const matchesSearch =
-      service.name.toLowerCase().includes(search.toLowerCase()) ||
-      service.description.toLowerCase().includes(search.toLowerCase()) ||
-      service.revenueHead.toLowerCase().includes(search.toLowerCase());
+      (service.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (service.description || "").toLowerCase().includes(search.toLowerCase()) ||
+      (service.revenueHead || "").toLowerCase().includes(search.toLowerCase());
     const matchesCategory = selectedCategory === "All" || service.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const handleApplyClick = (serviceId: string) => {
     setSelectedQuickService(serviceId);
-    setShowQuickApply(true);
+    try {
+      const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+      params.set("serviceId", serviceId);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    } catch (e) {
+      console.error("Failed to update URL", e);
+    }
+
     // Smooth scroll to quick apply
     const el = document.getElementById("quick-apply-section");
     if (el) {
@@ -105,7 +138,6 @@ export default function ServicesPage() {
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button
                 onClick={() => {
-                  setShowQuickApply(true);
                   const el = document.getElementById("quick-apply-section");
                   if (el) el.scrollIntoView({ behavior: "smooth" });
                 }}
@@ -114,13 +146,13 @@ export default function ServicesPage() {
                 <Sparkles className="mr-2 h-4 w-4" /> First-Timer? Select Service & Pay
               </Button>
               <Button asChild variant="outline">
-                <Link href="#services-catalog">Browse All 12 Services</Link>
+                <Link href="#services-catalog">Browse All Services</Link>
               </Button>
             </div>
           </div>
         </section>
 
-        {/* 6-Step Mandatory Application Process Banner Posted on Services Page Before Payment */}
+        {/* 6-Step Mandatory Process Banner */}
         <section className="bg-muted/20 border-b border-border/40 py-10">
           <div className="container mx-auto px-4">
             <ServiceApplicationGuideSteps
@@ -182,9 +214,14 @@ export default function ServicesPage() {
 
           {/* Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredServices.map((s: OdedaService) => {
+            {filteredServices.map((s: any) => {
               const Icon = ICONS[s.icon] || FileBadge;
-              const fee = getConfiguredFeeForService(s.id) || s.defaultFee;
+              const fee = Number(
+                s.feeConfig?.amount ?? getConfiguredFeeForService(s.id) ?? s.defaultFee ?? 0
+              );
+              const processingTime =
+                s.processingTime || (s.estimatedDays ? `${s.estimatedDays} Business Days` : "1 - 3 Business Days");
+              const reqDocsCount = (s.requiredDocuments || s.requirements || []).length;
 
               return (
                 <Card
@@ -196,13 +233,13 @@ export default function ServicesPage() {
                       <div
                         className="h-12 w-12 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform"
                         style={{
-                          backgroundColor: `color-mix(in oklab, var(--${s.color}) 12%, transparent)`,
+                          backgroundColor: `color-mix(in oklab, var(--${s.color || "primary"}) 12%, transparent)`,
                         }}
                       >
-                        <Icon className="h-6 w-6" style={{ color: `var(--${s.color})` }} />
+                        <Icon className="h-6 w-6" style={{ color: `var(--${s.color || "primary"})` }} />
                       </div>
                       <Badge variant="secondary" className="text-[10px] font-semibold">
-                        {s.category}
+                        {s.category || "Statutory"}
                       </Badge>
                     </div>
 
@@ -217,25 +254,25 @@ export default function ServicesPage() {
                       <div className="flex justify-between items-center text-muted-foreground">
                         <span>Statutory Fee:</span>
                         <span className="font-bold text-foreground">
-                          {s.feeType === "fixed" ? `₦${fee.toLocaleString()}` : s.feeDescription}
+                          {fee > 0 ? `₦${fee.toLocaleString()}` : s.feeDescription || "Variable Tariff"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-muted-foreground">
                         <span>Processing Time:</span>
                         <span className="font-medium text-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-primary" /> {s.processingTime}
+                          <Clock className="h-3 w-3 text-primary" /> {processingTime}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-muted-foreground pt-0.5">
                         <span>Revenue Head:</span>
-                        <span className="font-mono text-[11px] text-foreground">{s.revenueHead}</span>
+                        <span className="font-mono text-[11px] text-foreground">{s.revenueHead || "1001"}</span>
                       </div>
                     </div>
 
                     <div className="mt-4 space-y-1 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                        <span>Requires {s.requiredDocuments.length} verification documents</span>
+                        <span>Requires {reqDocsCount > 0 ? reqDocsCount : 2} verification documents</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <QrCode className="h-3.5 w-3.5 text-primary" />
@@ -286,5 +323,19 @@ export default function ServicesPage() {
 
       <SiteFooter />
     </div>
+  );
+}
+
+export default function ServicesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <ServicesPageContent />
+    </Suspense>
   );
 }

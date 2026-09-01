@@ -42,6 +42,33 @@ export function useSubmitApplication() {
   });
 }
 
+export function useCompleteApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: {
+        formData?: Record<string, any>;
+        files?: Record<string, any>;
+        applicantId?: string;
+      };
+    }) => apiApplications.completeApplication(id, payload),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: applicationsKeys.all });
+      qc.invalidateQueries({ queryKey: applicationsKeys.detail(data?.id) });
+      toast.success(
+        `Application ${data?.applicationNumber || data?.id || ""} completed and submitted successfully!`
+      );
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to complete statutory application");
+    },
+  });
+}
+
 export function useMoveToUnderReview() {
   const qc = useQueryClient();
   return useMutation({

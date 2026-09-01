@@ -185,6 +185,56 @@ export const apiApplications = {
     }
   },
 
+  /**
+   * Complete a post-payment draft application: PATCH /applications/:id/complete
+   */
+  completeApplication: async (
+    id: string,
+    payload: {
+      formData?: Record<string, any>;
+      files?: Record<string, any>;
+      applicantId?: string;
+    },
+  ): Promise<Application> => {
+    const formData = new FormData();
+
+    if (payload.applicantId) {
+      formData.append("applicantId", String(payload.applicantId));
+    }
+
+    if (payload.formData) {
+      formData.append("formData", JSON.stringify(payload.formData));
+    }
+
+    if (payload.files) {
+      Object.entries(payload.files).forEach(([reqKey, fileOrMeta]) => {
+        if (!fileOrMeta) return;
+
+        if (fileOrMeta instanceof File || fileOrMeta instanceof Blob) {
+          const fileName =
+            fileOrMeta instanceof File ? fileOrMeta.name : `${reqKey}.pdf`;
+
+          formData.append(reqKey, fileOrMeta, fileName);
+        }
+      });
+    }
+
+    try {
+      const response = await api.upload<Application>(
+        `/applications/${id}/complete`,
+        formData,
+        {
+          method: "PATCH",
+        },
+      );
+
+      return response;
+    } catch (err) {
+      console.error("Post-payment application completion failed:", err);
+      throw err;
+    }
+  },
+
 /**
  * Get applications with query filtering and pagination.
  */

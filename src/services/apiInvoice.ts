@@ -145,6 +145,20 @@ export interface OnlinePaymentInitResponse {
   // authorizationUrl: string;
 }
 
+export interface PublicPaymentInitRequest {
+  serviceId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+export interface PublicPaymentInitResponse {
+  paymentUrl: string;
+  reference: string;
+  accessCode?: string;
+  message?: string;
+}
+
 // Matches sendPaymentLinkToBusiness's response
 export interface SendPaymentLinkResponse {
   reference: string;
@@ -155,9 +169,13 @@ export interface SendPaymentLinkResponse {
 
 export interface VerifyPaymentResponse {
   status: "confirmed" | "success" | "failed" | "abandoned" | string;
-  payment: Payment;
-  invoice: InvoiceDetails;
-  receipt: Receipt | null;
+  payment?: Payment;
+  invoice?: InvoiceDetails;
+  receipt?: Receipt | null;
+  message?: string;
+  application?: any;
+  user?: any;
+  data?: any;
 }
 
 // Service functions
@@ -245,7 +263,22 @@ export const invoicesService = {
   },
 
   
-initializeOnlinePayment: async (id: string): Promise<OnlinePaymentInitResponse> => {
+  // Public payment initialization for citizen apply flow
+  initializePublicPayment: async (
+    data: PublicPaymentInitRequest
+  ): Promise<PublicPaymentInitResponse> => {
+    return await api.post<PublicPaymentInitResponse>(
+      "/invoices/public/initialize",
+      data,
+      {
+        headers: {
+          "skip-auth": "true",
+        },
+      }
+    );
+  },
+
+  initializeOnlinePayment: async (id: string): Promise<OnlinePaymentInitResponse> => {
   return await api.post<OnlinePaymentInitResponse>(`/invoices/${id}/pay-online`, {});
 },
 

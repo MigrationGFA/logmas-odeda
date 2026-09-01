@@ -185,6 +185,13 @@ export default function ApplicationsPage() {
 
   const getStatusBadge = (status: string) => {
     const s = String(status).toLowerCase();
+    if (s === "draft") {
+      return (
+        <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-300 text-[11px] gap-1 font-semibold">
+          <FileText className="w-3 h-3" /> Draft (Paid)
+        </Badge>
+      );
+    }
     if (s === "submitted") {
       return (
         <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 text-[11px] gap-1 font-semibold">
@@ -485,6 +492,20 @@ export default function ApplicationsPage() {
 
                 {/* Right Actions & Pipeline Controls */}
                 <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 shrink-0">
+                  {/* Draft Application Completion Action */}
+                  {s === "draft" && (
+                    <Button
+                      size="sm"
+                      asChild
+                      className="text-xs h-8 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs"
+                    >
+                      <Link href={`/dashboard/applications/${app.id}/complete`}>
+                        <FileText className="h-3.5 w-3.5" />
+                        Complete Form
+                      </Link>
+                    </Button>
+                  )}
+
                   {/* Pipeline Action Buttons for Admins */}
                   {isAdmin && isSubmitted && (
                     <Button

@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useState, useId } from "react";
-import { ODEDA_SERVICES, OdedaService, getOdedaServiceById, getConfiguredFeeForService } from "@/config/odedaServices";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useServices } from "@/hooks/queries/useServices";
+import { ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ServiceApplicationGuideSteps } from "./ServiceApplicationGuideSteps";
+import { invoicesService } from "@/services/apiInvoice";
+import { toast } from "sonner";
 import {
   CreditCard,
   User,
@@ -29,18 +33,36 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-interface PublicServiceApplyWidgetProps {
+export interface PublicServiceApplyWidgetProps {
   initialServiceId?: string;
   className?: string;
   showStepGuide?: boolean;
 }
 
-export function PublicServiceApplyWidget({
+function PublicServiceApplyWidgetInner({
   initialServiceId = "certificate_of_origin",
   className = "",
   showStepGuide = true,
 }: PublicServiceApplyWidgetProps) {
-  const [selectedServiceId, setSelectedServiceId] = useState<string>(initialServiceId);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlServiceId = searchParams ? searchParams.get("serviceId") : null;
+
+  const { services: servicesData, isLoading } = useServices();
+
+  const services = useMemo(() => {
+    const list = Array.isArray(servicesData) ? servicesData : (servicesData as any)?.data || [];
+    if (list && list.length > 0) {
+      return list;
+    }
+    return ODEDA_SERVICES ?? [];
+  }, [servicesData]);
+
+  // Initial state derived from URL or initialServiceId
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(
+    urlServiceId || initialServiceId || "certificate_of_origin"
+  );
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -49,10 +71,68 @@ export function PublicServiceApplyWidget({
   const [copiedKey, setCopiedKey] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const selectedService = getOdedaServiceById(selectedServiceId) || ODEDA_SERVICES[0];
-  const statutoryFee = getConfiguredFeeForService(selectedService.id) || selectedService.defaultFee;
+  // Sync state when URL serviceId or initialServiceId changes
+  useEffect(() => {
+    if (urlServiceId) {
+      setSelectedServiceId(urlServiceId);
+    } else if (initialServiceId) {
+      setSelectedServiceId(initialServiceId);
+    }
+  }, [urlServiceId, initialServiceId]);
 
-  // Generated Mock Result for UI
+  // Find currently selected service
+  const selectedService = useMemo(() => {
+    if (!services || services.length === 0) return null;
+    const match = services.find(
+      (s: any) =>
+        s.id === selectedServiceId ||
+        s.code?.toLowerCase() === selectedServiceId?.toLowerCase() ||
+        s.id?.toLowerCase() === selectedServiceId?.toLowerCase() ||
+        s.slug?.toLowerCase() === selectedServiceId?.toLowerCase()
+    );
+    return match || services[0];
+  }, [services, selectedServiceId]);
+
+  // Calculate statutory fee
+  const statutoryFee = useMemo(() => {
+    if (!selectedService) return 0;
+    if (selectedService.feeConfig?.amount !== undefined && selectedService.feeConfig?.amount !== null) {
+      return Number(selectedService.feeConfig.amount);
+    }
+    const configured = getConfiguredFeeForService(selectedService.id);
+    if (configured) return configured;
+    return Number(selectedService.defaultFee ?? selectedService.amount ?? 0);
+  }, [selectedService]);
+
+  // Calculate required documents
+  const requiredDocuments: string[] = useMemo(() => {
+    if (!selectedService) return [];
+    if (Array.isArray(selectedService.requiredDocuments) && selectedService.requiredDocuments.length > 0) {
+      return selectedService.requiredDocuments;
+    }
+    if (Array.isArray(selectedService.requirements) && selectedService.requirements.length > 0) {
+      return selectedService.requirements;
+    }
+    return [
+      "National Identity Number (NIN) Slip",
+      "Passport Photograph (red background)",
+      "Proof of Residency or Family Identification",
+    ];
+  }, [selectedService]);
+
+  // When user changes service in dropdown
+  const handleServiceChange = (newServiceId: string) => {
+    setSelectedServiceId(newServiceId);
+    try {
+      const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+      params.set("serviceId", newServiceId);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    } catch (e) {
+      console.error("Failed to update URL search parameters", e);
+    }
+  };
+
+  // Generated Result for UI
   const [successDetails, setSuccessDetails] = useState<{
     reference: string;
     generatedPass: string;
@@ -63,43 +143,84 @@ export function PublicServiceApplyWidget({
     fullName: string;
   } | null>(null);
 
-  const handleSubmitPayment = (e: React.FormEvent) => {
+  const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
 
+    if (!selectedService || !selectedService.id) {
+      const msg = "Please select a valid statutory service to continue.";
+      setFormError(msg);
+      toast.error(msg);
+      return;
+    }
     if (!fullName.trim()) {
-      setFormError("Please enter your full applicant name");
+      const msg = "Please enter your full applicant name";
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
     if (!email.trim() || !email.includes("@")) {
-      setFormError("Please enter a valid and correct email address to receive your login details");
+      const msg = "Please enter a valid email address";
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
-    if (!phone.trim() || phone.length < 8) {
-      setFormError("Please enter a valid phone number for SMS status updates");
+    if (!phone.trim() || phone.trim().length < 7) {
+      const msg = "Please enter a valid phone number";
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
 
     setIsProcessing(true);
 
-    // Simulate instant online payment and automatic account provisioning
-    setTimeout(() => {
-      const generatedRef = `OG-ODEDA-${Date.now().toString().slice(-6)}`;
-      const randomPassword = `Odeda@${Math.floor(1000 + Math.random() * 9000)}`;
-
-      setSuccessDetails({
-        reference: generatedRef,
-        generatedPass: randomPassword,
-        paidAmount: statutoryFee,
-        serviceName: selectedService.name,
+    try {
+      const response = await invoicesService.initializePublicPayment({
+        serviceId: selectedService.id,
+        fullName: fullName.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        fullName: fullName.trim(),
       });
 
+      const paymentUrl =
+        (response as any)?.paymentUrl ||
+        (response as any)?.data?.paymentUrl ||
+        (response as any)?.authorizationUrl ||
+        (response as any)?.data?.authorizationUrl;
+
+      const reference =
+        (response as any)?.reference ||
+        (response as any)?.data?.reference;
+
+      if (!paymentUrl) {
+        throw new Error(
+          (response as any)?.message ||
+          "Payment gateway URL was not returned. Please check service status and try again."
+        );
+      }
+
+      // Preserve the returned payment reference so it can be used when the applicant returns
+      if (reference) {
+        sessionStorage.setItem("pendingPaymentReference", reference);
+        sessionStorage.setItem("publicPaymentServiceId", selectedService.id);
+        localStorage.setItem("pendingPaymentReference", reference);
+      }
+
+      toast.success("Redirecting to Paystack secure checkout...");
+
+      // Redirect applicant to the returned Paystack checkout URL
+      window.location.href = paymentUrl;
+    } catch (err: any) {
+      console.error("Public payment initialization failed:", err);
+      const errorMessage =
+        err?.message ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Payment initialization failed. Please verify service availability and try again.";
+      setFormError(errorMessage);
+      toast.error(errorMessage);
       setIsProcessing(false);
-      setIsPaidSuccess(true);
-    }, 1200);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -178,37 +299,56 @@ export function PublicServiceApplyWidget({
                     </Label>
                     <select
                       id="service-select"
-                      value={selectedServiceId}
-                      onChange={(e) => setSelectedServiceId(e.target.value)}
+                      value={selectedService?.id || selectedServiceId}
+                      onChange={(e) => handleServiceChange(e.target.value)}
                       className="mt-1.5 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2.5 text-sm font-medium text-foreground focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
                     >
-                      {ODEDA_SERVICES.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.category}) — ₦{(getConfiguredFeeForService(s.id) || s.defaultFee).toLocaleString()}
-                        </option>
-                      ))}
+                      {services.map((s: any) => {
+                        const fee = Number(
+                          s.feeConfig?.amount ?? getConfiguredFeeForService(s.id) ?? s.defaultFee ?? 0
+                        );
+                        return (
+                          <option key={s.id} value={s.id}>
+                            {s.name} ({s.category || "Statutory"}) — {fee > 0 ? `₦${fee.toLocaleString()}` : "Variable"}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
                   {/* Service info card */}
-                  <div className="p-4 rounded-xl bg-muted/40 border border-border/60 space-y-2.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground font-medium">Selected Service:</span>
-                      <span className="font-semibold text-foreground">{selectedService.name}</span>
+                  {selectedService && (
+                    <div className="p-4 rounded-xl bg-muted/40 border border-border/60 space-y-2.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground font-medium">Selected Service:</span>
+                        <span className="font-semibold text-foreground">{selectedService.name}</span>
+                      </div>
+                      {selectedService.description && (
+                        <div className="pt-1 text-muted-foreground text-[11px] leading-relaxed border-t border-border/30">
+                          {selectedService.description}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-1 border-t border-border/30">
+                        <span className="text-muted-foreground font-medium">Revenue Head:</span>
+                        <span className="font-mono text-[11px] text-foreground">
+                          {selectedService.revenueHead || "1001 - General Revenue"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground font-medium">Processing Time SLA:</span>
+                        <span className="font-medium text-foreground">
+                          {selectedService.processingTime ||
+                            (selectedService.estimatedDays
+                              ? `${selectedService.estimatedDays} Business Days`
+                              : "1 - 3 Business Days")}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-border/40">
+                        <span className="text-muted-foreground font-medium">Total Statutory Fee:</span>
+                        <span className="font-bold text-sm text-primary">₦{statutoryFee.toLocaleString()}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground font-medium">Revenue Head:</span>
-                      <span className="font-mono text-[11px] text-foreground">{selectedService.revenueHead}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground font-medium">Processing Time SLA:</span>
-                      <span className="font-medium text-foreground">{selectedService.processingTime}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-border/40">
-                      <span className="text-muted-foreground font-medium">Total Statutory Fee:</span>
-                      <span className="font-bold text-sm text-primary">₦{statutoryFee.toLocaleString()}</span>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Required Docs note */}
                   <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 text-xs text-muted-foreground">
@@ -216,11 +356,13 @@ export function PublicServiceApplyWidget({
                       <FileCheck2 className="h-3.5 w-3.5 text-primary" /> Step 4 Note (Documents to Prepare):
                     </div>
                     <ul className="list-disc list-inside space-y-0.5 text-[11px]">
-                      {selectedService.requiredDocuments.slice(0, 3).map((d, i) => (
-                        <li key={i} className="truncate">{d}</li>
+                      {requiredDocuments.slice(0, 3).map((d, i) => (
+                        <li key={i} className="truncate">
+                          {d}
+                        </li>
                       ))}
-                      {selectedService.requiredDocuments.length > 3 && (
-                        <li>+{selectedService.requiredDocuments.length - 3} more statutory document(s)</li>
+                      {requiredDocuments.length > 3 && (
+                        <li>+{requiredDocuments.length - 3} more statutory document(s)</li>
                       )}
                     </ul>
                   </div>
@@ -339,7 +481,8 @@ export function PublicServiceApplyWidget({
                 Payment Successful!
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Your statutory fee of <strong className="text-foreground">₦{successDetails?.paidAmount.toLocaleString()}</strong> for <strong className="text-foreground">{successDetails?.serviceName}</strong> has been received.
+                Your statutory fee of <strong className="text-foreground">₦{successDetails?.paidAmount.toLocaleString()}</strong> for{" "}
+                <strong className="text-foreground">{successDetails?.serviceName}</strong> has been received.
               </p>
             </div>
 
@@ -355,7 +498,8 @@ export function PublicServiceApplyWidget({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  An account has been created for you automatically. Your login details have also been dispatched to <strong className="text-foreground">{successDetails?.email}</strong>.
+                  An account has been created for you automatically. Your login details have also been dispatched to{" "}
+                  <strong className="text-foreground">{successDetails?.email}</strong>.
                 </p>
 
                 <div className="space-y-2.5 text-xs bg-background p-4 rounded-xl border border-border/60">
@@ -469,7 +613,7 @@ export function PublicServiceApplyWidget({
                   </Link>
                 </Button>
                 <Button asChild size="sm" className="bg-gradient-hero text-xs font-semibold shadow-elegant">
-                  <Link href={`/dashboard/services/${selectedService.id}`}>
+                  <Link href={`/dashboard/services/${selectedService?.id || "certificate_of_origin"}`}>
                     Continue Application on Dashboard <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                   </Link>
                 </Button>
@@ -479,5 +623,20 @@ export function PublicServiceApplyWidget({
         )}
       </Card>
     </div>
+  );
+}
+
+export function PublicServiceApplyWidget(props: PublicServiceApplyWidgetProps) {
+  return (
+    <Suspense
+      fallback={
+        <Card className="p-8 bg-card border-border/80 shadow-elegant text-center">
+          <RefreshCw className="h-6 w-6 animate-spin mx-auto text-primary mb-2" />
+          <p className="text-xs text-muted-foreground">Loading service application form...</p>
+        </Card>
+      }
+    >
+      <PublicServiceApplyWidgetInner {...props} />
+    </Suspense>
   );
 }

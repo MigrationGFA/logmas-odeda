@@ -50,11 +50,15 @@ import {
   Sparkles,
   Loader2,
   AlertTriangle,
+  Plus,
+  Edit3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServices } from "@/hooks/queries/useServices";
 import { useServiceFees } from "@/hooks/queries/useTreasurer";
+import { CreateServiceModal } from "./CreateServiceModal";
+import { EditServiceModal } from "./EditServiceModal";
 
 export const formatNgn = (n: number) =>
   new Intl.NumberFormat("en-NG", {
@@ -99,6 +103,11 @@ export default function ServiceFeeConfigurationTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Create & Edit Service Modals State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<any | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   // Services with their fee configs
   const services = useMemo(() => {
@@ -374,36 +383,47 @@ export default function ServiceFeeConfigurationTab() {
       {/* Main Fee Configuration Form Section */}
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <SlidersHorizontal className="h-5 w-5 text-primary" />
-                Fee Configuration
+                Fee Configuration & Management
               </CardTitle>
               <CardDescription>
-                Select a service to view its current configured fee, update the
-                amount, activate or deactivate its status, and save changes.
+                Select a service to update fees, or create a new statutory service for Odeda LGA.
               </CardDescription>
             </div>
-            {currentActiveConfig && (
-              <Badge
-                variant={
-                  currentActiveConfig.status === "ACTIVE"
-                    ? "default"
-                    : "secondary"
-                }
-                className={
-                  currentActiveConfig.status === "ACTIVE"
-                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                    : "bg-muted text-muted-foreground"
-                }
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {currentActiveConfig && (
+                <Badge
+                  variant={
+                    currentActiveConfig.status === "ACTIVE"
+                      ? "default"
+                      : "secondary"
+                  }
+                  className={
+                    currentActiveConfig.status === "ACTIVE"
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs"
+                      : "bg-muted text-muted-foreground text-xs"
+                  }
+                >
+                  Status:{" "}
+                  {currentActiveConfig.status === "ACTIVE"
+                    ? "Active"
+                    : "Inactive"}
+                </Badge>
+              )}
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setCreateModalOpen(true)}
+                className="bg-primary text-primary-foreground gap-1.5 text-xs font-semibold h-8"
               >
-                Current Status:{" "}
-                {currentActiveConfig.status === "ACTIVE"
-                  ? "Active"
-                  : "Inactive"}
-              </Badge>
-            )}
+                <Plus className="h-3.5 w-3.5" />
+                Create New Service
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
@@ -841,6 +861,20 @@ export default function ServiceFeeConfigurationTab() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs px-2 gap-1 text-primary hover:bg-primary/10 border-primary/30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingService(service);
+                                setEditModalOpen(true);
+                              }}
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              Edit
+                            </Button>
+
+                            <Button
                               variant={isSelected ? "default" : "outline"}
                               size="sm"
                               className="h-8 text-xs px-2.5"
@@ -891,6 +925,21 @@ export default function ServiceFeeConfigurationTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Treasurer Create Service Modal */}
+      <CreateServiceModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={() => refetch()}
+      />
+
+      {/* Treasurer Edit Service Modal */}
+      <EditServiceModal
+        service={editingService}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }
