@@ -13,9 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ODEDA_SERVICES,
-  OdedaService,
-  getConfiguredFeeForService,
+  ServiceType,
 } from "@/config/odedaServices";
 import Link from "next/link";
 import {
@@ -69,7 +67,7 @@ export default function ServicesPage() {
   const currentUser = tokenManager.getUser();
   const canManageServices =
     currentUser?.role === "treasurer" ||
-    currentUser?.role === "admin" ||
+    currentUser?.role === "lga_admin" ||
     currentUser?.role === "super_admin";
 
   const categories = [
@@ -191,7 +189,7 @@ export default function ServicesPage() {
                 </CardFooter>
               </Card>
             ))
-          : filteredServices.map((service: OdedaService) => {
+          : filteredServices.map((service: ServiceType) => {
               const IconComponent = ICON_MAP[service.icon] || FileBadge;
 
               return (

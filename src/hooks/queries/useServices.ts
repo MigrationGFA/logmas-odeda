@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { services } from "@/services/apiServices";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ODEDA_SERVICES } from "@/config/odedaServices";
 import { useMemo } from "react";
 import { toast } from "sonner";
 
@@ -27,10 +26,27 @@ export function useServices() {
   });
 
   const servicesList = useMemo(() => {
-    if (Array.isArray(data)) return data;
-    if (data?.data && Array.isArray(data.data)) return data.data;
-    if (data?.services && Array.isArray(data.services)) return data.services;
-    return ODEDA_SERVICES ?? [];
+    if (!Array.isArray(data)) return [];
+    
+    const ODEDA_SERVICES_ICONS = [
+      { id: "certificate_of_origin", name: "Certificate of Origin", icon: "FileBadge" },
+      { id: "club_registration", name: "Certificate of Club Registration", icon: "Users" },
+      { id: "cda_registration", name: "Certificate of Community Development Association Registration", icon: "Building2" },
+      { id: "farmers_registration", name: "Certificate of Farmers Registration", icon: "Sprout" },
+      { id: "environmental_sanitation", name: "Certificate of Environmental Sanitation Compliance", icon: "ShieldCheck" },
+      { id: "tenement_rate", name: "Tenement Rate", icon: "Home" },
+      { id: "haulage_fees", name: "Haulage Fees", icon: "Truck" },
+      { id: "liquor_licence", name: "Liquor Licence Fees", icon: "Beer" },
+      { id: "viewing_centre_licence", name: "Viewing Centre Licence Fee", icon: "Tv" },
+      { id: "quarry_permit", name: "Quarry Fees and Permits", icon: "Pickaxe" },
+      { id: "street_naming", name: "Street Naming and Property Numbering", icon: "MapPin" },
+      { id: "kiosk_licence", name: "Kiosk Licence", icon: "Store" }
+    ];
+    
+    return data.map((service: any) => ({
+      ...service,
+      icon: ODEDA_SERVICES_ICONS.find(s => s.id === service.id)?.icon || null
+    }));
   }, [data]);
 
   // Get single application by ID or slug

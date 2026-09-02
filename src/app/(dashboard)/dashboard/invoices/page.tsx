@@ -60,8 +60,8 @@ export default function InvoicesPage() {
   const filtered = invoices.filter(
     (i) =>
       (tab === "all" ||
-        i.status === tab ||
-        (tab === "pending" && i.status === "pending")) &&
+        i.paymentStatus === tab ||
+        (tab === "pending" && i.paymentStatus === "pending")) &&
       (i.reference + i.customerName + i.levyType)
         .toLowerCase()
         .includes(q.toLowerCase()),

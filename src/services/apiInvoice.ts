@@ -199,54 +199,7 @@ export const invoicesService = {
         },
       });
     } catch {
-      return {
-        stats: {
-          totalBilled: 12450000,
-          totalCollected: 8900000,
-          totalOutstanding: 3550000,
-          totalOverdue: 1200000,
-          countAll: 15,
-          countPaid: 9,
-          countUnpaid: 4,
-          countOverdue: 2,
-        },
-        invoices: [
-          {
-            id: "inv-001",
-            invoiceNumber: "ODE/INV/2026/000101",
-            status: "paid",
-            issueDate: "2026-08-01",
-            dueDate: "2026-08-15",
-            totalAmount: "45000",
-            paidAmount: "45000",
-            balanceDue: "0",
-            category: "Trade Permit",
-            customerName: "Bola Enterprises",
-            customerEmail: "business@logmas.gov.ng",
-            customerPhone: "08088889999",
-            items: [{ id: "item-1", description: "Annual Business Permit 2026", quantity: 1, unitPrice: 45000, total: 45000 }],
-            paymentHistory: [
-              { id: "pay-1", reference: "ODE/PAY/2026/001", amount: 45000, method: "card", createdAt: "2026-08-02T10:00:00Z", receiptNumber: "ODE/RCP/2026/000101" }
-            ],
-          },
-          {
-            id: "inv-002",
-            invoiceNumber: "ODE/INV/2026/000102",
-            status: "issued",
-            issueDate: "2026-08-03",
-            dueDate: "2026-08-17",
-            totalAmount: "25000",
-            paidAmount: "0",
-            balanceDue: "25000",
-            category: "Tenement Rate",
-            customerName: "Camp Retail Hub",
-            customerEmail: "camp@example.com",
-            customerPhone: "08012345678",
-            items: [{ id: "item-2", description: "Residential Tenement Rate 2026", quantity: 1, unitPrice: 25000, total: 25000 }],
-            paymentHistory: [],
-          },
-        ],
-      };
+      console.error("Failed to fetch invoices hub data. Returning fallback data.");
     }
   },
 

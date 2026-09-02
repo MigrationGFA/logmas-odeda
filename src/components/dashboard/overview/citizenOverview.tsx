@@ -33,6 +33,7 @@ function CitizenOverview({ role }: { role: Role }) {
   const pending = data?.metrics?.pendingPayments ?? 0;
   const approvedApplications = data?.metrics?.approvedApplications ?? 0;
   const openComplaints = data?.metrics?.openComplaints ?? 0;
+  const awaitingFormSubmissions = data?.metrics?.awaitingForm ?? 0;  
 
   // console.log("Citizen Metrics:", citizenMetrics);
 
@@ -40,7 +41,7 @@ function CitizenOverview({ role }: { role: Role }) {
     <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
-          label="Applications"
+          label="Approved Applications"
           value={String(approvedApplications)}
           icon={FileBadge}
           color="primary"
@@ -53,8 +54,8 @@ function CitizenOverview({ role }: { role: Role }) {
         />
         {/* hasnt been done yet */}
         <StatCard
-          label="Receipts"
-          value={String("0")}
+          label="Awaiting Form Submission"
+          value={String(awaitingFormSubmissions)}
           icon={CheckCircle2}
           color="success"
         />
@@ -77,7 +78,7 @@ function CitizenOverview({ role }: { role: Role }) {
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Service Name</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -86,7 +87,7 @@ function CitizenOverview({ role }: { role: Role }) {
               {data?.recentApplications?.slice(0, 3).map((a) => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{`APP-${a.id.split("-")[1]}`}</TableCell>
-                  <TableCell>State of Origin</TableCell>
+                  <TableCell className="truncate">{a.service}</TableCell>
                   <TableCell>{format(a.createdAt, "MMM dd, yyyy")}</TableCell>
                   <TableCell>
                     <StatusBadge status={a.status} />

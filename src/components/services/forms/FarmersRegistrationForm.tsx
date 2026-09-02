@@ -13,7 +13,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { WARDS } from "@/lib/mock-data";
 import {
-  OdedaService,
+  ServiceType,
   getConfiguredFeeForService,
 } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
@@ -25,14 +25,14 @@ import {
 } from "./ReviewSubmitStep";
 import { Plus, Trash2, Sprout, Tractor, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ApplicantSnapshot } from "../ApplicantSelectionStep";
 
 interface Props {
-  service: OdedaService;
+  service: ServiceType;
   onSubmit: (formData: Record<string, any>) => void;
   isSubmitting?: boolean;
-  initialApplicant?: {
-    applicantId: string;
-  };
+  mode:any;
+  initialApplicant?:ApplicantSnapshot
 }
 
 interface FarmParcel {

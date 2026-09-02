@@ -54,7 +54,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { WARDS } from "@/lib/mock-data";
-import { ODEDA_SERVICES } from "@/config/odedaServices";
 import { tokenManager } from "@/services/apiAuth";
 import { getPublicCertificateUrl } from "@/lib/certificateTokens";
 import {
@@ -127,7 +126,7 @@ export default function ApplicationsPage() {
   const stats = React.useMemo(() => {
     const total = displayApplications.length;
     const submitted = displayApplications.filter((a) => a.status?.toLowerCase() === "submitted").length;
-    const underReview = displayApplications.filter((a) => a.status?.toLowerCase().includes("review")).length;
+    const underReview = displayApplications.filter((a) => a.status?.toLowerCase().includes("awaiting_form")).length;
     const approved = displayApplications.filter((a) => a.status?.toLowerCase() === "approved" || a.status?.toLowerCase() === "completed").length;
     const declined = displayApplications.filter((a) => a.status?.toLowerCase() === "declined" || a.status?.toLowerCase() === "rejected").length;
     return { total, submitted, underReview, approved, declined };
@@ -185,10 +184,10 @@ export default function ApplicationsPage() {
 
   const getStatusBadge = (status: string) => {
     const s = String(status).toLowerCase();
-    if (s === "draft") {
+    if (s === "awaiting_form") {
       return (
         <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-300 text-[11px] gap-1 font-semibold">
-          <FileText className="w-3 h-3" /> Draft (Paid)
+          <FileText className="w-3 h-3" /> Awaiting Form (Paid)
         </Badge>
       );
     }
@@ -321,7 +320,7 @@ export default function ApplicationsPage() {
         </Card>
         <Card className="p-4 bg-amber-500/5 border-amber-500/20 shadow-xs">
           <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
-            Under Review
+            Pending Form Completion
           </span>
           <div className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">{stats.underReview}</div>
         </Card>
@@ -493,7 +492,7 @@ export default function ApplicationsPage() {
                 {/* Right Actions & Pipeline Controls */}
                 <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 shrink-0">
                   {/* Draft Application Completion Action */}
-                  {s === "draft" && (
+                  {s === "awaiting_form" && (
                     <Button
                       size="sm"
                       asChild

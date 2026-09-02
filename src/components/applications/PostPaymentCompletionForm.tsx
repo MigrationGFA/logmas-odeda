@@ -36,7 +36,7 @@ import {
 import { useServices } from "@/hooks/queries/useServices";
 import {
   getOdedaServiceById,
-  OdedaService,
+  ServiceType,
 } from "@/config/odedaServices";
 import { Application } from "@/types/application";
 import { ApplicantSnapshot } from "@/components/services/ApplicantSelectionStep";
@@ -66,7 +66,7 @@ export function PostPaymentCompletionForm({
 }: PostPaymentCompletionFormProps) {
   const router = useRouter();
   const currentUser = tokenManager.getUser();
-  const isAuthenticated = !!tokenManager.getToken();
+  const isAuthenticated = !!tokenManager.getAccessToken();
 
   const {
     data: application,
@@ -87,12 +87,12 @@ export function PostPaymentCompletionForm({
   const completeMutation = useCompleteApplication();
 
   const [completedApplication, setCompletedApplication] =
-    useState<Application | null>(null);
+    useState<any | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   // Resolved service object: backend service or local config lookup
-  const service: OdedaService | null =
-    (fetchedService as OdedaService) ||
+  const service: ServiceType | null =
+    (fetchedService as ServiceType) ||
     getOdedaServiceById(serviceSlug) ||
     (application?.service as any) ||
     null;
@@ -208,12 +208,9 @@ export function PostPaymentCompletionForm({
   // 4. Success Completion State
   if (completedApplication) {
     const appNum =
-      completedApplication.applicationNumber ||
-      completedApplication.id;
+      completedApplication.application.applicationNumber 
     const sName =
       service?.name ||
-      completedApplication.service?.name ||
-      completedApplication.serviceName ||
       "Statutory Service";
 
     return (
@@ -311,16 +308,17 @@ export function PostPaymentCompletionForm({
       currentUser?.firstName
         ? `${currentUser.firstName} ${currentUser.lastName || ""}`.trim()
         : application?.formData?.fullName || undefined,
-    phone: currentUser?.phone || application?.formData?.phone || undefined,
-    email: currentUser?.email || application?.formData?.email || undefined,
-    address: currentUser?.address || application?.formData?.address || undefined,
-    nin: currentUser?.nin || application?.formData?.nin || undefined,
+    phone: currentUser?.phone || application?.applicant?.phone || undefined,
+    email: currentUser?.email || application?.applicant?.email || undefined,
+    address: currentUser?.address || application?.applicant?.address || undefined,
+    nin: currentUser?.nin || application?.applicant?.nin || undefined,
   };
 
   const handleFormSubmit = async (payload: {
     applicant: ApplicantSnapshot;
     formData: Record<string, any>;
     files: Record<string, any>;
+    serviceId: Record<string, any>;
   }) => {
     setSubmissionError(null);
     try {
@@ -330,8 +328,10 @@ export function PostPaymentCompletionForm({
           formData: payload.formData || {},
           files: payload.files || {},
           applicantId: payload.applicant?.applicantId || currentUser?.id || undefined,
+          serviceId:application.serviceId
         },
       });
+
 
       setCompletedApplication(res || application);
     } catch (err: any) {
@@ -344,7 +344,7 @@ export function PostPaymentCompletionForm({
   };
 
   // Fallback service definition if not found
-  const effectiveService: OdedaService = service || {
+  const effectiveService: ServiceType = service || {
     id: application.serviceId || "certificate_of_origin",
     code: application.service?.code || "certificate_of_origin",
     name: application.service?.name || application.serviceName || "Statutory Service Application",
@@ -435,14 +435,14 @@ export function PostPaymentCompletionForm({
           >
             <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Fee Paid & Verified
           </Badge>
-          <Badge variant="secondary" className="text-xs">
-            Draft Application
-          </Badge>
+          {/* <Badge variant="secondary" className="text-xs">
+            Awaiting Form (Paid)
+          </Badge> */}
         </div>
       </div>
 
       {/* Verified Payment Context Banner */}
-      <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-background border border-emerald-500/30 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+      <div className="bg-linear-to-r from-emerald-500/10 via-emerald-500/5 to-background border border-emerald-500/30 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-500/20 px-2 py-0.5 rounded">

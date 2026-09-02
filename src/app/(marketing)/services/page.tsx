@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
-import { ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
+import {  getConfiguredFeeForService } from "@/config/odedaServices";
 import { useServices } from "@/hooks/queries/useServices";
 import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
 import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
@@ -66,7 +66,7 @@ function ServicesPageContent() {
     if (list && list.length > 0) {
       return list;
     }
-    return ODEDA_SERVICES ?? [];
+    return [];
   }, [servicesData]);
 
   const [search, setSearch] = useState("");

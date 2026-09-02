@@ -64,6 +64,7 @@ type BackendStatus =
   | "submitted"
   | "pending"
   | "confirmed"
+  | "awaiting_form"
   | "unpaid"
   | "under_review"
   | "forwarded_to_councillor"
@@ -78,6 +79,7 @@ type DisplayStatus =
   | "approved"
   | "pending"
   | "sent"
+  | "awaiting form"
   | "review"
   | "overdue"
   | "declined";
@@ -94,6 +96,7 @@ const statusTranslation: Record<BackendStatus, DisplayStatus> = {
   rejected: "declined",
   certificate_issued: "approved",
   sent:"sent",
+  awaiting_form:"awaiting form",
   unpaid:"pending"
 };
 
@@ -103,6 +106,7 @@ const styleMap: Record<DisplayStatus, string> = {
   approved: "bg-success/15 text-success border-success/30",
   pending: "bg-warning/15 text-warning-foreground border-warning/30",
   sent: "bg-warning/15 text-warning-foreground border-warning/30",
+ "awaiting form": "bg-info/15 text-info border-info/30",
   review: "bg-info/15 text-info border-info/30",
   overdue: "bg-destructive/15 text-destructive border-destructive/30",
   declined: "bg-destructive/15 text-destructive border-destructive/30",

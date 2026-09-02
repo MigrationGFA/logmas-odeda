@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useServices } from "@/hooks/queries/useServices";
-import { ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
+import {
+  ServiceType,
+  getConfiguredFeeForService,
+} from "@/config/odedaServices";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +35,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 
 export interface PublicServiceApplyWidgetProps {
   initialServiceId?: string;
@@ -52,16 +56,18 @@ function PublicServiceApplyWidgetInner({
   const { services: servicesData, isLoading } = useServices();
 
   const services = useMemo(() => {
-    const list = Array.isArray(servicesData) ? servicesData : (servicesData as any)?.data || [];
+    const list = Array.isArray(servicesData)
+      ? servicesData
+      : (servicesData as any)?.data || [];
     if (list && list.length > 0) {
       return list;
     }
-    return ODEDA_SERVICES ?? [];
+    return [];
   }, [servicesData]);
 
   // Initial state derived from URL or initialServiceId
   const [selectedServiceId, setSelectedServiceId] = useState<string>(
-    urlServiceId || initialServiceId || "certificate_of_origin"
+    urlServiceId || initialServiceId || "certificate_of_origin",
   );
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -88,7 +94,7 @@ function PublicServiceApplyWidgetInner({
         s.id === selectedServiceId ||
         s.code?.toLowerCase() === selectedServiceId?.toLowerCase() ||
         s.id?.toLowerCase() === selectedServiceId?.toLowerCase() ||
-        s.slug?.toLowerCase() === selectedServiceId?.toLowerCase()
+        s.slug?.toLowerCase() === selectedServiceId?.toLowerCase(),
     );
     return match || services[0];
   }, [services, selectedServiceId]);
@@ -96,7 +102,10 @@ function PublicServiceApplyWidgetInner({
   // Calculate statutory fee
   const statutoryFee = useMemo(() => {
     if (!selectedService) return 0;
-    if (selectedService.feeConfig?.amount !== undefined && selectedService.feeConfig?.amount !== null) {
+    if (
+      selectedService.feeConfig?.amount !== undefined &&
+      selectedService.feeConfig?.amount !== null
+    ) {
       return Number(selectedService.feeConfig.amount);
     }
     const configured = getConfiguredFeeForService(selectedService.id);
@@ -107,10 +116,16 @@ function PublicServiceApplyWidgetInner({
   // Calculate required documents
   const requiredDocuments: string[] = useMemo(() => {
     if (!selectedService) return [];
-    if (Array.isArray(selectedService.requiredDocuments) && selectedService.requiredDocuments.length > 0) {
+    if (
+      Array.isArray(selectedService.requiredDocuments) &&
+      selectedService.requiredDocuments.length > 0
+    ) {
       return selectedService.requiredDocuments;
     }
-    if (Array.isArray(selectedService.requirements) && selectedService.requirements.length > 0) {
+    if (
+      Array.isArray(selectedService.requirements) &&
+      selectedService.requirements.length > 0
+    ) {
       return selectedService.requirements;
     }
     return [
@@ -124,7 +139,9 @@ function PublicServiceApplyWidgetInner({
   const handleServiceChange = (newServiceId: string) => {
     setSelectedServiceId(newServiceId);
     try {
-      const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+      const params = new URLSearchParams(
+        searchParams ? searchParams.toString() : "",
+      );
       params.set("serviceId", newServiceId);
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     } catch (e) {
@@ -165,8 +182,13 @@ function PublicServiceApplyWidgetInner({
       toast.error(msg);
       return;
     }
-    if (!phone.trim() || phone.trim().length < 7) {
-      const msg = "Please enter a valid phone number";
+
+    const phoneValidation = formatAndValidateNigerianPhoneNumber(phone);
+    console.log(phoneValidation, "phoneValidation");
+
+    if (!phoneValidation.isValid) {
+      const msg =
+        phoneValidation.error || "Please enter a valid Nigerian phone number";
       setFormError(msg);
       toast.error(msg);
       return;
@@ -179,7 +201,7 @@ function PublicServiceApplyWidgetInner({
         serviceId: selectedService.id,
         fullName: fullName.trim(),
         email: email.trim(),
-        phone: phone.trim(),
+        phone: phoneValidation.formattedNumber,
       });
 
       const paymentUrl =
@@ -189,13 +211,12 @@ function PublicServiceApplyWidgetInner({
         (response as any)?.data?.authorizationUrl;
 
       const reference =
-        (response as any)?.reference ||
-        (response as any)?.data?.reference;
+        (response as any)?.reference || (response as any)?.data?.reference;
 
       if (!paymentUrl) {
         throw new Error(
           (response as any)?.message ||
-          "Payment gateway URL was not returned. Please check service status and try again."
+            "Payment gateway URL was not returned. Please check service status and try again.",
         );
       }
 
@@ -238,7 +259,10 @@ function PublicServiceApplyWidgetInner({
   };
 
   return (
-    <div id="public-service-apply-container" className={`space-y-8 ${className}`}>
+    <div
+      id="public-service-apply-container"
+      className={`space-y-8 ${className}`}
+    >
       {/* 6-Step Application Process Banner Posted Before Payment */}
       {showStepGuide && (
         <ServiceApplicationGuideSteps
@@ -248,14 +272,21 @@ function PublicServiceApplyWidgetInner({
       )}
 
       {/* Main Interactive Form / Payment Box */}
-      <Card id="service-payment-card" className="p-6 md:p-8 bg-card border-border/80 shadow-elegant">
+      <Card
+        id="service-payment-card"
+        className="p-6 md:p-8 bg-card border-border/80 shadow-elegant"
+      >
         {!isPaidSuccess ? (
           <div>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/40 mb-6">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
-                    <Sparkles className="h-3 w-3 mr-1" /> First-Timer Fast Application
+                  <Badge
+                    variant="outline"
+                    className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" /> First-Timer Fast
+                    Application
                   </Badge>
                   <Badge variant="secondary" className="text-[10px]">
                     Instant Account Auto-Provisioning
@@ -265,7 +296,8 @@ function PublicServiceApplyWidgetInner({
                   Select Service & Make Online Payment
                 </h3>
                 <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                  Pay your statutory fee online to instantly generate your portal login credentials and proceed to the dashboard.
+                  Pay your statutory fee online to instantly generate your
+                  portal login credentials and proceed to the dashboard.
                 </p>
               </div>
 
@@ -277,7 +309,8 @@ function PublicServiceApplyWidgetInner({
                   ₦{statutoryFee.toLocaleString()}
                 </div>
                 <div className="text-[10px] text-emerald-600 font-semibold flex items-center justify-end gap-1 mt-0.5">
-                  <ShieldCheck className="h-3 w-3" /> Official Government Treasury Fee
+                  <ShieldCheck className="h-3 w-3" /> Official Government
+                  Treasury Fee
                 </div>
               </div>
             </div>
@@ -294,8 +327,12 @@ function PublicServiceApplyWidgetInner({
                 {/* Left Column: Service & Fee Details */}
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="service-select" className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                      1. Select Statutory Service <span className="text-destructive">*</span>
+                    <Label
+                      htmlFor="service-select"
+                      className="text-xs font-semibold text-foreground uppercase tracking-wider"
+                    >
+                      1. Select Statutory Service{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <select
                       id="service-select"
@@ -305,11 +342,15 @@ function PublicServiceApplyWidgetInner({
                     >
                       {services.map((s: any) => {
                         const fee = Number(
-                          s.feeConfig?.amount ?? getConfiguredFeeForService(s.id) ?? s.defaultFee ?? 0
+                          s.feeConfig?.amount ??
+                            getConfiguredFeeForService(s.id) ??
+                            s.defaultFee ??
+                            0,
                         );
                         return (
                           <option key={s.id} value={s.id}>
-                            {s.name} ({s.category || "Statutory"}) — {fee > 0 ? `₦${fee.toLocaleString()}` : "Variable"}
+                            {s.name} ({s.category || "Statutory"}) —{" "}
+                            {fee > 0 ? `₦${fee.toLocaleString()}` : "Variable"}
                           </option>
                         );
                       })}
@@ -320,8 +361,12 @@ function PublicServiceApplyWidgetInner({
                   {selectedService && (
                     <div className="p-4 rounded-xl bg-muted/40 border border-border/60 space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground font-medium">Selected Service:</span>
-                        <span className="font-semibold text-foreground">{selectedService.name}</span>
+                        <span className="text-muted-foreground font-medium">
+                          Selected Service:
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {selectedService.name}
+                        </span>
                       </div>
                       {selectedService.description && (
                         <div className="pt-1 text-muted-foreground text-[11px] leading-relaxed border-t border-border/30">
@@ -329,13 +374,18 @@ function PublicServiceApplyWidgetInner({
                         </div>
                       )}
                       <div className="flex items-center justify-between pt-1 border-t border-border/30">
-                        <span className="text-muted-foreground font-medium">Revenue Head:</span>
+                        <span className="text-muted-foreground font-medium">
+                          Revenue Head:
+                        </span>
                         <span className="font-mono text-[11px] text-foreground">
-                          {selectedService.revenueHead || "1001 - General Revenue"}
+                          {selectedService.revenueHead ||
+                            "1001 - General Revenue"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground font-medium">Processing Time SLA:</span>
+                        <span className="text-muted-foreground font-medium">
+                          Processing Time SLA:
+                        </span>
                         <span className="font-medium text-foreground">
                           {selectedService.processingTime ||
                             (selectedService.estimatedDays
@@ -344,8 +394,12 @@ function PublicServiceApplyWidgetInner({
                         </span>
                       </div>
                       <div className="flex items-center justify-between pt-1 border-t border-border/40">
-                        <span className="text-muted-foreground font-medium">Total Statutory Fee:</span>
-                        <span className="font-bold text-sm text-primary">₦{statutoryFee.toLocaleString()}</span>
+                        <span className="text-muted-foreground font-medium">
+                          Total Statutory Fee:
+                        </span>
+                        <span className="font-bold text-sm text-primary">
+                          ₦{statutoryFee.toLocaleString()}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -353,7 +407,8 @@ function PublicServiceApplyWidgetInner({
                   {/* Required Docs note */}
                   <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 text-xs text-muted-foreground">
                     <div className="font-semibold text-foreground flex items-center gap-1.5 mb-1">
-                      <FileCheck2 className="h-3.5 w-3.5 text-primary" /> Step 4 Note (Documents to Prepare):
+                      <FileCheck2 className="h-3.5 w-3.5 text-primary" /> Step 4
+                      Note (Documents to Prepare):
                     </div>
                     <ul className="list-disc list-inside space-y-0.5 text-[11px]">
                       {requiredDocuments.slice(0, 3).map((d, i) => (
@@ -362,7 +417,10 @@ function PublicServiceApplyWidgetInner({
                         </li>
                       ))}
                       {requiredDocuments.length > 3 && (
-                        <li>+{requiredDocuments.length - 3} more statutory document(s)</li>
+                        <li>
+                          +{requiredDocuments.length - 3} more statutory
+                          document(s)
+                        </li>
                       )}
                     </ul>
                   </div>
@@ -371,8 +429,12 @@ function PublicServiceApplyWidgetInner({
                 {/* Right Column: Applicant Details Form */}
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="applicant-name" className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                      Applicant Full Name <span className="text-destructive">*</span>
+                    <Label
+                      htmlFor="applicant-name"
+                      className="text-xs font-semibold text-foreground uppercase tracking-wider"
+                    >
+                      Applicant Full Name{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative mt-1.5">
                       <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -386,13 +448,18 @@ function PublicServiceApplyWidgetInner({
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      Enter full name exactly as it appears on your official identification document.
+                      Enter full name exactly as it appears on your official
+                      identification document.
                     </p>
                   </div>
 
                   <div>
-                    <Label htmlFor="applicant-email" className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                      Valid Email Address <span className="text-destructive">*</span>
+                    <Label
+                      htmlFor="applicant-email"
+                      className="text-xs font-semibold text-foreground uppercase tracking-wider"
+                    >
+                      Valid Email Address{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative mt-1.5">
                       <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -408,12 +475,16 @@ function PublicServiceApplyWidgetInner({
                     </div>
                     <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3 shrink-0" />
-                      Step 3: Login credentials will be automatically generated and sent to this email.
+                      Step 3: Login credentials will be automatically generated
+                      and sent to this email.
                     </p>
                   </div>
 
                   <div>
-                    <Label htmlFor="applicant-phone" className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    <Label
+                      htmlFor="applicant-phone"
+                      className="text-xs font-semibold text-foreground uppercase tracking-wider"
+                    >
                       Phone Number <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative mt-1.5">
@@ -429,7 +500,8 @@ function PublicServiceApplyWidgetInner({
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      Used for SMS notifications on application progress and LGA approvals.
+                      Used for SMS notifications on application progress and LGA
+                      approvals.
                     </p>
                   </div>
                 </div>
@@ -440,7 +512,8 @@ function PublicServiceApplyWidgetInner({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Lock className="h-4 w-4 text-emerald-600 shrink-0" />
                   <span>
-                    Secured by 256-bit encryption. Card, Bank Transfer & USSD accepted.
+                    Secured by 256-bit encryption. Card, Bank Transfer & USSD
+                    accepted.
                   </span>
                 </div>
 
@@ -469,20 +542,33 @@ function PublicServiceApplyWidgetInner({
           </div>
         ) : (
           /* Payment Success & Account Auto-Created State */
-          <div id="payment-success-container" className="space-y-6 animate-in fade-in-50 duration-300">
+          <div
+            id="payment-success-container"
+            className="space-y-6 animate-in fade-in-50 duration-300"
+          >
             <div className="text-center max-w-xl mx-auto py-2">
               <div className="h-16 w-16 mx-auto rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3 shadow-inner">
                 <CheckCircle2 className="h-9 w-9" />
               </div>
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 mb-2 text-xs font-semibold">
+              <Badge
+                variant="outline"
+                className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 mb-2 text-xs font-semibold"
+              >
                 Payment Confirmed & Account Provisioned
               </Badge>
               <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
                 Payment Successful!
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Your statutory fee of <strong className="text-foreground">₦{successDetails?.paidAmount.toLocaleString()}</strong> for{" "}
-                <strong className="text-foreground">{successDetails?.serviceName}</strong> has been received.
+                Your statutory fee of{" "}
+                <strong className="text-foreground">
+                  ₦{successDetails?.paidAmount.toLocaleString()}
+                </strong>{" "}
+                for{" "}
+                <strong className="text-foreground">
+                  {successDetails?.serviceName}
+                </strong>{" "}
+                has been received.
               </p>
             </div>
 
@@ -498,21 +584,33 @@ function PublicServiceApplyWidgetInner({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  An account has been created for you automatically. Your login details have also been dispatched to{" "}
-                  <strong className="text-foreground">{successDetails?.email}</strong>.
+                  An account has been created for you automatically. Your login
+                  details have also been dispatched to{" "}
+                  <strong className="text-foreground">
+                    {successDetails?.email}
+                  </strong>
+                  .
                 </p>
 
                 <div className="space-y-2.5 text-xs bg-background p-4 rounded-xl border border-border/60">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Payment Reference:</span>
-                    <span className="font-mono font-bold text-foreground">{successDetails?.reference}</span>
+                    <span className="text-muted-foreground">
+                      Payment Reference:
+                    </span>
+                    <span className="font-mono font-bold text-foreground">
+                      {successDetails?.reference}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Login Email:</span>
-                    <span className="font-medium text-foreground">{successDetails?.email}</span>
+                    <span className="font-medium text-foreground">
+                      {successDetails?.email}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-border/40">
-                    <span className="text-muted-foreground font-medium">Temporary Password:</span>
+                    <span className="text-muted-foreground font-medium">
+                      Temporary Password:
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
                         {successDetails?.generatedPass}
@@ -521,7 +619,9 @@ function PublicServiceApplyWidgetInner({
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => copyToClipboard(successDetails?.generatedPass || "")}
+                        onClick={() =>
+                          copyToClipboard(successDetails?.generatedPass || "")
+                        }
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -531,7 +631,8 @@ function PublicServiceApplyWidgetInner({
 
                 {copiedKey && (
                   <div className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Password copied to clipboard!
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Password copied to
+                    clipboard!
                   </div>
                 )}
               </div>
@@ -549,9 +650,12 @@ function PublicServiceApplyWidgetInner({
                       3
                     </span>
                     <div>
-                      <span className="font-semibold text-foreground">Check Your Email</span>
+                      <span className="font-semibold text-foreground">
+                        Check Your Email
+                      </span>
                       <p className="text-[11px] text-muted-foreground">
-                        Verify your inbox for confirmation and login instructions.
+                        Verify your inbox for confirmation and login
+                        instructions.
                       </p>
                     </div>
                   </div>
@@ -561,9 +665,12 @@ function PublicServiceApplyWidgetInner({
                       4
                     </span>
                     <div>
-                      <span className="font-semibold text-foreground">Get Your Documents Ready</span>
+                      <span className="font-semibold text-foreground">
+                        Get Your Documents Ready
+                      </span>
                       <p className="text-[11px] text-muted-foreground">
-                        Prepare clear digital copies (PDF/JPG) of required statutory documents.
+                        Prepare clear digital copies (PDF/JPG) of required
+                        statutory documents.
                       </p>
                     </div>
                   </div>
@@ -573,9 +680,12 @@ function PublicServiceApplyWidgetInner({
                       5
                     </span>
                     <div>
-                      <span className="font-semibold text-foreground">Log In with Credentials</span>
+                      <span className="font-semibold text-foreground">
+                        Log In with Credentials
+                      </span>
                       <p className="text-[11px] text-muted-foreground">
-                        Sign into your portal dashboard using your email & password.
+                        Sign into your portal dashboard using your email &
+                        password.
                       </p>
                     </div>
                   </div>
@@ -585,9 +695,12 @@ function PublicServiceApplyWidgetInner({
                       6
                     </span>
                     <div>
-                      <span className="font-semibold text-foreground">Fill Application & Upload Documents</span>
+                      <span className="font-semibold text-foreground">
+                        Fill Application & Upload Documents
+                      </span>
                       <p className="text-[11px] text-muted-foreground">
-                        Complete your application form and submit files step-by-step.
+                        Complete your application form and submit files
+                        step-by-step.
                       </p>
                     </div>
                   </div>
@@ -612,9 +725,16 @@ function PublicServiceApplyWidgetInner({
                     <LogIn className="mr-1.5 h-3.5 w-3.5" /> Go to Login Page
                   </Link>
                 </Button>
-                <Button asChild size="sm" className="bg-gradient-hero text-xs font-semibold shadow-elegant">
-                  <Link href={`/dashboard/services/${selectedService?.id || "certificate_of_origin"}`}>
-                    Continue Application on Dashboard <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                <Button
+                  asChild
+                  size="sm"
+                  className="bg-gradient-hero text-xs font-semibold shadow-elegant"
+                >
+                  <Link
+                    href={`/dashboard/services/${selectedService?.id || "certificate_of_origin"}`}
+                  >
+                    Continue Application on Dashboard{" "}
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                   </Link>
                 </Button>
               </div>
@@ -632,7 +752,9 @@ export function PublicServiceApplyWidget(props: PublicServiceApplyWidgetProps) {
       fallback={
         <Card className="p-8 bg-card border-border/80 shadow-elegant text-center">
           <RefreshCw className="h-6 w-6 animate-spin mx-auto text-primary mb-2" />
-          <p className="text-xs text-muted-foreground">Loading service application form...</p>
+          <p className="text-xs text-muted-foreground">
+            Loading service application form...
+          </p>
         </Card>
       }
     >

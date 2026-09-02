@@ -3,7 +3,7 @@ import React from "react";
 import { Check, ChevronRight, ArrowLeft, ArrowRight, Shield, AlertCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
+import { ServiceType, getConfiguredFeeForService } from "@/config/odedaServices";
 
 export interface FormStep {
   id: string;
@@ -13,7 +13,7 @@ export interface FormStep {
 }
 
 interface FormWizardProps {
-  service: OdedaService;
+  service: ServiceType;
   steps: FormStep[];
   currentStepIndex: number;
   onStepChange: (newIndex: number) => void;

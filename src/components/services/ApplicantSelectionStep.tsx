@@ -18,7 +18,7 @@ export interface ApplicantSnapshot {
   phone: string;
   email?: string;
   address: string;
-  ward: string;
+  ward?: string;
   nin?: string;
   cacNumber?: string;
   isRegistered?: boolean;

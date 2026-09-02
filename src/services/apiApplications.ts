@@ -194,12 +194,17 @@ export const apiApplications = {
       formData?: Record<string, any>;
       files?: Record<string, any>;
       applicantId?: string;
+      serviceId?: string;
     },
   ): Promise<Application> => {
     const formData = new FormData();
 
     if (payload.applicantId) {
       formData.append("applicantId", String(payload.applicantId));
+    }
+
+    if (payload.serviceId) {
+      formData.append("serviceId", payload.serviceId);
     }
 
     if (payload.formData) {
@@ -235,41 +240,41 @@ export const apiApplications = {
     }
   },
 
-/**
- * Get applications with query filtering and pagination.
- */
-getApplications: async (
-  params?: ApplicationsQueryParams,
-): Promise<Application[]> => {
-  const res = await api.get<any>("/applications", { params });
+  /**
+   * Get applications with query filtering and pagination.
+   */
+  getApplications: async (
+    params?: ApplicationsQueryParams,
+  ): Promise<Application[]> => {
+    const res = await api.get<any>("/applications", { params });
 
-  if (Array.isArray(res)) {
+    if (Array.isArray(res)) {
+      return res;
+    }
+
+    if (res && Array.isArray(res.data)) {
+      return res.data;
+    }
+
+    if (res && Array.isArray(res.applications)) {
+      return res.applications;
+    }
+
+    return [];
+  },
+
+  /**
+   * Get single application by ID.
+   */
+  getApplicationById: async (id: string): Promise<Application> => {
+    const res = await api.get<any>(`/applications/${id}`);
+
+    if (!res) {
+      throw new Error("Application not found");
+    }
+
     return res;
-  }
-
-  if (res && Array.isArray(res.data)) {
-    return res.data;
-  }
-
-  if (res && Array.isArray(res.applications)) {
-    return res.applications;
-  }
-
-  return [];
-},
-
-/**
- * Get single application by ID.
- */
-getApplicationById: async (id: string): Promise<Application> => {
-  const res = await api.get<any>(`/applications/${id}`);
-
-  if (!res) {
-    throw new Error("Application not found");
-  }
-
-  return res;
-},
+  },
   /**
    * Transition status: Submitted -> Under Review
    */
@@ -284,15 +289,21 @@ getApplicationById: async (id: string): Promise<Application> => {
     const actorRole = user?.role || "lga_admin";
 
     try {
-      const res = await api.patch<any>(`/applications/admin/${id}/under-review`, {
-        notes,
-      });
+      const res = await api.patch<any>(
+        `/applications/admin/${id}/under-review`,
+        {
+          notes,
+        },
+      );
       if (res) return res;
     } catch (err) {
       try {
-        const res2 = await api.post<any>(`/applications/admin/${id}/under-review`, {
-          notes,
-        });
+        const res2 = await api.post<any>(
+          `/applications/admin/${id}/under-review`,
+          {
+            notes,
+          },
+        );
         if (res2) return normalizeApplication(res2);
       } catch {
         // Continue to local sync

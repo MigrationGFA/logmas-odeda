@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SlidersHorizontal, Plus, Power, Building2, ShieldCheck, RefreshCw } from "lucide-react";
-import { ODEDA_SERVICES, OdedaService } from "@/config/odedaServices";
+import { ODEDA_SERVICES, ServiceType } from "@/config/odedaServices";
 import { toast } from "sonner";
 
 export default function LevyPermitFeeTab() {

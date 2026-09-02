@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { WARDS } from "@/lib/mock-data";
 import {
-  OdedaService,
+  ServiceType,
   getConfiguredFeeForService,
 } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
@@ -29,7 +29,7 @@ import {
 import { useForm } from "react-hook-form";
 
 interface Props {
-  service: OdedaService;
+  service: ServiceType;
   onSubmit: (payload: {
     applicant: ApplicantSnapshot;
     formData: Record<string, any>;

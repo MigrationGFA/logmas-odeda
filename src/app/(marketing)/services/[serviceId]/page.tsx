@@ -1,7 +1,7 @@
 "use client";
 
 import React, { use, useState } from "react";
-import { getOdedaServiceById, ODEDA_SERVICES, OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
+import { getOdedaServiceById, ODEDA_SERVICES, ServiceType, getConfiguredFeeForService } from "@/config/odedaServices";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
 import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
@@ -38,6 +38,7 @@ import {
   UserCheck,
   LogIn,
 } from "lucide-react";
+import { useServices } from "@/hooks/queries/useServices";
 
 const ICON_MAP: Record<string, any> = {
   FileBadge,
@@ -61,7 +62,9 @@ interface PublicServicePageProps {
 export default function PublicServiceDetailPage({ params }: PublicServicePageProps) {
   const resolvedParams = use(params);
   const serviceId = resolvedParams.serviceId;
-  const service = getOdedaServiceById(serviceId);
+
+  const { useGetServiceBySlug } = useServices();
+  const { data: service } = useGetServiceBySlug(serviceId);
 
   const [activeTab, setActiveTab] = useState<"apply" | "requirements" | "workflow" | "faq">("apply");
 
@@ -99,7 +102,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
   }
 
   const IconComponent = ICON_MAP[service.icon] || FileBadge;
-  const currentFee = getConfiguredFeeForService(service.id) || service.defaultFee;
+  const currentFee = service.feeConfig.amount;
 
   // Filter related services in same category or adjacent
   const relatedServices = ODEDA_SERVICES.filter(
@@ -133,18 +136,18 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
               </Badge>
             </nav>
 
-            <div className="grid lg:grid-cols-12 gap-8 items-start">
+            <div className="grid lg:grid-cols-12 gap-8 items-start md:px-8">
               <div className="lg:col-span-8">
                 <div className="flex items-start gap-4">
                   <div
                     className="h-16 w-16 rounded-2xl flex items-center justify-center shrink-0 shadow-elegant"
                     style={{
-                      backgroundColor: `color-mix(in oklab, var(--${service.color}) 15%, transparent)`,
+                      // backgroundColor: `color-mix(in oklab, var(--${service.color}) 15%, transparent)`,
                     }}
                   >
                     <IconComponent
                       className="h-8 w-8"
-                      style={{ color: `var(--${service.color})` }}
+                      // style={{ color: `var(--${service.color})` }}
                     />
                   </div>
                   <div>
@@ -152,7 +155,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                       <span className="font-mono text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded">
                         Head: {service.revenueHead}
                       </span>
-                      {service.supportsCertificate && (
+                      {/* {service.supportsCertificate && (
                         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px]">
                           Official Certificate
                         </Badge>
@@ -161,7 +164,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                         <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]">
                           Statutory Licence
                         </Badge>
-                      )}
+                      )} */}
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                       {service.name}
@@ -177,7 +180,9 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                     <Clock className="h-4 w-4 text-primary" />
                     <div>
                       <div className="text-[11px] text-muted-foreground font-medium">Processing SLA</div>
-                      <div className="font-semibold text-foreground">{service.processingTime}</div>
+                      <div className="font-semibold text-foreground">{ (service.estimatedDays
+                              ? `${service.estimatedDays} Business Days`
+                              : "1 - 3 Business Days")}</div>
                     </div>
                   </div>
 
@@ -186,7 +191,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                     <div>
                       <div className="text-[11px] text-muted-foreground font-medium">Official Fee</div>
                       <div className="font-semibold text-foreground">
-                        {service.feeType === "fixed" ? `₦${currentFee.toLocaleString()}` : service.feeDescription}
+                        {`₦${currentFee.toLocaleString()}`}
                       </div>
                     </div>
                   </div>
@@ -207,7 +212,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                   <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                     Citizen & Business Action
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-foreground">
+                  {/* <div className="mt-2 text-2xl font-bold text-foreground">
                     {service.feeType === "fixed" ? (
                       <>
                         ₦{currentFee.toLocaleString()}{" "}
@@ -216,7 +221,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                     ) : (
                       <span className="text-lg">{service.feeDescription}</span>
                     )}
-                  </div>
+                  </div> */}
                   <p className="text-xs text-muted-foreground mt-1">
                     Pay statutory fee online to instantly auto-create your account, receive login details via email, and complete your application form.
                   </p>
@@ -292,7 +297,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                 </p>
 
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {service.requiredDocuments.map((doc, idx) => (
+                  {service.requirements?.map((doc, idx) => (
                     <div
                       key={idx}
                       className="p-3.5 rounded-xl border border-border/60 bg-gradient-card flex items-start gap-3 text-sm"

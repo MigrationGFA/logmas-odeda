@@ -27,6 +27,7 @@ import { ROLE_LABELS, type Role } from "@/lib/auth";
 import { useAuth } from "@/hooks/queries/useAuth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 
 // Form schema with validation including confirm password
 const registerSchema = z
@@ -34,7 +35,6 @@ const registerSchema = z
     firstName: z.string().min(2, "First name must be at least 2 characters"),
     lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
-    phone: z.string().optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(8, "Please confirm your password"),
     role: z.enum(["citizen", "business_owner"] as const),
@@ -75,7 +75,7 @@ export default function RegisterPage() {
       firstName: "",
       lastName: "",
       email: "",
-      phone: "",
+      // phone: "",
       password: "",
       confirmPassword: "",
       role: "citizen",

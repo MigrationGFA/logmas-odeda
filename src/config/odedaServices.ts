@@ -1,28 +1,44 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export interface OdedaService {
+export interface ServiceType {
   id: string;
   name: string;
-  category: "Certificates" | "Community & Agriculture" | "Rates & Levies" | "Licences & Permits" | "Urban Development";
+  code?: string;
+  // Allow flexible category values coming from backend (e.g. "CERTIFICATE")
+  category:
+    | "Certificates"
+    | "Community & Agriculture"
+    | "Rates & Levies"
+    | "Licences & Permits"
+    | "Urban Development"
+    | string;
   description: string;
   revenueHead: string;
   processingTime: string;
-  feeType: "fixed" | "variable" | "tiered";
-  defaultFee: number;
-  feeDescription: string;
-  requiresInspection: boolean;
-  requiresAssessment: boolean;
-  requiresTreasuryApproval: boolean;
-  requiresLgaApproval: boolean;
-  supportsCertificate: boolean;
-  supportsLicence: boolean;
-  supportsRenewal: boolean;
-  requiresPayment: boolean;
-  requiredDocuments: string[];
-  icon: string;
-  color: string;
+  // backend may return estimatedDays as number or string
+  estimatedDays?: string | number;
+  // optional certificate type identifier from backend
+  certificateType?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  // optional fee configuration object coming from backend
+  feeConfig?: {
+    id: string;
+    amount: string;
+    status: string;
+    updatedAt: string;
+  };
+  // counts metadata
+  _count?: {
+    applications?: number;
+  };
+  supportsRenewal:boolean;
+  requirements?: string[];
+  icon?:string
 }
 
-export const ODEDA_SERVICES: OdedaService[] = [
+
+export const ODEDA_SERVICES: any[] = [
   {
     id: "certificate_of_origin",
     name: "Certificate of Origin",
@@ -353,7 +369,7 @@ export const ODEDA_SERVICES: OdedaService[] = [
   }
 ];
 
-export function getOdedaServiceById(id: string): OdedaService | undefined {
+export function getOdedaServiceById(id: string): any | undefined {
   if (!id) return undefined;
   
   let raw = "";

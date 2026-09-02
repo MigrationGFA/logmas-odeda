@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { WARDS } from "@/lib/mock-data";
-import { OdedaService, getConfiguredFeeForService } from "@/config/odedaServices";
+import { ServiceType, getConfiguredFeeForService } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
 import { DocumentUploadStep, DocumentSpec, UploadedFileMeta } from "./DocumentUploadStep";
 import { ReviewSubmitStep, ReviewSection, ReviewRepeatableSection } from "./ReviewSubmitStep";
@@ -16,7 +16,7 @@ import { Plus, Trash2, User, Users, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
-  service: OdedaService;
+  service: ServiceType;
   onSubmit: (payload: {
     applicant: ApplicantSnapshot;
     formData: Record<string, any>;

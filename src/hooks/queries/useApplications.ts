@@ -54,6 +54,7 @@ export function useCompleteApplication() {
         formData?: Record<string, any>;
         files?: Record<string, any>;
         applicantId?: string;
+        serviceId?: string;
       };
     }) => apiApplications.completeApplication(id, payload),
     onSuccess: (data) => {

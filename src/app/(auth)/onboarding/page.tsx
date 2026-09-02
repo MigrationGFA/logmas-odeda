@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/queries/useAuth";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { optional, z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { uploadsService } from "@/services/uploads";
 import { FullPageLoader } from "@/components/ProtectedRoute";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 
 // Ward options - adjust based on your LGA
 const WARDS = [
@@ -68,16 +69,26 @@ const baseSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z
     .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .max(15, "Phone number must be at most 15 digits"),
+    .min(10, "Please enter a valid Nigerian phone number")
+    .refine(
+      (val) => {
+        if (!val) return false;
+        const result = formatAndValidateNigerianPhoneNumber(val);
+        return result.isValid;
+      },
+      {
+        message:
+          "Invalid Nigerian phone number (e.g., 08012345678 or 2348012345678)",
+      },
+    ),
   address: z.string().min(1, "Address is required"),
-  town: z.string().min(1, "Town/Community is required"),
-  ward: z.string().min(1, "Ward is required"),
+  town: z.string().optional(),
+  // town: z.string().min(1, "Town/Community is required"),
+  ward: z.string().optional(),
+  // ward: z.string().min(1, "Ward is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Gender is required"),
-  emergencyContact: z
-    .string()
-    .min(10, "Emergency contact must be at least 10 digits"),
+  emergencyContact: z.string().optional(),
   avatarUrl: z.string().optional(),
 });
 
@@ -134,7 +145,7 @@ export default function OnboardingPage() {
     user,
     updateProfileAsync: updateProfile,
     isUpdatingProfile,
-    isLoadingUser
+    isLoadingUser,
   } = useAuth();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,7 +155,6 @@ export default function OnboardingPage() {
   const isCitizen = user?.role === "citizen";
   const isBusinessOwner = user?.role === "business_owner";
   const isCitizenOrBusiness = isCitizen || isBusinessOwner;
-
 
   // Get the appropriate schema based on role
   const getSchema = () => {
@@ -254,8 +264,7 @@ export default function OnboardingPage() {
 
   const [isUploading, setIsUploading] = useState(false);
 
-  
-  if(isLoadingUser) return <FullPageLoader/>
+  if (isLoadingUser) return <FullPageLoader />;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -397,11 +406,12 @@ export default function OnboardingPage() {
       "email",
       "phone",
       "address",
-      "town",
-      "ward",
       "dateOfBirth",
       "gender",
-      "emergencyContact",
+      "avatarUrl",
+      // "ward",
+      // "town",
+      // "emergencyContact",
     ];
     return required.every((field) =>
       watchedFields[field as keyof FormValues]?.trim(),
@@ -694,7 +704,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="town">Town/Community *</Label>
+                  <Label htmlFor="town">Town/Community</Label>
                   <Controller
                     name="town"
                     control={control}
@@ -716,7 +726,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="ward">Ward *</Label>
+                  <Label htmlFor="ward">Ward</Label>
                   <Controller
                     name="ward"
                     control={control}
@@ -748,7 +758,7 @@ export default function OnboardingPage() {
 
                 <div>
                   <Label htmlFor="emergencyContact">
-                    Emergency/Alternative Contact *
+                    Emergency/Alternative Contact
                   </Label>
                   <Controller
                     name="emergencyContact"

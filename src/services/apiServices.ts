@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { ServiceType } from "@/config/odedaServices";
 import { api } from "../lib/api";
 
 export interface CreateServiceFeeConfig {
@@ -44,10 +45,10 @@ export interface UpdateServicePayload {
 
 // Service functions with standalone fallback logic
 export const services = {
-  listServices: () => api.get<any>("/services"),
+  listServices: () => api.get<ServiceType[]>("/services"),
 
   getServiceBySlug: (slug: string) =>
-    api.get<any>(`/services/${slug}`),
+    api.get<ServiceType>(`/services/${slug}`),
 
   createService: (payload: CreateServicePayload) =>
     api.post<any>("/services", payload),

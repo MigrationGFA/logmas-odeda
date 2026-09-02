@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { WARDS } from "@/lib/mock-data";
 import {
-  OdedaService,
+  ServiceType,
   getConfiguredFeeForService,
 } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
 
 interface Props {
-  service: OdedaService;
+  service: ServiceType;
   onSubmit: (formData: Record<string, any>) => void;
   isSubmitting?: boolean;
   initialApplicant?: ApplicantSnapshot;

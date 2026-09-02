@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 import Link from "next/link";
+import { tokenManager } from "@/services/apiAuth";
 
 type NavItem = { to: string; label: string; desc?: string };
 type NavGroup = { label: string; items: NavItem[] };
@@ -60,6 +61,8 @@ const NAV: (NavItem | NavGroup)[] = [
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+
+  const isAuthenticated = !!tokenManager.getAccessToken()
 
   return (
     <>
@@ -148,9 +151,15 @@ export function SiteHeader() {
           </nav>
 
           <div className="hidden md:flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/login">Sign in</Link>
-            </Button>
+            {isAuthenticated ? (
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/login">Sign in</Link>
+              </Button>
+            )}
             <Button
               asChild
               size="sm"
