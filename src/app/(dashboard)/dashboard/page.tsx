@@ -369,6 +369,7 @@ interface ChairmanOverviewProps {
   role: Role;
 }
 
+// Update the UI component to use all available metrics
 function ChairmanOverview({ role }: ChairmanOverviewProps) {
   const { metrics, isLoading: overviewLoading } = useChairmanOverview();
   const { totalApplications, approvalRate, isLoading: appsLoading } = useChairmanApplications();
@@ -386,7 +387,7 @@ function ChairmanOverview({ role }: ChairmanOverviewProps) {
   }
 
   // Format currency in thousands (K)
-  const formattedRevenue = `₦${(metrics.totalRevenue / 1000).toFixed(1)}K`;
+  const formattedRevenue = `₦${(metrics.totalRevenue / 1000).toFixed(0)}`;
 
   return (
     <>
@@ -400,19 +401,19 @@ function ChairmanOverview({ role }: ChairmanOverviewProps) {
         />
         <StatCard
           label="Pending Applications"
-          value={String(metrics.pendingApplications)}
+          value={String(metrics.pendingApplications || 0)}
           icon={Clock}
           color="warning"
         />
         <StatCard
           label="Approved Certificates"
-          value={String(metrics.approvedCertificates)}
+          value={String(metrics.approvedCertificates || 0)}
           icon={CheckCircle2}
           color="primary"
         />
         <StatCard
           label="Pending Complaints"
-          value={String(openComplaints)}
+          value={String(openComplaints || metrics.pendingComplaints || 0)}
           icon={MessageSquare}
           color="info"
         />
@@ -435,15 +436,15 @@ function ChairmanOverview({ role }: ChairmanOverviewProps) {
         <div className="grid sm:grid-cols-3 gap-4 text-sm">
           <div className="p-3 rounded-lg bg-secondary/40">
             <div className="text-xs text-muted-foreground">Active Field Officers</div>
-            <div className="text-xl font-bold mt-1">{metrics.activeOfficersCount}</div>
+            <div className="text-xl font-bold mt-1">{metrics.activeOfficersCount || 0}</div>
           </div>
           <div className="p-3 rounded-lg bg-secondary/40">
             <div className="text-xs text-muted-foreground">Invoices Issued</div>
-            <div className="text-xl font-bold mt-1">{metrics.totalInvoicesCount}</div>
+            <div className="text-xl font-bold mt-1">{metrics.totalInvoicesCount || 0}</div>
           </div>
           <div className="p-3 rounded-lg bg-secondary/40">
             <div className="text-xs text-muted-foreground">Pending Bills</div>
-            <div className="text-xl font-bold mt-1">{metrics.pendingBillsCount}</div>
+            <div className="text-xl font-bold mt-1">{metrics.pendingBillsCount || 0}</div>
           </div>
         </div>
 
@@ -451,15 +452,15 @@ function ChairmanOverview({ role }: ChairmanOverviewProps) {
         <div className="grid sm:grid-cols-3 gap-4 text-sm mt-4">
           <div className="p-3 rounded-lg bg-secondary/40">
             <div className="text-xs text-muted-foreground">Total Applications</div>
-            <div className="text-xl font-bold mt-1">{totalApplications}</div>
+            <div className="text-xl font-bold mt-1">{totalApplications || 0}</div>
           </div>
           <div className="p-3 rounded-lg bg-secondary/40">
             <div className="text-xs text-muted-foreground">Approval Rate</div>
-            <div className="text-xl font-bold mt-1">{approvalRate}%</div>
+            <div className="text-xl font-bold mt-1">{approvalRate || 0}%</div>
           </div>
           <div className="p-3 rounded-lg bg-secondary/40">
             <div className="text-xs text-muted-foreground">Complaint Resolution</div>
-            <div className="text-xl font-bold mt-1">{resolutionRate}%</div>
+            <div className="text-xl font-bold mt-1">{resolutionRate || 0}%</div>
           </div>
         </div>
 

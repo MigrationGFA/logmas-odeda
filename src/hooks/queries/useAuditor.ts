@@ -33,7 +33,7 @@ export function useAuditLogs(params?: GetAuditLogsParams) {
 
   
   const logs = logsResponse?.data || [];
-  const meta = logsResponse?.meta || {
+  const meta = logsResponse?.pagination || {
     total: 0,
     page: 1,
     limit: 50,
@@ -78,23 +78,33 @@ export function useAuditLogFilters() {
   // Get unique actions from existing logs (this would require a separate endpoint)
   // For now, return common actions
   const commonActions: AuditAction[] = [
-    "user_created",
-    "user_updated",
-    "user_deleted",
     "login",
+    "logout",
     "login_failed",
+    "declaration_accepted",
+    "application_created",
+    "application_submitted",
+    "field_inspection_logged",
+    "treasury_assessed",
     "invoice_created",
-    "invoice_edited",
+    "invoice_adjusted",
+    "invoice_cancelled",
     "payment_confirmed",
     "payment_reversed",
     "receipt_generated",
-    "receipt_verified",
-    "permit_issued",
-    "permit_revoked",
-    "application_submitted",
+    "approval_granted",
+    "correction_requested",
     "application_rejected",
     "certificate_issued",
+    "certificate_revoked",
+    "user_created",
+    "user_updated",
+    "user_suspended",
+    "user_reactivated",
     "pricing_updated",
+    "complaint_logged",
+    "complaint_assigned",
+    "complaint_resolved",
   ];
 
   const actionOptions = commonActions.map((action) => ({

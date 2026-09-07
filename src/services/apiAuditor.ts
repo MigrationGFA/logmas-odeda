@@ -1,24 +1,38 @@
 import { api } from "../lib/api";
 
 // Types based on your controller
-export type AuditAction = 
-  | "user_created"
-  | "user_updated"
-  | "user_deleted"
+export type AuditAction =
   | "login"
+  | "logout"
   | "login_failed"
+  | "declaration_accepted"
+  | "application_created"
+  | "application_submitted"
+  | "field_inspection_logged"
+  | "treasury_assessed"
   | "invoice_created"
-  | "invoice_edited"
+  | "invoice_adjusted"
+  | "invoice_cancelled"
   | "payment_confirmed"
   | "payment_reversed"
   | "receipt_generated"
   | "receipt_verified"
-  | "permit_issued"
-  | "permit_revoked"
-  | "application_submitted"
+  | "approval_granted"
+  | "correction_requested"
   | "application_rejected"
   | "certificate_issued"
-  | "pricing_updated";
+  | "certificate_revoked"
+  | "permit_issued"
+  | "permit_revoked"
+  | "user_created"
+  | "user_updated"
+  | "user_deleted"
+  | "user_suspended"
+  | "user_reactivated"
+  | "pricing_updated"
+  | "complaint_logged"
+  | "complaint_assigned"
+  | "complaint_resolved";
 
 export interface AuditLog {
   id: string;
@@ -44,7 +58,7 @@ export interface AuditLogStats {
 export interface AuditLogsResponse {
   stats: AuditLogStats;
   data: AuditLog[];
-  meta: {
+  pagination: {
     total: number;
     page: number;
     limit: number;

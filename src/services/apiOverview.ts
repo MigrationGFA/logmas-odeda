@@ -130,7 +130,7 @@ export interface TreasurerMetrics {
 export interface AuditorMetrics {
   totalCollected: number;
   outstanding: number;
-  receiptsAudited: number;
+  receiptsCount: number;
   auditEvents: number;
   permitsIssued: number;
   permitsPending: number;

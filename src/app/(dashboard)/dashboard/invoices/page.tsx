@@ -118,15 +118,15 @@ export default function InvoicesPage() {
       <PageHeader
         title="Invoices & Payments"
         subtitle="Every invoice issued across the platform, with collections overview"
-        action={
-          (user?.role === "field_officer" || user?.role === "lga_admin") && (
-            <Button asChild className="bg-gradient-hero shadow-elegant">
-              <Link href="/dashboard/invoices/new">
-                <Plus className="h-4 w-4 mr-1.5" /> Generate Invoice
-              </Link>
-            </Button>
-          )
-        }
+        // action={
+        //   (user?.role === "field_officer" || user?.role === "lga_admin") && (
+        //     <Button asChild className="bg-gradient-hero shadow-elegant">
+        //       <Link href="/dashboard/invoices/new">
+        //         <Plus className="h-4 w-4 mr-1.5" /> Generate Invoice
+        //       </Link>
+        //     </Button>
+        //   )
+        // }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
