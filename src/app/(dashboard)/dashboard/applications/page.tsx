@@ -266,6 +266,8 @@ export default function ApplicationsPage() {
     return app.ward || app.formData?.ward || "Ward 7";
   };
 
+  console.log(selectedApp,"selectedApp")
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-6">
       {/* Top Header */}
@@ -492,7 +494,7 @@ export default function ApplicationsPage() {
                 {/* Right Actions & Pipeline Controls */}
                 <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 shrink-0">
                   {/* Draft Application Completion Action */}
-                  {s === "awaiting_form" && (
+                  {isCitizen && s === "awaiting_form" && (
                     <Button
                       size="sm"
                       asChild
@@ -704,7 +706,7 @@ export default function ApplicationsPage() {
                     </div>
                     <div className="col-span-2">
                       <span className="text-muted-foreground text-[11px] block font-medium">Payment Method:</span>
-                      <span className="font-semibold text-foreground">{selectedApp.invoice.payments[0].method || "online"}</span>
+                      <span className="font-semibold text-foreground">{selectedApp.invoice?.payments[0]?.method ?? "online"}</span>
                     </div>
                   </div>
                 </div>

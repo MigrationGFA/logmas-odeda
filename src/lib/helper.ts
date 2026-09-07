@@ -12,7 +12,7 @@ export const formatAndValidateNigerianPhoneNumber = (phone: string): { isValid: 
     number = '234' + number.substring(1); // Remove leading 0 and add 234
   } else if (number.startsWith('234')) {
     // Already has country code, extract prefix from after 234
-    originalPrefix = number.substring(3, 6);
+    
   } else if (number.length === 10) {
     // Assume it's a 10-digit number without leading zero
     number = '234' + number;
@@ -29,6 +29,7 @@ export const formatAndValidateNigerianPhoneNumber = (phone: string): { isValid: 
       error: 'Invalid phone number format. Please enter a valid Nigerian phone number.'
     };
   }
+
 
   // Validate that it's exactly 13 digits after formatting (234 + 10 digits)
   if (number.length !== 13) {

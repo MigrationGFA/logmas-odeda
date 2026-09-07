@@ -29,7 +29,11 @@ import { ApplicantSnapshot } from "../ApplicantSelectionStep";
 
 interface Props {
   service: ServiceType;
-  onSubmit: (formData: Record<string, any>) => void;
+  onSubmit: (payload: {
+    applicant: ApplicantSnapshot;
+    formData: Record<string, any>;
+    files: Record<string, any>;
+  }) => void;
   isSubmitting?: boolean;
   initialApplicant?: ApplicantSnapshot;
 }
@@ -136,12 +140,12 @@ export default function StreetNamingForm({
 
   // Form Basic Info
   const [formData, setFormData] = useState({
-    applicantName: "",
+    applicantName: "nil",
     applicantType: "Community Development Association (CDA)",
-    contactPerson: "",
-    phone: "",
+    contactPerson: "2323",
+    phone: "23233",
     email: "",
-    address: "",
+    address: "fffff",
     ward: WARDS[0] || "Odeda",
     proposedStreetName: "Chief Obafemi Awolowo Crescent",
     alternativeStreetName: "Unity Crescent",

@@ -7,7 +7,15 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, XCircle, Clock, ArrowRight, RotateCcw, ShieldCheck } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ArrowRight,
+  RotateCcw,
+  ShieldCheck,
+} from "lucide-react";
 import { invoicesService } from "@/services/apiInvoice";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import Link from "next/link";
@@ -32,7 +40,9 @@ function PaymentResultPage() {
   const reference =
     searchParams.get("reference") ??
     searchParams.get("trxref") ??
-    (typeof window !== "undefined" ? sessionStorage.getItem("pendingPaymentReference") : null);
+    (typeof window !== "undefined"
+      ? sessionStorage.getItem("pendingPaymentReference")
+      : null);
 
   const [state, setState] = useState<ResultState>("verifying");
   const [invoiceNumber, setInvoiceNumber] = useState<string | null>(null);
@@ -40,19 +50,28 @@ function PaymentResultPage() {
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [serviceName, setServiceName] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
+  const [isNormalFlow, setIsNormalFlow] = useState<boolean>(false);
 
   useEffect(() => {
     if (!reference) {
       setState("error");
-      setMessage("No payment reference found. Please check your transaction details or try applying again.");
+      setMessage(
+        "No payment reference found. Please check your transaction details or try applying again.",
+      );
       return;
     }
 
     invoicesService
       .verifyPayment(reference)
       .then((res: any) => {
-        const invNum = res?.invoice?.invoiceNumber ?? res?.data?.invoice?.invoiceNumber ?? null;
-        const rcpNum = res?.receipt?.receiptNumber ?? res?.data?.receipt?.receiptNumber ?? null;
+        const invNum =
+          res?.invoice?.invoiceNumber ??
+          res?.data?.invoice?.invoiceNumber ??
+          null;
+        const rcpNum =
+          res?.receipt?.receiptNumber ??
+          res?.data?.receipt?.receiptNumber ??
+          null;
         const appId =
           res?.application?.id ??
           res?.data?.application?.id ??
@@ -67,11 +86,11 @@ function PaymentResultPage() {
           res?.service?.name ??
           res?.data?.service?.name ??
           null;
-
         setInvoiceNumber(invNum);
         setReceiptNumber(rcpNum);
         setApplicationId(appId);
         setServiceName(sName);
+        setIsNormalFlow(res.flow === "new_application" || res.data?.flow === "new_application");
 
         const isSuccess =
           res?.status === "confirmed" ||
@@ -88,19 +107,31 @@ function PaymentResultPage() {
 
         if (isSuccess) {
           setState("confirmed");
-          setMessage(res?.message || "Your statutory fee payment was verified and processed successfully.");
+          setMessage(
+            res?.message ||
+              "Your statutory fee payment was verified and processed successfully.",
+          );
         } else if (isFailed) {
           setState("failed");
-          setMessage(res?.message || "This payment transaction was not completed or was cancelled.");
+          setMessage(
+            res?.message ||
+              "This payment transaction was not completed or was cancelled.",
+          );
         } else {
           // Transaction still in progress
           setState("pending");
-          setMessage(res?.message || "Your payment is still being processed. This can take a few seconds.");
+          setMessage(
+            res?.message ||
+              "Your payment is still being processed. This can take a few seconds.",
+          );
         }
       })
       .catch((err) => {
         setState("error");
-        setMessage(err?.message ?? "Could not verify payment status with payment gateway.");
+        setMessage(
+          err?.message ??
+            "Could not verify payment status with payment gateway.",
+        );
       })
       .finally(() => {
         // Clear the stashed reference after verification attempt
@@ -129,8 +160,12 @@ function PaymentResultPage() {
                   Verifying Your Statutory Payment…
                 </h2>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Connecting to government treasury gateway to confirm transaction reference{" "}
-                  <strong className="font-mono text-foreground text-xs">{reference}</strong>. Please do not close this window.
+                  Connecting to government treasury gateway to confirm
+                  transaction reference{" "}
+                  <strong className="font-mono text-foreground text-xs">
+                    {reference}
+                  </strong>
+                  . Please do not close this window.
                 </p>
               </div>
             </div>
@@ -142,7 +177,10 @@ function PaymentResultPage() {
                 <CheckCircle2 className="h-9 w-9" />
               </div>
               <div className="space-y-1">
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs"
+                >
                   <ShieldCheck className="h-3 w-3 mr-1" /> Payment Confirmed
                 </Badge>
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">
@@ -155,49 +193,85 @@ function PaymentResultPage() {
                 <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 text-xs space-y-1.5 text-left">
                   {serviceName && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Statutory Service:</span>
-                      <span className="font-semibold text-foreground">{serviceName}</span>
+                      <span className="text-muted-foreground">
+                        Statutory Service:
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {serviceName}
+                      </span>
                     </div>
                   )}
                   {reference && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Payment Reference:</span>
-                      <span className="font-mono font-medium text-foreground">{reference}</span>
+                      <span className="text-muted-foreground">
+                        Payment Reference:
+                      </span>
+                      <span className="font-mono font-medium text-foreground">
+                        {reference}
+                      </span>
                     </div>
                   )}
                   {invoiceNumber && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Invoice Reference:</span>
-                      <span className="font-mono font-semibold text-primary">{invoiceNumber}</span>
+                      <span className="text-muted-foreground">
+                        Invoice Reference:
+                      </span>
+                      <span className="font-mono font-semibold text-primary">
+                        {invoiceNumber}
+                      </span>
                     </div>
                   )}
                   {receiptNumber && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Receipt Number:</span>
-                      <span className="font-mono font-semibold text-foreground">{receiptNumber}</span>
+                      <span className="text-muted-foreground">
+                        Receipt Number:
+                      </span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {receiptNumber}
+                      </span>
                     </div>
                   )}
                 </div>
               )}
 
               <div className="pt-2 space-y-2">
-                {applicationId ? (
-                  <Button asChild className="w-full bg-gradient-hero text-primary-foreground font-semibold h-11 shadow-sm">
-                    <Link href={`/dashboard/applications/${applicationId}/complete?reference=${reference || ""}`}>
-                      Complete Application Form <ArrowRight className="ml-2 h-4 w-4" />
+                {isNormalFlow ? (
+                  <Button
+                    asChild
+                    className="w-full bg-gradient-hero text-primary-foreground font-semibold h-11 shadow-sm"
+                  >
+                    <Link
+                      href={`/dashboard/applications/${applicationId}/complete?reference=${reference || ""}`}
+                    >
+                      Complete Application Form{" "}
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 ) : (
-                  <Button asChild className="w-full bg-gradient-hero text-primary-foreground font-semibold h-11">
-                    <Link href={invoiceNumber ? `/dashboard/invoices/${invoiceNumber}` : "/dashboard/applications"}>
-                      Proceed to Application Portal <ArrowRight className="ml-2 h-4 w-4" />
+                  <Button
+                    asChild
+                    className="w-full bg-gradient-hero text-primary-foreground font-semibold h-11"
+                  >
+                    <Link
+                      href={
+                        invoiceNumber
+                          ? `/dashboard/invoices/${invoiceNumber}`
+                          : "/dashboard/applications"
+                      }
+                    >
+                      Proceed to Application Portal{" "}
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 )}
 
                 <div className="flex gap-2">
                   {invoiceNumber && (
-                    <Button asChild variant="outline" className="flex-1 text-xs">
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="flex-1 text-xs"
+                    >
                       <Link href={`/dashboard/invoices/${invoiceNumber}`}>
                         View Invoice
                       </Link>
@@ -217,7 +291,10 @@ function PaymentResultPage() {
                 <Clock className="h-9 w-9" />
               </div>
               <div className="space-y-1">
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs">
+                <Badge
+                  variant="outline"
+                  className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs"
+                >
                   Pending Gateway Settlement
                 </Badge>
                 <h2 className="text-xl font-bold tracking-tight text-foreground">
@@ -245,11 +322,18 @@ function PaymentResultPage() {
                 <XCircle className="h-9 w-9" />
               </div>
               <div className="space-y-1">
-                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
-                  {state === "failed" ? "Transaction Incomplete" : "Verification Error"}
+                <Badge
+                  variant="outline"
+                  className="bg-destructive/10 text-destructive border-destructive/30 text-xs"
+                >
+                  {state === "failed"
+                    ? "Transaction Incomplete"
+                    : "Verification Error"}
                 </Badge>
                 <h2 className="text-xl font-bold tracking-tight text-foreground">
-                  {state === "failed" ? "Payment Not Completed" : "Payment Verification Failed"}
+                  {state === "failed"
+                    ? "Payment Not Completed"
+                    : "Payment Verification Failed"}
                 </h2>
                 <p className="text-sm text-muted-foreground">{message}</p>
               </div>

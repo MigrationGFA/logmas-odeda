@@ -143,6 +143,46 @@ function normalizeApplication(raw: any): any {
   };
 }
 
+const appendFilesToFormData = (
+  formData: FormData,
+  files?: Record<string, any>,
+) => {
+  if (!files) return;
+
+  Object.entries(files).forEach(([reqKey, value]) => {
+    if (!value) return;
+
+    // Direct File
+    if (value instanceof File) {
+      formData.append(reqKey, value, value.name);
+      return;
+    }
+
+    // Direct Blob
+    if (value instanceof Blob) {
+      formData.append(reqKey, value, `${reqKey}.pdf`);
+      return;
+    }
+
+    // Common shape: { file: File }
+    if (value.file instanceof File) {
+      formData.append(reqKey, value.file, value.file.name);
+      return;
+    }
+
+    // Common shape: { file: Blob }
+    if (value.file instanceof Blob) {
+      formData.append(reqKey, value.file, `${reqKey}.pdf`);
+      return;
+    }
+
+    console.warn(
+      `[appendFilesToFormData] Skipping "${reqKey}" because it is not a File/Blob:`,
+      value,
+    );
+  });
+};
+
 export const apiApplications = {
   /**
    * Submit an application with multipart/form-data.
@@ -162,32 +202,23 @@ export const apiApplications = {
 
     formData.append("formData", JSON.stringify(payload.formData || {}));
 
-    if (payload.files) {
-      Object.entries(payload.files).forEach(([reqKey, fileOrMeta]) => {
-        if (!fileOrMeta) return;
+    appendFilesToFormData(formData, payload.files);
 
-        if (fileOrMeta instanceof File || fileOrMeta instanceof Blob) {
-          const fileName =
-            fileOrMeta instanceof File ? fileOrMeta.name : `${reqKey}.pdf`;
+    console.log(
+      "SUBMIT FormData files:",
+      [...formData.entries()]
+        .filter(([key, value]) => value instanceof File)
+        .map(([key, value]) => ({
+          field: key,
+          name: (value as File).name,
+          size: (value as File).size,
+          type: (value as File).type,
+        })),
+    );
 
-          formData.append(reqKey, fileOrMeta, fileName);
-        }
-      });
-    }
-
-    try {
-      const response = await api.upload<Application>("/applications", formData);
-
-      return response;
-    } catch (err) {
-      console.error("Application submission failed:", err);
-      throw err;
-    }
+    return api.upload<Application>("/applications", formData);
   },
 
-  /**
-   * Complete a post-payment draft application: PATCH /applications/:id/complete
-   */
   completeApplication: async (
     id: string,
     payload: {
@@ -211,33 +242,23 @@ export const apiApplications = {
       formData.append("formData", JSON.stringify(payload.formData));
     }
 
-    if (payload.files) {
-      Object.entries(payload.files).forEach(([reqKey, fileOrMeta]) => {
-        if (!fileOrMeta) return;
+    appendFilesToFormData(formData, payload.files);
 
-        if (fileOrMeta instanceof File || fileOrMeta instanceof Blob) {
-          const fileName =
-            fileOrMeta instanceof File ? fileOrMeta.name : `${reqKey}.pdf`;
+    console.log(
+      "COMPLETE FormData files:",
+      [...formData.entries()]
+        .filter(([key, value]) => value instanceof File)
+        .map(([key, value]) => ({
+          field: key,
+          name: (value as File).name,
+          size: (value as File).size,
+          type: (value as File).type,
+        })),
+    );
 
-          formData.append(reqKey, fileOrMeta, fileName);
-        }
-      });
-    }
-
-    try {
-      const response = await api.upload<Application>(
-        `/applications/${id}/complete`,
-        formData,
-        {
-          method: "PATCH",
-        },
-      );
-
-      return response;
-    } catch (err) {
-      console.error("Post-payment application completion failed:", err);
-      throw err;
-    }
+    return api.upload<Application>(`/applications/${id}/complete`, formData, {
+      method: "PATCH",
+    });
   },
 
   /**

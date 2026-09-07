@@ -67,20 +67,7 @@ const baseSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  phone: z
-    .string()
-    .min(10, "Please enter a valid Nigerian phone number")
-    .refine(
-      (val) => {
-        if (!val) return false;
-        const result = formatAndValidateNigerianPhoneNumber(val);
-        return result.isValid;
-      },
-      {
-        message:
-          "Invalid Nigerian phone number (e.g., 08012345678 or 2348012345678)",
-      },
-    ),
+  phone: z.string().min(10, "Please enter a valid Nigerian phone number"),
   address: z.string().min(1, "Address is required"),
   town: z.string().optional(),
   // town: z.string().min(1, "Town/Community is required"),
@@ -94,7 +81,7 @@ const baseSchema = z.object({
 
 // Citizen schema
 const citizenSchema = baseSchema.extend({
-  occupation: z.string().min(1, "Occupation is required"),
+  occupation: z.string().optional(),
   identificationType: z.string().min(1, "Identification type is required"),
   identificationNumber: z.string().min(1, "Identification number is required"),
   nin: z.string().optional(),
@@ -121,22 +108,18 @@ const businessSchema = baseSchema.extend({
 });
 
 // Dynamic schema based on role
-type FormValues = {
-  [K in
-    | keyof z.infer<typeof citizenSchema>
-    | keyof z.infer<typeof businessSchema>]?: string;
-} & {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  town: string;
-  ward: string;
-  dateOfBirth: string;
-  gender: string;
-  emergencyContact: string;
-  avatarUrl?: string;
+// Keep the form type aligned with the union of all possible onboarding fields so
+// the selected Zod schema can be passed to react-hook-form without type conflicts.
+type FormValues = z.infer<typeof baseSchema> & {
+  occupation?: string;
+  identificationType?: string;
+  identificationNumber?: string;
+  nin?: string;
+  businessName?: string;
+  businessType?: string;
+  cacNumber?: string;
+  taxIdNumber?: string;
+  ownerRepresentative?: string;
 };
 
 export default function OnboardingPage() {
@@ -182,11 +165,11 @@ export default function OnboardingPage() {
       town: "",
       ward: "",
       dateOfBirth: "",
-      gender: "",
+      gender: "Male",
       emergencyContact: "",
       avatarUrl: "",
       occupation: "",
-      identificationType: "",
+      identificationType: "NIN",
       identificationNumber: "",
       nin: "",
       businessName: "",
@@ -323,7 +306,7 @@ export default function OnboardingPage() {
 
     if (isCitizen) {
       fieldsToValidate = [
-        "occupation",
+        // "occupation",
         "identificationType",
         "identificationNumber",
       ];
@@ -408,7 +391,7 @@ export default function OnboardingPage() {
       "address",
       "dateOfBirth",
       "gender",
-      "avatarUrl",
+      // "avatarUrl",
       // "ward",
       // "town",
       // "emergencyContact",
@@ -422,7 +405,7 @@ export default function OnboardingPage() {
   const isStep2Valid = () => {
     if (isCitizen) {
       const required = [
-        "occupation",
+        // "occupation",
         "identificationType",
         "identificationNumber",
       ];
@@ -611,6 +594,7 @@ export default function OnboardingPage() {
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
+                        defaultValue="Male"
                         disabled={isSubmitting}
                       >
                         <SelectTrigger className="mt-1.5">
@@ -668,7 +652,7 @@ export default function OnboardingPage() {
                         {...field}
                         className="mt-1.5"
                         placeholder="08012345678"
-                        disabled={isSubmitting}
+                        disabled
                       />
                     )}
                   />
@@ -808,7 +792,7 @@ export default function OnboardingPage() {
               {isCitizen && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="occupation">Occupation *</Label>
+                    <Label htmlFor="occupation">Occupation</Label>
                     <Controller
                       name="occupation"
                       control={control}
