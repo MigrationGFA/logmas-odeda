@@ -66,6 +66,8 @@ import { Application, ApplicationStatus } from "@/types/application";
 import { FormDataViewer } from "@/components/services/FormDataViewer";
 import { DocumentsViewer } from "@/components/services/DocumentsViewer";
 import { useServices } from "@/hooks/queries/useServices";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { TableSkeleton } from "@/components/ui/LoadingSkeleton";
 
 export default function ApplicationsPage() {
   const currentUser = tokenManager.getUser();
@@ -89,7 +91,7 @@ export default function ApplicationsPage() {
   const [certificateModalOpen, setCertificateModalOpen] = useState(false);
 
   // Queries & Mutations
-  const { data: applications = [], isLoading, refetch, isFetching } = useApplications({
+  const { data: applications = [], isLoading, error, refetch, isFetching } = useApplications({
     search: searchTerm,
     status: statusFilter !== "all" ? statusFilter : undefined,
     serviceId: serviceFilter !== "all" ? serviceFilter : undefined,
@@ -398,10 +400,13 @@ export default function ApplicationsPage() {
 
       {/* Applications Table / Cards */}
       {isLoading ? (
-        <div className="p-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center space-y-3">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <span>Loading applications registry...</span>
-        </div>
+        <TableSkeleton rows={8} cols={7} />
+      ) : error ? (
+        <ErrorState
+          title="Failed to load applications"
+          error={error}
+          refetch={refetch}
+        />
       ) : displayApplications.length === 0 ? (
         <Card className="p-12 text-center space-y-4">
           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">

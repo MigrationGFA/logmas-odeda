@@ -26,7 +26,34 @@ import {
   ApplicantSelectionStep,
   ApplicantSnapshot,
 } from "../ApplicantSelectionStep";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+export const certificateOfOriginSchema = z.object({
+  fullName: z.string().min(2, "Full legal name is required"),
+  phone: z.string().min(10, "Valid phone number is required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  address: z.string().min(5, "Residential address must be at least 5 characters"),
+  ward: z.string().min(1, "Ward selection is required"),
+  nin: z.string().optional(),
+  cacNumber: z.string().optional(),
+  dob: z.string().min(1, "Date of birth is required"),
+  gender: z.string().min(1, "Gender is required"),
+  maritalStatus: z.string().min(1, "Marital status is required"),
+  occupation: z.string().optional(),
+  fatherName: z.string().min(2, "Father's name is required"),
+  fatherCompound: z.string().min(2, "Father's compound is required"),
+  fatherVillage: z.string().optional(),
+  motherName: z.string().min(2, "Mother's name is required"),
+  motherCompound: z.string().min(2, "Mother's compound is required"),
+  motherVillage: z.string().optional(),
+  familyBaale: z.string().optional(),
+  purpose: z.string().min(1, "Purpose of application is required"),
+  previousApplication: z.string().optional(),
+});
+
+export type CertificateOfOriginFormData = z.infer<typeof certificateOfOriginSchema>;
 
 interface Props {
   service: ServiceType;
@@ -112,11 +139,13 @@ export default function CertificateOfOriginForm({
   const {
     register,
     handleSubmit,
+    control,
     setValue,
     watch,
     trigger,
     formState: { errors, isValid },
   } = useForm<CertificateOfOriginFormData>({
+    resolver: zodResolver(certificateOfOriginSchema),
     defaultValues: {
       fullName: initialApplicant?.fullName || "",
       phone: initialApplicant?.phone || "",
@@ -459,38 +488,44 @@ export default function CertificateOfOriginForm({
                 <Label htmlFor="ward">
                   Ward <span className="text-red-500">*</span>
                 </Label>
-                <Select
-                  value={formValues.ward}
-                  onValueChange={(val) => setValue("ward", val)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id="ward">
-                    <SelectValue placeholder="Select Ward" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ward 1 (Odeda)">
-                      Ward 1 (Odeda)
-                    </SelectItem>
-                    <SelectItem value="Ward 2 (Obantoko)">
-                      Ward 2 (Obantoko)
-                    </SelectItem>
-                    <SelectItem value="Ward 3 (Olodo)">
-                      Ward 3 (Olodo)
-                    </SelectItem>
-                    <SelectItem value="Ward 4 (Osiele)">
-                      Ward 4 (Osiele)
-                    </SelectItem>
-                    <SelectItem value="Ward 5 (Ilugun)">
-                      Ward 5 (Ilugun)
-                    </SelectItem>
-                    <SelectItem value="Ward 6 (Olorunda)">
-                      Ward 6 (Olorunda)
-                    </SelectItem>
-                    <SelectItem value="Ward 7 (Itesi / Camp)">
-                      Ward 7 (Itesi / Camp)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="ward"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="ward">
+                        <SelectValue placeholder="Select Ward" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Ward 1 (Odeda)">
+                          Ward 1 (Odeda)
+                        </SelectItem>
+                        <SelectItem value="Ward 2 (Obantoko)">
+                          Ward 2 (Obantoko)
+                        </SelectItem>
+                        <SelectItem value="Ward 3 (Olodo)">
+                          Ward 3 (Olodo)
+                        </SelectItem>
+                        <SelectItem value="Ward 4 (Osiele)">
+                          Ward 4 (Osiele)
+                        </SelectItem>
+                        <SelectItem value="Ward 5 (Ilugun)">
+                          Ward 5 (Ilugun)
+                        </SelectItem>
+                        <SelectItem value="Ward 6 (Olorunda)">
+                          Ward 6 (Olorunda)
+                        </SelectItem>
+                        <SelectItem value="Ward 7 (Itesi / Camp)">
+                          Ward 7 (Itesi / Camp)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.ward && (
                   <p className="text-xs text-red-500">{errors.ward.message}</p>
                 )}
@@ -573,38 +608,50 @@ export default function CertificateOfOriginForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="gender">Gender *</Label>
-                <Select
-                  value={formValues.gender}
-                  onValueChange={(val) => setValue("gender", val)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id="gender">
-                    <SelectValue placeholder="Select Gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="gender"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="gender">
+                        <SelectValue placeholder="Select Gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="maritalStatus">Marital Status</Label>
-                <Select
-                  value={formValues.maritalStatus}
-                  onValueChange={(val) => setValue("maritalStatus", val)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id="maritalStatus">
-                    <SelectValue placeholder="Select Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Single">Single</SelectItem>
-                    <SelectItem value="Married">Married</SelectItem>
-                    <SelectItem value="Divorced">Divorced</SelectItem>
-                    <SelectItem value="Widowed">Widowed</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="maritalStatus"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="maritalStatus">
+                        <SelectValue placeholder="Select Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Single">Single</SelectItem>
+                        <SelectItem value="Married">Married</SelectItem>
+                        <SelectItem value="Divorced">Divorced</SelectItem>
+                        <SelectItem value="Widowed">Widowed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="space-y-1.5 md:col-span-3">
@@ -765,35 +812,41 @@ export default function CertificateOfOriginForm({
                 <Label htmlFor="purpose">
                   Purpose of Application <span className="text-red-500">*</span>
                 </Label>
-                <Select
-                  value={formValues.purpose}
-                  onValueChange={(val) => setValue("purpose", val)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id="purpose">
-                    <SelectValue placeholder="Select Purpose" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Employment / NYSC / Admission">
-                      Employment / NYSC / Admission
-                    </SelectItem>
-                    <SelectItem value="Military / Police Recruitment">
-                      Military / Police Recruitment
-                    </SelectItem>
-                    <SelectItem value="Scholarship / Bursary">
-                      Scholarship / Bursary
-                    </SelectItem>
-                    <SelectItem value="Visa / International Travel">
-                      Visa / International Travel
-                    </SelectItem>
-                    <SelectItem value="Political / Public Office">
-                      Political / Public Office
-                    </SelectItem>
-                    <SelectItem value="General Identification">
-                      General Identification
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="purpose"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="purpose">
+                        <SelectValue placeholder="Select Purpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Employment / NYSC / Admission">
+                          Employment / NYSC / Admission
+                        </SelectItem>
+                        <SelectItem value="Military / Police Recruitment">
+                          Military / Police Recruitment
+                        </SelectItem>
+                        <SelectItem value="Scholarship / Bursary">
+                          Scholarship / Bursary
+                        </SelectItem>
+                        <SelectItem value="Visa / International Travel">
+                          Visa / International Travel
+                        </SelectItem>
+                        <SelectItem value="Political / Public Office">
+                          Political / Public Office
+                        </SelectItem>
+                        <SelectItem value="General Identification">
+                          General Identification
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.purpose && (
                   <p className="text-xs text-red-500">
                     {errors.purpose.message}
@@ -844,28 +897,4 @@ export default function CertificateOfOriginForm({
       )}
     </FormWizard>
   );
-}
-
-// Type definitions
-interface CertificateOfOriginFormData {
-  fullName: string;
-  phone: string;
-  email: string;
-  address: string;
-  ward: string;
-  nin: string;
-  cacNumber: string;
-  dob: string;
-  gender: string;
-  maritalStatus: string;
-  occupation: string;
-  fatherName: string;
-  fatherCompound: string;
-  fatherVillage: string;
-  motherName: string;
-  motherCompound: string;
-  motherVillage: string;
-  familyBaale: string;
-  purpose: string;
-  previousApplication: string;
 }

@@ -42,6 +42,8 @@ import {
 import { tokenManager } from "@/services/apiAuth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { DetailSkeleton } from "@/components/ui/LoadingSkeleton";
 
 export default function InvoiceDetail({
   params,
@@ -93,25 +95,22 @@ export default function InvoiceDetail({
       : "";
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <DetailSkeleton />;
   }
 
   if (error || !invoice) {
     return (
-      <div>
-        <PageHeader
-          title="Invoice not found"
-          subtitle="The invoice may have been deleted or you don't have access"
-        />
+      <div className="space-y-6">
         <Button asChild variant="outline">
           <Link href="/dashboard/invoices">
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Invoices
           </Link>
         </Button>
+        <ErrorState
+          title="Invoice not found"
+          error={error || "The invoice may have been deleted or you don't have access."}
+          refetch={refetch}
+        />
       </div>
     );
   }

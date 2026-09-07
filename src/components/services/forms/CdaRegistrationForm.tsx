@@ -14,6 +14,50 @@ import { ReviewSubmitStep, ReviewSection, ReviewRepeatableSection } from "./Revi
 import { ApplicantSelectionStep, ApplicantSnapshot } from "../ApplicantSelectionStep";
 import { Plus, Trash2, Shield, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const cdaOfficerSchema = z.object({
+  role: z.string().min(1, "Role is required"),
+  fullName: z.string().min(1, "Full name is required"),
+  phone: z.string().min(1, "Phone is required"),
+  email: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  occupation: z.string().optional().or(z.literal("")),
+  nin: z.string().optional().or(z.literal("")),
+});
+
+const communityStreetSchema = z.object({
+  streetName: z.string().optional().or(z.literal("")),
+  estimatedHouses: z.string().optional().or(z.literal("")),
+  zoneLeader: z.string().optional().or(z.literal("")),
+  leaderPhone: z.string().optional().or(z.literal("")),
+});
+
+export const cdaRegistrationSchema = z.object({
+  cdaName: z.string().min(2, "Full name of CDA is required"),
+  cdaAcronym: z.string().optional().or(z.literal("")),
+  ward: z.string().min(1, "Ward location is required"),
+  hostVillage: z.string().min(1, "Host village / community is required"),
+  baaleName: z.string().min(1, "Community Baale name is required"),
+  baalePhone: z.string().optional().or(z.literal("")),
+  estimatedPopulation: z.union([z.number(), z.string()]).optional(),
+  estimatedHouseholds: z.union([z.number(), z.string()]).optional(),
+  primarySecurityArrangement: z.string().min(1, "Security arrangement is required"),
+  securityPostLocation: z.string().optional().or(z.literal("")),
+  primaryWaterSource: z.string().optional().or(z.literal("")),
+  electricityStatus: z.string().optional().or(z.literal("")),
+  priorityProject1: z.string().min(1, "Priority community project 1 is required"),
+  priorityProject2: z.string().optional().or(z.literal("")),
+  priorityProject3: z.string().optional().or(z.literal("")),
+  bankName: z.string().optional().or(z.literal("")),
+  accountNumber: z.string().optional().or(z.literal("")),
+  officers: z.array(cdaOfficerSchema),
+  streets: z.array(communityStreetSchema),
+});
+
+export type CdaRegistrationFormData = z.infer<typeof cdaRegistrationSchema>;
 
 interface Props {
   service: ServiceType;
@@ -128,7 +172,7 @@ export default function CdaRegistrationForm({
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedFileMeta>>({});
   const [declaration, setDeclaration] = useState(false);
 
-  const [applicant, setApplicant] = useState<ApplicantSnapshot>(
+  const [applicant] = useState<ApplicantSnapshot>(
     initialApplicant || {
       fullName: "test",
       phone: "08031234567",
@@ -142,69 +186,98 @@ export default function CdaRegistrationForm({
     }
   );
 
-  const [formData, setFormData] = useState({
-    cdaName: "",
-    cdaAcronym: "",
-    ward: WARDS[0] || "Odeda",
-    hostVillage: "",
-    baaleName: "",
-    baalePhone: "",
-    estimatedPopulation: 3500,
-    estimatedHouseholds: 420,
-    primarySecurityArrangement: "Ogun State So-Safe Corps / Local Hunters Vigilante",
-    securityPostLocation: "Near the Community Center",
-    primaryWaterSource: "Community Solar Boreholes & Hand Pumps",
-    electricityStatus: "Connected to IBEDC 33KV Grid (With Community Transformer)",
-    priorityProject1: "Grading and drainage construction of main spine road",
-    priorityProject2: "Installation of 500KVA relief transformer",
-    priorityProject3: "Community health post refurbishment",
-    bankName: "",
-    accountNumber: "",
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    trigger,
+    formState: { errors },
+  } = useForm<CdaRegistrationFormData>({
+    resolver: zodResolver(cdaRegistrationSchema),
+    defaultValues: {
+      cdaName: "",
+      cdaAcronym: "",
+      ward: WARDS[0] || "Odeda",
+      hostVillage: "",
+      baaleName: "",
+      baalePhone: "",
+      estimatedPopulation: 3500,
+      estimatedHouseholds: 420,
+      primarySecurityArrangement: "Ogun State So-Safe Corps / Local Hunters Vigilante",
+      securityPostLocation: "Near the Community Center",
+      primaryWaterSource: "Community Solar Boreholes & Hand Pumps",
+      electricityStatus: "Connected to IBEDC 33KV Grid (With Community Transformer)",
+      priorityProject1: "Grading and drainage construction of main spine road",
+      priorityProject2: "Installation of 500KVA relief transformer",
+      priorityProject3: "Community health post refurbishment",
+      bankName: "",
+      accountNumber: "",
+      officers: [
+        {
+          role: "CDA Chairman",
+          fullName: "John Doe",
+          phone: "08031234567",
+          email: "john.doe@example.com",
+          address: "123 Main Street, Odeda",
+          occupation: "Local Leader",
+          nin: "123456789012345",
+        },
+        {
+          role: "General Secretary",
+          fullName: "Jane Smith",
+          phone: "08031234568",
+          email: "jane.smith@example.com",
+          address: "456 Another Street, Odeda",
+          occupation: "Administrative Officer",
+          nin: "123456789012346",
+        },
+        {
+          role: "Treasurer",
+          fullName: "Michael Johnson",
+          phone: "08031234569",
+          email: "michael.johnson@example.com",
+          address: "789 Third Street, Odeda",
+          occupation: "Financial Officer",
+          nin: "123456789012347",
+        },
+        {
+          role: "Chief Security Officer (CSO)",
+          fullName: "Sarah Williams",
+          phone: "08031234570",
+          email: "sarah.williams@example.com",
+          address: "101 Security Street, Odeda",
+          occupation: "Security Officer",
+          nin: "123456789012348",
+        },
+      ],
+      streets: [
+        { streetName: "", estimatedHouses: "35", zoneLeader: "", leaderPhone: "" },
+        { streetName: "", estimatedHouses: "28", zoneLeader: "", leaderPhone: "" },
+      ],
+    },
+    mode: "onChange",
   });
 
-  const [officers, setOfficers] = useState<CdaOfficer[]>([
-    {
-      role: "CDA Chairman",
-      fullName: "John Doe",
-      phone: "08031234567",
-      email: "john.doe@example.com",
-      address: "123 Main Street, Odeda",
-      occupation: "Local Leader",
-      nin: "123456789012345",
-    },
-    {
-      role: "General Secretary",
-      fullName: "Jane Smith",
-      phone: "08031234568",
-      email: "jane.smith@example.com",
-      address: "456 Another Street, Odeda",
-      occupation: "Administrative Officer",
-      nin: "123456789012346",
-    },
-    {
-      role: "Treasurer",
-      fullName: "Michael Johnson",
-      phone: "08031234569",
-      email: "michael.johnson@example.com",
-      address: "789 Third Street, Odeda",
-      occupation: "Financial Officer",
-      nin: "123456789012347",
-    },
-    {
-      role: "Chief Security Officer (CSO)",
-      fullName: "Sarah Williams",
-      phone: "08031234570",
-      email: "sarah.williams@example.com",
-      address: "101 Security Street, Odeda",
-      occupation: "Security Officer",
-      nin: "123456789012348",
-    },
-  ]);
+  const {
+    fields: officerFields,
+    append: appendOfficer,
+    remove: removeOfficer,
+  } = useFieldArray({
+    control,
+    name: "officers",
+  });
 
-  const [streets, setStreets] = useState<CommunityStreet[]>([
-    { streetName: "", estimatedHouses: "35", zoneLeader: "", leaderPhone: "" },
-    { streetName: "", estimatedHouses: "28", zoneLeader: "", leaderPhone: "" },
-  ]);
+  const {
+    fields: streetFields,
+    append: appendStreet,
+    remove: removeStreet,
+  } = useFieldArray({
+    control,
+    name: "streets",
+  });
+
+  const formValues = watch();
 
   const handleFileUpload = (docId: string, meta: UploadedFileMeta | string, actualFile?: File) => {
     if (typeof meta === "string") {
@@ -223,70 +296,35 @@ export default function CdaRegistrationForm({
   };
 
   const addOfficer = () => {
-    setOfficers((prev) => [
-      ...prev,
-      {
-        role: "Executive Member (PRO / Welfare)",
-        fullName: "",
-        phone: "",
-        email: "",
-        address: "",
-        occupation: "",
-        nin: "",
-      },
-    ]);
-  };
-
-  const removeOfficer = (index: number) => {
-    if (officers.length <= 4) return;
-    setOfficers((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateOfficer = (index: number, field: keyof CdaOfficer, value: string) => {
-    setOfficers((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
+    appendOfficer({
+      role: "Executive Member (PRO / Welfare)",
+      fullName: "",
+      phone: "",
+      email: "",
+      address: "",
+      occupation: "",
+      nin: "",
     });
   };
 
   const addStreet = () => {
-    setStreets((prev) => [
-      ...prev,
-      {
-        streetName: "",
-        estimatedHouses: "20",
-        zoneLeader: "",
-        leaderPhone: "",
-      },
-    ]);
-  };
-
-  const removeStreet = (index: number) => {
-    if (streets.length <= 1) return;
-    setStreets((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateStreet = (index: number, field: keyof CommunityStreet, value: string) => {
-    setStreets((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
+    appendStreet({
+      streetName: "",
+      estimatedHouses: "20",
+      zoneLeader: "",
+      leaderPhone: "",
     });
   };
 
-  const validateStep = (index: number): boolean => {
-    // if (index === 0) {
-    //   return !!applicant.fullName.trim() && !!applicant.phone.trim() && !!applicant.address.trim();
-    // }
+  const validateStep = async (index: number): Promise<boolean> => {
     if (index === 0) {
-      return !!formData.cdaName.trim() && !!formData.hostVillage.trim() && !!formData.baaleName.trim();
+      return await trigger(["cdaName", "hostVillage", "baaleName", "ward"]);
     }
     if (index === 1) {
-      return !!formData.priorityProject1.trim() && !!formData.primarySecurityArrangement.trim();
+      return await trigger(["primarySecurityArrangement", "priorityProject1"]);
     }
     if (index === 2) {
-      return !!officers[0]?.fullName.trim() && !!officers[1]?.fullName.trim();
+      return await trigger(["officers"]);
     }
     if (index === 3) {
       const missing = DOCUMENTS.filter((d) => d.required && !uploadedFiles[d.id]);
@@ -298,8 +336,9 @@ export default function CdaRegistrationForm({
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+  const handleNext = async () => {
+    const isStepValid = await validateStep(currentStepIndex);
+    if (isStepValid) {
       setCurrentStepIndex((prev) => Math.min(STEPS.length - 1, prev + 1));
     }
   };
@@ -308,8 +347,7 @@ export default function CdaRegistrationForm({
     setCurrentStepIndex((prev) => Math.max(0, prev - 1));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onValidSubmit = (data: CdaRegistrationFormData) => {
     if (!declaration) return;
 
     const filesPayload: Record<string, any> = {};
@@ -321,15 +359,15 @@ export default function CdaRegistrationForm({
       }
     });
 
-    const cleanOfficers = officers.filter((o) => o.fullName.trim().length > 0);
-    const cleanStreets = streets.filter((s) => s.streetName.trim().length > 0);
+    const cleanOfficers = (data.officers || []).filter((o) => o.fullName.trim().length > 0);
+    const cleanStreets = (data.streets || []).filter((s) => (s.streetName || "").trim().length > 0);
 
-    console.log(applicant,"applican",formData)
+    const { officers: _rawOfficers, streets: _rawStreets, ...rest } = data;
 
     onSubmit({
       applicant,
       formData: {
-        ...formData,
+        ...rest,
         officers: cleanOfficers,
         streets: cleanStreets,
         officerCount: cleanOfficers.length,
@@ -339,31 +377,31 @@ export default function CdaRegistrationForm({
     });
   };
 
-  const currentFee = service.feeConfig.amount;
+   const currentFee = service.feeConfig.amount;
 
   const reviewSections: ReviewSection[] = [
     {
       title: "CDA Community Identity",
       items: [
-        { label: "Full CDA Name", value: formData.cdaName },
-        { label: "Acronym", value: formData.cdaAcronym || "N/A" },
-        { label: "Host Ward", value: `${formData.ward} Ward` },
-        { label: "Host Village / Area", value: formData.hostVillage },
-        { label: "Traditional Baale / Head", value: formData.baaleName },
-        { label: "Baale Contact Phone", value: formData.baalePhone || "N/A" },
-        { label: "Est. Households / Population", value: `${formData.estimatedHouseholds} Houses / ~${Number(formData.estimatedPopulation).toLocaleString()} Residents` },
+        { label: "Full CDA Name", value: formValues.cdaName },
+        { label: "Acronym", value: formValues.cdaAcronym || "N/A" },
+        { label: "Host Ward", value: `${formValues.ward} Ward` },
+        { label: "Host Village / Area", value: formValues.hostVillage },
+        { label: "Traditional Baale / Head", value: formValues.baaleName },
+        { label: "Baale Contact Phone", value: formValues.baalePhone || "N/A" },
+        { label: "Est. Households / Population", value: `${formValues.estimatedHouseholds} Houses / ~${Number(formValues.estimatedPopulation || 0).toLocaleString()} Residents` },
       ],
     },
     {
       title: "Community Infrastructure & Security",
       items: [
-        { label: "Security Apparatus", value: formData.primarySecurityArrangement },
-        { label: "Security Post Location", value: formData.securityPostLocation || "Central Junction" },
-        { label: "Water Infrastructure", value: formData.primaryWaterSource },
-        { label: "Electricity Infrastructure", value: formData.electricityStatus },
-        { label: "Priority Project #1", value: formData.priorityProject1 },
-        { label: "Priority Project #2", value: formData.priorityProject2 || "N/A" },
-        { label: "Priority Project #3", value: formData.priorityProject3 || "N/A" },
+        { label: "Security Apparatus", value: formValues.primarySecurityArrangement },
+        { label: "Security Post Location", value: formValues.securityPostLocation || "Central Junction" },
+        { label: "Water Infrastructure", value: formValues.primaryWaterSource || "N/A" },
+        { label: "Electricity Infrastructure", value: formValues.electricityStatus || "N/A" },
+        { label: "Priority Project #1", value: formValues.priorityProject1 },
+        { label: "Priority Project #2", value: formValues.priorityProject2 || "N/A" },
+        { label: "Priority Project #3", value: formValues.priorityProject3 || "N/A" },
       ],
     },
   ];
@@ -372,8 +410,8 @@ export default function CdaRegistrationForm({
     {
       title: "CDA Executive Committee",
       countLabel: "Executive Officers",
-      items: officers
-        .filter((o) => o.fullName.trim())
+      items: (formValues.officers || [])
+        .filter((o) => o?.fullName?.trim())
         .map((o) => ({
           role: o.role,
           name: o.fullName,
@@ -386,11 +424,11 @@ export default function CdaRegistrationForm({
     {
       title: "Street & Zone Register",
       countLabel: "Streets Listed",
-      items: streets
-        .filter((s) => s.streetName.trim())
+      items: (formValues.streets || [])
+        .filter((s) => s?.streetName?.trim())
         .map((s) => ({
-          streetName: s.streetName,
-          estHouses: s.estimatedHouses,
+          streetName: s.streetName || "",
+          estHouses: s.estimatedHouses || "0",
           zoneLeader: s.zoneLeader || "N/A",
           leaderPhone: s.leaderPhone || "N/A",
         })),
@@ -405,24 +443,13 @@ export default function CdaRegistrationForm({
       onStepChange={setCurrentStepIndex}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleFormSubmit}
+      onSubmit={handleSubmit(onValidSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
       submitDisabled={!declaration}
       submitLabel="Submit CDA Registration Application"
     >
-      {/* STEP 0: Applicant Selection */}
-      {/* {currentStepIndex === 0 && (
-        <ApplicantSelectionStep
-          mode={mode}
-          value={applicant}
-          onChange={setApplicant}
-          serviceName={service.name}
-          serviceCategory={service.category}
-        />
-      )} */}
-
       {/* STEP 1: CDA Profile */}
       {currentStepIndex === 0 && (
         <div className="space-y-4 text-xs">
@@ -440,71 +467,87 @@ export default function CdaRegistrationForm({
               <Label htmlFor="cdaName">Full Name of CDA *</Label>
               <Input
                 id="cdaName"
-                required
-                value={formData.cdaName}
-                onChange={(e) => setFormData({ ...formData, cdaName: e.target.value })}
+                {...register("cdaName")}
                 placeholder="e.g. Ifelodun Community Development Association, Itesi"
+                disabled={isSubmitting}
               />
+              {errors.cdaName && (
+                <p className="text-xs text-red-500">{errors.cdaName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="cdaAcronym">CDA Short Name / Acronym</Label>
               <Input
                 id="cdaAcronym"
-                value={formData.cdaAcronym}
-                onChange={(e) => setFormData({ ...formData, cdaAcronym: e.target.value })}
+                {...register("cdaAcronym")}
                 placeholder="e.g. IFELODUN CDA"
+                disabled={isSubmitting}
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward Location *</Label>
-              <Select
-                value={formData.ward}
-                onValueChange={(val) => setFormData({ ...formData, ward: val })}
-              >
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="ward"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="hostVillage">Host Village / Quarter / Community *</Label>
               <Input
                 id="hostVillage"
-                required
-                value={formData.hostVillage}
-                onChange={(e) => setFormData({ ...formData, hostVillage: e.target.value })}
+                {...register("hostVillage")}
                 placeholder="e.g. Camp Village / Alabata Road"
+                disabled={isSubmitting}
               />
+              {errors.hostVillage && (
+                <p className="text-xs text-red-500">{errors.hostVillage.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="baaleName">Community Baale / Traditional Ruler *</Label>
               <Input
                 id="baaleName"
-                required
-                value={formData.baaleName}
-                onChange={(e) => setFormData({ ...formData, baaleName: e.target.value })}
+                {...register("baaleName")}
                 placeholder="Chief / Baale of Community"
+                disabled={isSubmitting}
               />
+              {errors.baaleName && (
+                <p className="text-xs text-red-500">{errors.baaleName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="baalePhone">Baale Contact Phone</Label>
               <Input
                 id="baalePhone"
-                value={formData.baalePhone}
-                onChange={(e) => setFormData({ ...formData, baalePhone: e.target.value })}
+                {...register("baalePhone")}
                 placeholder="080XXXXXXXX"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -513,8 +556,8 @@ export default function CdaRegistrationForm({
               <Input
                 id="estimatedHouseholds"
                 type="number"
-                value={formData.estimatedHouseholds}
-                onChange={(e) => setFormData({ ...formData, estimatedHouseholds: Number(e.target.value) })}
+                {...register("estimatedHouseholds")}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -536,28 +579,38 @@ export default function CdaRegistrationForm({
           <div className="space-y-3.5">
             <div className="space-y-1.5">
               <Label htmlFor="primarySecurityArrangement">Community Security / Vigilante System *</Label>
-              <Select
-                value={formData.primarySecurityArrangement}
-                onValueChange={(val) => setFormData({ ...formData, primarySecurityArrangement: val })}
-              >
-                <SelectTrigger id="primarySecurityArrangement">
-                  <SelectValue placeholder="Select Security Architecture" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Ogun State So-Safe Corps / Local Hunters Vigilante">
-                    Ogun State So-Safe Corps / Local Hunters Vigilante
-                  </SelectItem>
-                  <SelectItem value="Nigeria Police Force (Odeda Div) & Community Patrol">
-                    Nigeria Police Force (Odeda Div) & Community Patrol
-                  </SelectItem>
-                  <SelectItem value="Licensed Private Security Guards">
-                    Licensed Private Security Guards
-                  </SelectItem>
-                  <SelectItem value="Amotekun Corps / Joint Vigilante">
-                    Amotekun Corps / Joint Vigilante
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="primarySecurityArrangement"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="primarySecurityArrangement">
+                      <SelectValue placeholder="Select Security Architecture" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ogun State So-Safe Corps / Local Hunters Vigilante">
+                        Ogun State So-Safe Corps / Local Hunters Vigilante
+                      </SelectItem>
+                      <SelectItem value="Nigeria Police Force (Odeda Div) & Community Patrol">
+                        Nigeria Police Force (Odeda Div) & Community Patrol
+                      </SelectItem>
+                      <SelectItem value="Licensed Private Security Guards">
+                        Licensed Private Security Guards
+                      </SelectItem>
+                      <SelectItem value="Amotekun Corps / Joint Vigilante">
+                        Amotekun Corps / Joint Vigilante
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.primarySecurityArrangement && (
+                <p className="text-xs text-red-500">{errors.primarySecurityArrangement.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -565,9 +618,9 @@ export default function CdaRegistrationForm({
                 <Label htmlFor="primaryWaterSource">Community Water Infrastructure</Label>
                 <Input
                   id="primaryWaterSource"
-                  value={formData.primaryWaterSource}
-                  onChange={(e) => setFormData({ ...formData, primaryWaterSource: e.target.value })}
+                  {...register("primaryWaterSource")}
                   placeholder="e.g. Solar powered public boreholes"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -575,9 +628,9 @@ export default function CdaRegistrationForm({
                 <Label htmlFor="electricityStatus">Electricity / Grid Connection Status</Label>
                 <Input
                   id="electricityStatus"
-                  value={formData.electricityStatus}
-                  onChange={(e) => setFormData({ ...formData, electricityStatus: e.target.value })}
+                  {...register("electricityStatus")}
                   placeholder="e.g. IBEDC 33KV line with 300KVA Transformer"
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -586,20 +639,22 @@ export default function CdaRegistrationForm({
               <Label htmlFor="priorityProject1">Priority Community Project #1 *</Label>
               <Input
                 id="priorityProject1"
-                required
-                value={formData.priorityProject1}
-                onChange={(e) => setFormData({ ...formData, priorityProject1: e.target.value })}
+                {...register("priorityProject1")}
                 placeholder="e.g. Culvert construction across Main Stream"
+                disabled={isSubmitting}
               />
+              {errors.priorityProject1 && (
+                <p className="text-xs text-red-500">{errors.priorityProject1.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="priorityProject2">Priority Community Project #2</Label>
               <Input
                 id="priorityProject2"
-                value={formData.priorityProject2}
-                onChange={(e) => setFormData({ ...formData, priorityProject2: e.target.value })}
+                {...register("priorityProject2")}
                 placeholder="e.g. Street numbering and solar street lighting"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -626,6 +681,7 @@ export default function CdaRegistrationForm({
                 size="sm"
                 variant="outline"
                 className="text-xs gap-1 h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Executive
@@ -633,9 +689,9 @@ export default function CdaRegistrationForm({
             </div>
 
             <div className="space-y-3">
-              {officers.map((officer, index) => (
+              {officerFields.map((field, index) => (
                 <div
-                  key={index}
+                  key={field.id}
                   className="border rounded-xl p-4 bg-muted/20 space-y-3 shadow-2xs text-xs"
                 >
                   <div className="flex items-center justify-between border-b pb-2">
@@ -643,15 +699,18 @@ export default function CdaRegistrationForm({
                       <Badge variant="secondary" className="text-xs font-semibold">
                         Officer #{index + 1}
                       </Badge>
-                      <span className="font-bold text-xs text-foreground">{officer.role}</span>
+                      <span className="font-bold text-xs text-foreground">
+                        {formValues.officers?.[index]?.role || "Executive Member"}
+                      </span>
                     </div>
-                    {officers.length > 4 && (
+                    {officerFields.length > 4 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => removeOfficer(index)}
                         className="h-7 text-xs text-red-600 hover:text-red-700 px-2"
+                        disabled={isSubmitting}
                       >
                         <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
                       </Button>
@@ -662,44 +721,42 @@ export default function CdaRegistrationForm({
                     <div className="space-y-1">
                       <Label>Executive Designation *</Label>
                       <Input
-                        value={officer.role}
-                        onChange={(e) => updateOfficer(index, "role", e.target.value)}
+                        {...register(`officers.${index}.role`)}
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="space-y-1 sm:col-span-2">
                       <Label>Full Name *</Label>
                       <Input
-                        required
-                        value={officer.fullName}
-                        onChange={(e) => updateOfficer(index, "fullName", e.target.value)}
+                        {...register(`officers.${index}.fullName`)}
                         placeholder="Legal Full Name"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="space-y-1">
                       <Label>Phone Number *</Label>
                       <Input
-                        required
-                        value={officer.phone}
-                        onChange={(e) => updateOfficer(index, "phone", e.target.value)}
+                        {...register(`officers.${index}.phone`)}
                         placeholder="080XXXXXXXX"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="space-y-1">
                       <Label>Email Address</Label>
                       <Input
                         type="email"
-                        value={officer.email}
-                        onChange={(e) => updateOfficer(index, "email", e.target.value)}
+                        {...register(`officers.${index}.email`)}
                         placeholder="officer@domain.com"
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="space-y-1">
                       <Label>National ID (NIN)</Label>
                       <Input
-                        value={officer.nin}
-                        onChange={(e) => updateOfficer(index, "nin", e.target.value)}
+                        {...register(`officers.${index}.nin`)}
                         placeholder="11-digit NIN"
                         maxLength={11}
+                        disabled={isSubmitting}
                       />
                     </div>
                   </div>
@@ -725,6 +782,7 @@ export default function CdaRegistrationForm({
                 size="sm"
                 variant="outline"
                 className="text-xs gap-1 h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Street Zone
@@ -732,51 +790,52 @@ export default function CdaRegistrationForm({
             </div>
 
             <div className="space-y-2.5">
-              {streets.map((street, index) => (
+              {streetFields.map((field, index) => (
                 <div
-                  key={index}
+                  key={field.id}
                   className="border rounded-lg p-3 bg-muted/10 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center text-xs"
                 >
                   <div className="sm:col-span-4">
                     <Input
-                      value={street.streetName}
-                      onChange={(e) => updateStreet(index, "streetName", e.target.value)}
+                      {...register(`streets.${index}.streetName`)}
                       placeholder="Street / Close Name"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <Input
-                      value={street.estimatedHouses}
-                      onChange={(e) => updateStreet(index, "estimatedHouses", e.target.value)}
+                      {...register(`streets.${index}.estimatedHouses`)}
                       placeholder="Est. Houses"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="sm:col-span-3">
                     <Input
-                      value={street.zoneLeader}
-                      onChange={(e) => updateStreet(index, "zoneLeader", e.target.value)}
+                      {...register(`streets.${index}.zoneLeader`)}
                       placeholder="Zone Leader Name"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <Input
-                      value={street.leaderPhone}
-                      onChange={(e) => updateStreet(index, "leaderPhone", e.target.value)}
+                      {...register(`streets.${index}.leaderPhone`)}
                       placeholder="Leader Phone"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="sm:col-span-1 flex justify-end">
-                    {streets.length > 1 && (
+                    {streetFields.length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => removeStreet(index)}
                         className="h-7 w-7 text-red-600 hover:text-red-700"
+                        disabled={isSubmitting}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>

@@ -49,6 +49,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Business } from "@/services/apiFieldOfficer";
 import { tokenManager } from "@/services/apiAuth";
 import { NGN, statusClass } from './page';
+import { ErrorState } from "@/components/ui/ErrorState";
+import { MetricsSkeleton, TableSkeleton } from "@/components/ui/LoadingSkeleton";
 
 function FieldOfficerView() {
   const user = tokenManager.getUser();
@@ -63,11 +65,24 @@ function FieldOfficerView() {
   );
 
   // Fetch real data
-  const { data: permitsData, isLoading: permitsLoading } = useGetPermits();
-  const { data: summaryData, isLoading: summaryLoading } =
-    useGetCollectionSummary();
-  const { data: businessesData, isLoading: businessesLoading } =
-    useGetBusinesses();
+  const {
+    data: permitsData,
+    isLoading: permitsLoading,
+    error: permitsError,
+    refetch: refetchPermits,
+  } = useGetPermits();
+  const {
+    data: summaryData,
+    isLoading: summaryLoading,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useGetCollectionSummary();
+  const {
+    data: businessesData,
+    isLoading: businessesLoading,
+    error: businessesError,
+    refetch: refetchBusinesses,
+  } = useGetBusinesses();
 
   const [scanOpen, setScanOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -182,11 +197,34 @@ function FieldOfficerView() {
 
   if (permitsLoading || summaryLoading || businessesLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground mt-2">Loading field data...</p>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Field Enforcement Hub"
+          subtitle={`Assigned Ward Verification & Billing Portal${wardId ? `: ${stats?.wardName} Ward` : ""}.`}
+        />
+        <MetricsSkeleton count={4} />
+        <TableSkeleton rows={8} cols={6} />
+      </div>
+    );
+  }
+
+  const anyError = permitsError || summaryError || businessesError;
+  if (anyError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Field Enforcement Hub"
+          subtitle={`Assigned Ward Verification & Billing Portal${wardId ? `: ${stats?.wardName} Ward` : ""}.`}
+        />
+        <ErrorState
+          title="Failed to load field enforcement data"
+          error={anyError}
+          refetch={() => {
+            refetchPermits();
+            refetchSummary();
+            refetchBusinesses();
+          }}
+        />
       </div>
     );
   }

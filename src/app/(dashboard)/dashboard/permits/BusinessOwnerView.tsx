@@ -30,12 +30,15 @@ import Link from "next/link";
 import { Permit } from "@/services/apiBusiness";
 import { redirect } from "next/navigation";
 import { NGN, statusClass } from './page';
+import { ErrorState } from "@/components/ui/ErrorState";
+import { MetricsSkeleton, CardsSkeleton } from "@/components/ui/LoadingSkeleton";
 
 function BusinessOwnerView() {
 //   const { user } = useAuth();
   const {
     permits = [],
     isLoading: permitsLoading,
+    error: permitsError,
     refetch: refetchPermits,
   } = useBusinessPermits();
   const { useGetInvoices } = useBusinessInvoices();
@@ -76,7 +79,7 @@ function BusinessOwnerView() {
 
   if (permitsLoading) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader
           title="My Business Permits"
           subtitle="Manage your company trade licenses and official digital certificates."
@@ -89,11 +92,32 @@ function BusinessOwnerView() {
             </Button>
           }
         />
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-pulse text-muted-foreground">
-            Loading permits...
-          </div>
-        </div>
+        <MetricsSkeleton count={3} />
+        <CardsSkeleton count={3} />
+      </div>
+    );
+  }
+
+  if (permitsError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="My Business Permits"
+          subtitle="Manage your company trade licenses and official digital certificates."
+          action={
+            <Button asChild>
+              <Link href="/dashboard/permits/new">
+                <FilePlus2 className="h-4 w-4 mr-2" />
+                Apply for Permit
+              </Link>
+            </Button>
+          }
+        />
+        <ErrorState
+          title="Failed to load business permits"
+          error={permitsError}
+          refetch={refetchPermits}
+        />
       </div>
     );
   }

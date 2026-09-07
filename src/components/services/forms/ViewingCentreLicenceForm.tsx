@@ -1,5 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,10 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WARDS } from "@/lib/mock-data";
-import {
-  ServiceType,
-  getConfiguredFeeForService,
-} from "@/config/odedaServices";
+import { ServiceType } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
 import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
 import {
@@ -23,33 +23,68 @@ import {
   ReviewRepeatableSection,
 } from "./ReviewSubmitStep";
 import { Plus, Trash2, Tv, ShieldCheck, Radio } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 
 interface Props {
   service: ServiceType;
-  onSubmit: (formData: Record<string, any>) => void;
+  onSubmit: (payload: {
+    applicant: ApplicantSnapshot;
+    formData: Record<string, any>;
+    files: Record<string, any>;
+  }) => void;
   isSubmitting?: boolean;
   initialApplicant?: ApplicantSnapshot;
 }
 
-interface DisplayScreen {
-  screenType: string;
-  sizeInches: string;
-  hallPosition: string;
-}
+const displayScreenSchema = z.object({
+  screenType: z.string().min(1, "Display type is required"),
+  sizeInches: z.string().default(""),
+  hallPosition: z.string().default(""),
+});
 
-interface BroadcastDecoder {
-  platform: string;
-  decoderNumber: string;
-  subscriptionPlan: string;
-}
+const broadcastDecoderSchema = z.object({
+  platform: z.string().min(1, "Broadcaster / Platform is required"),
+  decoderNumber: z.string().default(""),
+  subscriptionPlan: z.string().default(""),
+});
 
-interface HallStaff {
-  fullName: string;
-  role: string;
-  phone: string;
-}
+const hallStaffSchema = z.object({
+  fullName: z.string().min(1, "Staff name is required"),
+  role: z.string().default(""),
+  phone: z.string().default(""),
+});
+
+const viewingCentreLicenceSchema = z.object({
+  centreName: z.string().min(1, "Viewing centre commercial name is required"),
+  operatorName: z.string().min(1, "Operator / Proprietor full name is required"),
+  phone: z
+    .string()
+    .min(1, "Contact phone number is required")
+    .refine((val) => formatAndValidateNigerianPhoneNumber(val).isValid, {
+      message: "Please enter a valid Nigerian phone number",
+    }),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .or(z.literal(""))
+    .optional(),
+  physicalAddress: z.string().min(1, "Viewing hall physical location is required"),
+  ward: z.string().min(1, "Ward is required"),
+  cacNumber: z.string().optional(),
+  standardFee: z.string().optional(),
+  seatingCapacity: z.string().min(1, "Hall seating capacity is required"),
+  ventilationType: z.string().default("Heavy Duty Industrial Wall Fans & Cross Ventilation"),
+  powerBackup: z.string().default("15kVA Soundproof Diesel Generator & Inverter"),
+  fireExtinguishers: z.string().min(1, "Fire extinguishers specification is required"),
+  exitDoors: z.string().optional(),
+  juvenileSafety: z.string().optional(),
+  screens: z.array(displayScreenSchema).min(1, "At least one display screen is required"),
+  decoders: z.array(broadcastDecoderSchema).min(1, "At least one broadcast decoder is required"),
+  staff: z.array(hallStaffSchema).default([]),
+});
+
+type ViewingCentreLicenceFormValues = z.infer<typeof viewingCentreLicenceSchema>;
 
 const STEPS: FormStep[] = [
   {
@@ -138,151 +173,116 @@ export default function ViewingCentreLicenceForm({
   );
   const [declaration, setDeclaration] = useState(false);
 
-  // Form State
-  const [formData, setFormData] = useState({
-    centreName: "",
-    operatorName: "",
-    phone: "",
-    email: "",
-    physicalAddress: "",
-    ward: WARDS[0] || "Odeda",
-    cacNumber: "",
-    seatingCapacity: "120 Seats",
-    standardFee: "₦200 per Match",
-    ventilationType: "Heavy Duty Industrial Wall Fans & Cross Ventilation",
-    powerBackup: "15kVA Soundproof Diesel Generator & Inverter",
-    fireExtinguishers: "2 x 6kg Dry Chemical Powder Extinguishers",
-    exitDoors: "2 Wide Double-Leaf Exit Doors",
-    juvenileSafety:
-      "Strict ban on schoolchildren in uniform during school hours",
+  const {
+    register,
+    control,
+    handleSubmit,
+    trigger,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<ViewingCentreLicenceFormValues>({
+    resolver: zodResolver(viewingCentreLicenceSchema),
+    defaultValues: {
+      centreName: "",
+      operatorName: initialApplicant?.name || "",
+      phone: initialApplicant?.phone || "",
+      email: initialApplicant?.email || "",
+      physicalAddress: initialApplicant?.address || "",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda",
+      cacNumber: "",
+      seatingCapacity: "120 Seats",
+      standardFee: "₦200 per Match",
+      ventilationType: "Heavy Duty Industrial Wall Fans & Cross Ventilation",
+      powerBackup: "15kVA Soundproof Diesel Generator & Inverter",
+      fireExtinguishers: "2 x 6kg Dry Chemical Powder Extinguishers",
+      exitDoors: "2 Wide Double-Leaf Exit Doors",
+      juvenileSafety:
+        "Strict ban on schoolchildren in uniform during school hours",
+      screens: [
+        {
+          screenType: "4K UHD Commercial LED Screen",
+          sizeInches: "75 Inches",
+          hallPosition: "Main Front Stage Left",
+        },
+        {
+          screenType: "4K UHD Commercial LED Screen",
+          sizeInches: "75 Inches",
+          hallPosition: "Main Front Stage Right",
+        },
+        {
+          screenType: "HD Overhead Digital Projector",
+          sizeInches: "120-Inch Screen",
+          hallPosition: "Central Overhead Display",
+        },
+      ],
+      decoders: [
+        {
+          platform: "DStv Commercial (SuperSport Premier League)",
+          decoderNumber: "1049281729",
+          subscriptionPlan: "Commercial Premium Sports Package",
+        },
+        {
+          platform: "StarTimes Sports Arena",
+          decoderNumber: "0293847192",
+          subscriptionPlan: "Commercial Bundesliga & Serie A Package",
+        },
+      ],
+      staff: [
+        {
+          fullName: "Olamide Soyinka",
+          role: "Hall Manager / Cashier",
+          phone: "08033344499",
+        },
+        {
+          fullName: "Ibrahim Adeyemi",
+          role: "Crowd Control & Security Guard",
+          phone: "08055566677",
+        },
+      ],
+    },
+    mode: "onChange",
   });
 
-  // Repeatable: Display Screens
-  const [screens, setScreens] = useState<DisplayScreen[]>([
-    {
-      screenType: "4K UHD Commercial LED Screen",
-      sizeInches: "75 Inches",
-      hallPosition: "Main Front Stage Left",
-    },
-    {
-      screenType: "4K UHD Commercial LED Screen",
-      sizeInches: "75 Inches",
-      hallPosition: "Main Front Stage Right",
-    },
-    {
-      screenType: "HD Overhead Digital Projector",
-      sizeInches: "120-Inch Screen",
-      hallPosition: "Central Overhead Display",
-    },
-  ]);
+  const {
+    fields: screenFields,
+    append: appendScreen,
+    remove: removeScreen,
+  } = useFieldArray({
+    control,
+    name: "screens",
+  });
 
-  // Repeatable: Broadcast Decoders
-  const [decoders, setDecoders] = useState<BroadcastDecoder[]>([
-    {
-      platform: "DStv Commercial (SuperSport Premier League)",
-      decoderNumber: "1049281729",
-      subscriptionPlan: "Commercial Premium Sports Package",
-    },
-    {
-      platform: "StarTimes Sports Arena",
-      decoderNumber: "0293847192",
-      subscriptionPlan: "Commercial Bundesliga & Serie A Package",
-    },
-  ]);
+  const {
+    fields: decoderFields,
+    append: appendDecoder,
+    remove: removeDecoder,
+  } = useFieldArray({
+    control,
+    name: "decoders",
+  });
 
-  // Repeatable: Staff
-  const [staff, setStaff] = useState<HallStaff[]>([
-    {
-      fullName: "Olamide Soyinka",
-      role: "Hall Manager / Cashier",
-      phone: "08033344499",
-    },
-    {
-      fullName: "Ibrahim Adeyemi",
-      role: "Crowd Control & Security Guard",
-      phone: "08055566677",
-    },
-  ]);
+  const {
+    fields: staffFields,
+    append: appendStaff,
+    remove: removeStaff,
+  } = useFieldArray({
+    control,
+    name: "staff",
+  });
 
-  // Handlers for Screens
-  const addScreen = () => {
-    setScreens((prev) => [
-      ...prev,
-      {
-        screenType: "Smart LED TV",
-        sizeInches: "65 Inches",
-        hallPosition: "Rear Hall Wing",
-      },
-    ]);
-  };
+  useEffect(() => {
+    if (initialApplicant) {
+      if (initialApplicant.name) setValue("operatorName", initialApplicant.name);
+      if (initialApplicant.companyName) setValue("centreName", initialApplicant.companyName);
+      if (initialApplicant.phone) setValue("phone", initialApplicant.phone);
+      if (initialApplicant.email) setValue("email", initialApplicant.email);
+      if (initialApplicant.address) setValue("physicalAddress", initialApplicant.address);
+      if (initialApplicant.ward) setValue("ward", initialApplicant.ward);
+    }
+  }, [initialApplicant, setValue]);
 
-  const removeScreen = (idx: number) => {
-    setScreens((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateScreen = (
-    idx: number,
-    field: keyof DisplayScreen,
-    val: string,
-  ) => {
-    setScreens((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Decoders
-  const addDecoder = () => {
-    setDecoders((prev) => [
-      ...prev,
-      {
-        platform: "DStv Commercial",
-        decoderNumber: "",
-        subscriptionPlan: "Commercial HD",
-      },
-    ]);
-  };
-
-  const removeDecoder = (idx: number) => {
-    setDecoders((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateDecoder = (
-    idx: number,
-    field: keyof BroadcastDecoder,
-    val: string,
-  ) => {
-    setDecoders((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Staff
-  const addStaff = () => {
-    setStaff((prev) => [
-      ...prev,
-      {
-        fullName: "",
-        role: "Security / Attendant",
-        phone: "",
-      },
-    ]);
-  };
-
-  const removeStaff = (idx: number) => {
-    setStaff((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateStaff = (idx: number, field: keyof HallStaff, val: string) => {
-    setStaff((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
+  const formValues = watch();
 
   const handleFileUpload = (docId: string, fileName: string) => {
     setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
@@ -296,27 +296,31 @@ export default function ViewingCentreLicenceForm({
     });
   };
 
-  const validateStep = (index: number): boolean => {
+  const validateStep = async (index: number): Promise<boolean> => {
     if (index === 0) {
-      return (
-        !!formData.centreName.trim() &&
-        !!formData.operatorName.trim() &&
-        !!formData.phone.trim() &&
-        !!formData.physicalAddress.trim() &&
-        !!formData.ward
-      );
+      return await trigger([
+        "centreName",
+        "operatorName",
+        "phone",
+        "email",
+        "physicalAddress",
+        "ward",
+        "cacNumber",
+        "standardFee",
+      ]);
     }
     if (index === 1) {
-      return (
-        !!formData.seatingCapacity.trim() && !!formData.fireExtinguishers.trim()
-      );
+      return await trigger([
+        "seatingCapacity",
+        "ventilationType",
+        "powerBackup",
+        "fireExtinguishers",
+        "exitDoors",
+        "juvenileSafety",
+      ]);
     }
     if (index === 2) {
-      return (
-        screens.length > 0 &&
-        !!screens[0].screenType.trim() &&
-        decoders.length > 0
-      );
+      return await trigger(["screens", "decoders", "staff"]);
     }
     if (index === 3) {
       const missing = DOCUMENTS.filter(
@@ -327,8 +331,9 @@ export default function ViewingCentreLicenceForm({
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStepIndex);
+    if (isValid) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
     }
   };
@@ -339,19 +344,17 @@ export default function ViewingCentreLicenceForm({
 
   const currentFee = service.feeConfig.amount;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFormSubmit = (data: ViewingCentreLicenceFormValues) => {
     if (!declaration) return;
 
     onSubmit({
       formData: {
-        ...formData,
-        screens: screens.filter((s) => s.screenType.trim()),
-        decoders: decoders.filter((d) => d.platform.trim()),
-        staff: staff.filter((st) => st.fullName.trim()),
+        ...data,
+        screens: data.screens.filter((s) => s.screenType.trim()),
+        decoders: data.decoders.filter((d) => d.platform.trim()),
+        staff: data.staff.filter((st) => st.fullName.trim()),
       },
       files: uploadedFiles,
-
       applicant: initialApplicant || null,
     });
   };
@@ -360,28 +363,28 @@ export default function ViewingCentreLicenceForm({
     {
       title: "Viewing Centre & Operator Details",
       items: [
-        { label: "Centre Name", value: formData.centreName },
-        { label: "Operator / Owner Name", value: formData.operatorName },
-        { label: "Contact Phone Number", value: formData.phone },
-        { label: "Email Address", value: formData.email },
-        { label: "Physical Location", value: formData.physicalAddress },
-        { label: "Ward in Odeda LGA", value: formData.ward },
-        { label: "CAC Reg Number", value: formData.cacNumber },
-        { label: "Standard Admission Fee", value: formData.standardFee },
+        { label: "Centre Name", value: formValues.centreName },
+        { label: "Operator / Owner Name", value: formValues.operatorName },
+        { label: "Contact Phone Number", value: formValues.phone },
+        { label: "Email Address", value: formValues.email || "N/A" },
+        { label: "Physical Location", value: formValues.physicalAddress },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
+        { label: "CAC Reg Number", value: formValues.cacNumber || "N/A" },
+        { label: "Standard Admission Fee", value: formValues.standardFee || "N/A" },
       ],
     },
     {
       title: "Hall Capacity, Safety & Power Standards",
       items: [
-        { label: "Total Seating Capacity", value: formData.seatingCapacity },
-        { label: "Hall Ventilation", value: formData.ventilationType },
-        { label: "Backup Generator System", value: formData.powerBackup },
+        { label: "Total Seating Capacity", value: formValues.seatingCapacity },
+        { label: "Hall Ventilation", value: formValues.ventilationType },
+        { label: "Backup Generator System", value: formValues.powerBackup },
         {
           label: "Fire Extinguishers Provided",
-          value: formData.fireExtinguishers,
+          value: formValues.fireExtinguishers,
         },
-        { label: "Emergency Exits", value: formData.exitDoors },
-        { label: "Juvenile Protection Clause", value: formData.juvenileSafety },
+        { label: "Emergency Exits", value: formValues.exitDoors || "N/A" },
+        { label: "Juvenile Protection Clause", value: formValues.juvenileSafety || "N/A" },
       ],
     },
   ];
@@ -390,34 +393,34 @@ export default function ViewingCentreLicenceForm({
     {
       title: "Display Screens & Projection Equipment",
       countLabel: "Screens",
-      items: screens
-        .filter((s) => s.screenType.trim())
+      items: (formValues.screens || [])
+        .filter((s) => s.screenType?.trim())
         .map((s) => ({
           "Screen Hardware": s.screenType,
-          "Diagonal Size": s.sizeInches,
-          "Mounting Position": s.hallPosition,
+          "Diagonal Size": s.sizeInches || "N/A",
+          "Mounting Position": s.hallPosition || "N/A",
         })),
     },
     {
       title: "Commercial Broadcast Decoders & Subscriptions",
       countLabel: "Decoders",
-      items: decoders
-        .filter((d) => d.platform.trim())
+      items: (formValues.decoders || [])
+        .filter((d) => d.platform?.trim())
         .map((d) => ({
           "Broadcast Service": d.platform,
-          "Smartcard / Box ID": d.decoderNumber,
-          "Commercial Package": d.subscriptionPlan,
+          "Smartcard / Box ID": d.decoderNumber || "N/A",
+          "Commercial Package": d.subscriptionPlan || "N/A",
         })),
     },
     {
       title: "Hall Supervisory & Crowd Security Personnel",
       countLabel: "Personnel",
-      items: staff
-        .filter((st) => st.fullName.trim())
+      items: (formValues.staff || [])
+        .filter((st) => st.fullName?.trim())
         .map((st) => ({
           "Staff Name": st.fullName,
-          "Assigned Role": st.role,
-          "Phone Number": st.phone,
+          "Assigned Role": st.role || "N/A",
+          "Phone Number": st.phone || "N/A",
         })),
     },
   ];
@@ -430,16 +433,21 @@ export default function ViewingCentreLicenceForm({
       onStepChange={(idx) => setCurrentStepIndex(idx)}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onFormSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
       submitDisabled={
         !declaration ||
-        !validateStep(0) ||
-        !validateStep(1) ||
-        !validateStep(2) ||
-        !validateStep(3)
+        !formValues.centreName ||
+        !formValues.operatorName ||
+        !formValues.phone ||
+        !formValues.physicalAddress ||
+        !formValues.ward ||
+        !formValues.seatingCapacity ||
+        !formValues.fireExtinguishers ||
+        screenFields.length === 0 ||
+        decoderFields.length === 0
       }
     >
       {/* STEP 1: Centre Profile */}
@@ -462,13 +470,12 @@ export default function ViewingCentreLicenceForm({
               </Label>
               <Input
                 id="centreName"
-                required
-                value={formData.centreName}
-                onChange={(e) =>
-                  setFormData({ ...formData, centreName: e.target.value })
-                }
+                {...register("centreName")}
                 placeholder="e.g. Champions League Arena Viewing Centre"
               />
+              {errors.centreName && (
+                <p className="text-xs text-red-500">{errors.centreName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -477,13 +484,12 @@ export default function ViewingCentreLicenceForm({
               </Label>
               <Input
                 id="operatorName"
-                required
-                value={formData.operatorName}
-                onChange={(e) =>
-                  setFormData({ ...formData, operatorName: e.target.value })
-                }
+                {...register("operatorName")}
                 placeholder="e.g. Mr. Kehinde Adegbite"
               />
+              {errors.operatorName && (
+                <p className="text-xs text-red-500">{errors.operatorName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -491,13 +497,12 @@ export default function ViewingCentreLicenceForm({
               <Input
                 id="phone"
                 type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                {...register("phone")}
                 placeholder="+234 800 000 0000"
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -505,41 +510,47 @@ export default function ViewingCentreLicenceForm({
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...register("email")}
                 placeholder="viewingcentre@example.com"
               />
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward in Odeda LGA *</Label>
-              <Select
-                value={formData.ward}
-                onValueChange={(val) => setFormData({ ...formData, ward: val })}
-              >
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="ward"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="cacNumber">CAC Registration Number</Label>
               <Input
                 id="cacNumber"
-                value={formData.cacNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, cacNumber: e.target.value })
-                }
+                {...register("cacNumber")}
                 placeholder="BN-334455"
               />
             </div>
@@ -548,10 +559,7 @@ export default function ViewingCentreLicenceForm({
               <Label htmlFor="standardFee">Standard Match Admission Fee</Label>
               <Input
                 id="standardFee"
-                value={formData.standardFee}
-                onChange={(e) =>
-                  setFormData({ ...formData, standardFee: e.target.value })
-                }
+                {...register("standardFee")}
                 placeholder="e.g. ₦200 - ₦300"
               />
             </div>
@@ -562,13 +570,12 @@ export default function ViewingCentreLicenceForm({
               </Label>
               <Input
                 id="physicalAddress"
-                required
-                value={formData.physicalAddress}
-                onChange={(e) =>
-                  setFormData({ ...formData, physicalAddress: e.target.value })
-                }
+                {...register("physicalAddress")}
                 placeholder="Building No, Street name, Community in Odeda LGA"
               />
+              {errors.physicalAddress && (
+                <p className="text-xs text-red-500">{errors.physicalAddress.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -592,65 +599,72 @@ export default function ViewingCentreLicenceForm({
               <Label htmlFor="seatingCapacity">Hall Seating Capacity *</Label>
               <Input
                 id="seatingCapacity"
-                required
-                value={formData.seatingCapacity}
-                onChange={(e) =>
-                  setFormData({ ...formData, seatingCapacity: e.target.value })
-                }
+                {...register("seatingCapacity")}
                 placeholder="e.g. 100 Seats"
               />
+              {errors.seatingCapacity && (
+                <p className="text-xs text-red-500">{errors.seatingCapacity.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ventilationType">
                 Ventilation & Cooling System *
               </Label>
-              <Select
-                value={formData.ventilationType}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, ventilationType: val })
-                }
-              >
-                <SelectTrigger id="ventilationType">
-                  <SelectValue placeholder="Select Ventilation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Heavy Duty Industrial Wall Fans & Cross Ventilation">
-                    Industrial Wall Fans & Cross Ventilation
-                  </SelectItem>
-                  <SelectItem value="Split-Unit Air Conditioning System">
-                    Split-Unit Air Conditioning System
-                  </SelectItem>
-                  <SelectItem value="Natural Cross Ventilation with Ceiling Fans">
-                    Natural Cross Ventilation with Ceiling Fans
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="ventilationType"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="ventilationType">
+                      <SelectValue placeholder="Select Ventilation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Heavy Duty Industrial Wall Fans & Cross Ventilation">
+                        Industrial Wall Fans & Cross Ventilation
+                      </SelectItem>
+                      <SelectItem value="Split-Unit Air Conditioning System">
+                        Split-Unit Air Conditioning System
+                      </SelectItem>
+                      <SelectItem value="Natural Cross Ventilation with Ceiling Fans">
+                        Natural Cross Ventilation with Ceiling Fans
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="powerBackup">Alternative Power Backup *</Label>
-              <Select
-                value={formData.powerBackup}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, powerBackup: val })
-                }
-              >
-                <SelectTrigger id="powerBackup">
-                  <SelectValue placeholder="Select Power Backup" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15kVA Soundproof Diesel Generator & Inverter">
-                    Soundproof Diesel Generator & Inverter
-                  </SelectItem>
-                  <SelectItem value="10kVA Petrol Generator Set">
-                    10kVA Petrol Generator Set
-                  </SelectItem>
-                  <SelectItem value="Solar PV & Lithium Inverter Backup">
-                    Solar PV & Lithium Inverter Backup
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="powerBackup"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="powerBackup">
+                      <SelectValue placeholder="Select Power Backup" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15kVA Soundproof Diesel Generator & Inverter">
+                        Soundproof Diesel Generator & Inverter
+                      </SelectItem>
+                      <SelectItem value="10kVA Petrol Generator Set">
+                        10kVA Petrol Generator Set
+                      </SelectItem>
+                      <SelectItem value="Solar PV & Lithium Inverter Backup">
+                        Solar PV & Lithium Inverter Backup
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -659,26 +673,19 @@ export default function ViewingCentreLicenceForm({
               </Label>
               <Input
                 id="fireExtinguishers"
-                required
-                value={formData.fireExtinguishers}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    fireExtinguishers: e.target.value,
-                  })
-                }
+                {...register("fireExtinguishers")}
                 placeholder="e.g. 2 x 6kg Dry Chemical Extinguishers"
               />
+              {errors.fireExtinguishers && (
+                <p className="text-xs text-red-500">{errors.fireExtinguishers.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="exitDoors">Emergency Evacuation Exit Doors</Label>
               <Input
                 id="exitDoors"
-                value={formData.exitDoors}
-                onChange={(e) =>
-                  setFormData({ ...formData, exitDoors: e.target.value })
-                }
+                {...register("exitDoors")}
                 placeholder="e.g. 2 Dedicated Outward-Opening Exit Doors"
               />
             </div>
@@ -687,10 +694,7 @@ export default function ViewingCentreLicenceForm({
               <Label htmlFor="juvenileSafety">Juvenile Protection Policy</Label>
               <Input
                 id="juvenileSafety"
-                value={formData.juvenileSafety}
-                onChange={(e) =>
-                  setFormData({ ...formData, juvenileSafety: e.target.value })
-                }
+                {...register("juvenileSafety")}
                 placeholder="No underage gambling or admission in school uniform"
               />
             </div>
@@ -728,23 +732,29 @@ export default function ViewingCentreLicenceForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addScreen}
+                onClick={() =>
+                  appendScreen({
+                    screenType: "Smart LED TV",
+                    sizeInches: "65 Inches",
+                    hallPosition: "Rear Hall Wing",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Screen
               </Button>
             </div>
 
-            {screens.map((sc, idx) => (
+            {screenFields.map((fieldItem, idx) => (
               <div
-                key={idx}
+                key={fieldItem.id}
                 className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group"
               >
                 <div className="flex items-center justify-between border-b pb-2">
                   <span className="font-bold text-xs text-foreground">
-                    Screen #{idx + 1}: {sc.screenType} ({sc.sizeInches})
+                    Screen #{idx + 1}: {formValues.screens?.[idx]?.screenType || "Screen"} ({formValues.screens?.[idx]?.sizeInches || "Size"})
                   </span>
-                  {screens.length > 1 && (
+                  {screenFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -761,30 +771,26 @@ export default function ViewingCentreLicenceForm({
                   <div className="space-y-1">
                     <Label className="text-xs">Display Type *</Label>
                     <Input
-                      value={sc.screenType}
-                      onChange={(e) =>
-                        updateScreen(idx, "screenType", e.target.value)
-                      }
+                      {...register(`screens.${idx}.screenType`)}
                       placeholder="e.g. 4K UHD Smart TV / Laser Projector"
                     />
+                    {errors.screens?.[idx]?.screenType && (
+                      <p className="text-xs text-red-500">
+                        {errors.screens[idx]?.screenType?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Screen Size (Inches)</Label>
                     <Input
-                      value={sc.sizeInches}
-                      onChange={(e) =>
-                        updateScreen(idx, "sizeInches", e.target.value)
-                      }
+                      {...register(`screens.${idx}.sizeInches`)}
                       placeholder="e.g. 75 Inches / 120 Inches"
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Hall Mounting Position</Label>
                     <Input
-                      value={sc.hallPosition}
-                      onChange={(e) =>
-                        updateScreen(idx, "hallPosition", e.target.value)
-                      }
+                      {...register(`screens.${idx}.hallPosition`)}
                       placeholder="e.g. Front Stage / Side Wing"
                     />
                   </div>
@@ -809,7 +815,13 @@ export default function ViewingCentreLicenceForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addDecoder}
+                onClick={() =>
+                  appendDecoder({
+                    platform: "DStv Commercial",
+                    decoderNumber: "",
+                    subscriptionPlan: "Commercial HD",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Decoder
@@ -817,33 +829,32 @@ export default function ViewingCentreLicenceForm({
             </div>
 
             <div className="space-y-2.5">
-              {decoders.map((dec, idx) => (
+              {decoderFields.map((fieldItem, idx) => (
                 <div
-                  key={idx}
+                  key={fieldItem.id}
                   className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end"
                 >
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">
-                      Broadcaster / Platform
+                      Broadcaster / Platform *
                     </Label>
                     <Input
-                      value={dec.platform}
-                      onChange={(e) =>
-                        updateDecoder(idx, "platform", e.target.value)
-                      }
+                      {...register(`decoders.${idx}.platform`)}
                       placeholder="e.g. DStv Commercial / StarTimes"
                       className="h-8 text-xs"
                     />
+                    {errors.decoders?.[idx]?.platform && (
+                      <p className="text-xs text-red-500">
+                        {errors.decoders[idx]?.platform?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">
                       Smartcard / IUC Number
                     </Label>
                     <Input
-                      value={dec.decoderNumber}
-                      onChange={(e) =>
-                        updateDecoder(idx, "decoderNumber", e.target.value)
-                      }
+                      {...register(`decoders.${idx}.decoderNumber`)}
                       placeholder="10-digit number"
                       className="h-8 text-xs font-mono"
                     />
@@ -851,10 +862,7 @@ export default function ViewingCentreLicenceForm({
                   <div className="space-y-1">
                     <Label className="text-[11px]">Commercial Plan</Label>
                     <Input
-                      value={dec.subscriptionPlan}
-                      onChange={(e) =>
-                        updateDecoder(idx, "subscriptionPlan", e.target.value)
-                      }
+                      {...register(`decoders.${idx}.subscriptionPlan`)}
                       placeholder="Commercial Sports"
                       className="h-8 text-xs"
                     />
@@ -892,7 +900,13 @@ export default function ViewingCentreLicenceForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addStaff}
+                onClick={() =>
+                  appendStaff({
+                    fullName: "",
+                    role: "Security / Attendant",
+                    phone: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Staff
@@ -900,27 +914,28 @@ export default function ViewingCentreLicenceForm({
             </div>
 
             <div className="space-y-2.5">
-              {staff.map((st, idx) => (
+              {staffFields.map((fieldItem, idx) => (
                 <div
-                  key={idx}
+                  key={fieldItem.id}
                   className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end"
                 >
                   <div className="space-y-1 sm:col-span-2">
-                    <Label className="text-[11px]">Staff Name</Label>
+                    <Label className="text-[11px]">Staff Name *</Label>
                     <Input
-                      value={st.fullName}
-                      onChange={(e) =>
-                        updateStaff(idx, "fullName", e.target.value)
-                      }
+                      {...register(`staff.${idx}.fullName`)}
                       placeholder="Full Name"
                       className="h-8 text-xs"
                     />
+                    {errors.staff?.[idx]?.fullName && (
+                      <p className="text-xs text-red-500">
+                        {errors.staff[idx]?.fullName?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Role / Duty</Label>
                     <Input
-                      value={st.role}
-                      onChange={(e) => updateStaff(idx, "role", e.target.value)}
+                      {...register(`staff.${idx}.role`)}
                       placeholder="Security / Cashier"
                       className="h-8 text-xs"
                     />
@@ -928,10 +943,7 @@ export default function ViewingCentreLicenceForm({
                   <div className="space-y-1">
                     <Label className="text-[11px]">Phone Number</Label>
                     <Input
-                      value={st.phone}
-                      onChange={(e) =>
-                        updateStaff(idx, "phone", e.target.value)
-                      }
+                      {...register(`staff.${idx}.phone`)}
                       placeholder="080..."
                       className="h-8 text-xs"
                     />

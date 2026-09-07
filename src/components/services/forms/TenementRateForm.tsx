@@ -1,5 +1,8 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,10 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WARDS } from "@/lib/mock-data";
-import {
-  ServiceType,
-  getConfiguredFeeForService,
-} from "@/config/odedaServices";
+import { ServiceType } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
 import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
 import {
@@ -22,24 +22,58 @@ import {
   ReviewSection,
   ReviewRepeatableSection,
 } from "./ReviewSubmitStep";
-import { Plus, Trash2, Home, Calculator, Building2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, Calculator, Building2 } from "lucide-react";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 
 interface Props {
   service: ServiceType;
-  onSubmit: (formData: Record<string, any>) => void;
+  onSubmit: (payload: {
+    applicant: ApplicantSnapshot;
+    formData: Record<string, any>;
+    files: Record<string, any>;
+  }) => void;
   isSubmitting?: boolean;
   initialApplicant?: ApplicantSnapshot;
 }
 
-interface TenementUnit {
-  unitIdentifier: string;
-  unitType: string;
-  occupancyStatus: string;
-  occupantName: string;
-  annualRent: string;
-}
+const tenementUnitSchema = z.object({
+  unitIdentifier: z.string().min(1, "Unit identifier is required"),
+  unitType: z.string().default("2-Bedroom Flat"),
+  occupancyStatus: z.string().default("Tenant-Occupied"),
+  occupantName: z.string().default(""),
+  annualRent: z.string().min(1, "Annual rent is required"),
+});
+
+const tenementRateSchema = z.object({
+  ownerName: z.string().min(1, "Owner full legal name is required"),
+  isCorporate: z.string().default("No"),
+  corporateName: z.string().optional(),
+  phone: z
+    .string()
+    .min(1, "Owner phone number is required")
+    .refine((val) => formatAndValidateNigerianPhoneNumber(val).isValid, {
+      message: "Please enter a valid Nigerian phone number",
+    }),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .or(z.literal(""))
+    .optional(),
+  ward: z.string().min(1, "Ward is required"),
+  cadastralPlotNo: z.string().optional(),
+  propertyAddress: z.string().min(1, "Physical property address is required"),
+  ownerAddress: z.string().optional(),
+  propertyType: z.string().min(1, "Property classification is required"),
+  numberOfFloors: z.string().min(1, "Number of floors is required"),
+  constructionYear: z.string().optional(),
+  buildingMaterials: z.string().optional(),
+  accessRoadStatus: z.string().default("Tarred / Paved Access Road"),
+  utilitiesAvailable: z.string().optional(),
+  units: z.array(tenementUnitSchema).min(1, "At least one tenement unit is required"),
+});
+
+type TenementRateFormValues = z.infer<typeof tenementRateSchema>;
 
 const STEPS: FormStep[] = [
   {
@@ -123,88 +157,99 @@ export default function TenementRateForm({
   );
   const [declaration, setDeclaration] = useState(false);
 
-  // Property Information
-  const [formData, setFormData] = useState({
-    ownerName: "",
-    isCorporate: "No",
-    corporateName: "",
-    phone: "",
-    email: "",
-    ownerAddress: "",
-    propertyAddress: "",
-    ward: WARDS[0] || "Odeda",
-    cadastralPlotNo: "Plot 12, Block IV",
-    propertyType: "Multi-Flat Block / Storey Building",
-    numberOfFloors: "2",
-    totalUnitsCount: "4",
-    constructionYear: "2018",
-    buildingMaterials: "Reinforced Concrete & Sandcrete Hollow Blocks",
-    accessRoadStatus: "Tarred / Paved Access Road",
-    utilitiesAvailable: "National Grid Electricity & Motorized Borehole",
+  const {
+    register,
+    control,
+    handleSubmit,
+    trigger,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<TenementRateFormValues>({
+    resolver: zodResolver(tenementRateSchema),
+    defaultValues: {
+      ownerName: initialApplicant?.name || "",
+      isCorporate: "No",
+      corporateName: initialApplicant?.companyName || "",
+      phone: initialApplicant?.phone || "",
+      email: initialApplicant?.email || "",
+      ownerAddress: initialApplicant?.address || "",
+      propertyAddress: initialApplicant?.address || "",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda",
+      cadastralPlotNo: "Plot 12, Block IV",
+      propertyType: "Multi-Flat Block / Storey Building",
+      numberOfFloors: "2",
+      constructionYear: "2018",
+      buildingMaterials: "Reinforced Concrete & Sandcrete Hollow Blocks",
+      accessRoadStatus: "Tarred / Paved Access Road",
+      utilitiesAvailable: "National Grid Electricity & Motorized Borehole",
+      units: [
+        {
+          unitIdentifier: "Flat 1 (Ground Floor Right)",
+          unitType: "3-Bedroom Flat",
+          occupancyStatus: "Tenant-Occupied",
+          occupantName: "Mr. Kunle Ajayi",
+          annualRent: "450000",
+        },
+        {
+          unitIdentifier: "Flat 2 (Ground Floor Left)",
+          unitType: "2-Bedroom Flat",
+          occupancyStatus: "Tenant-Occupied",
+          occupantName: "Alhaja S. Balogun",
+          annualRent: "350000",
+        },
+        {
+          unitIdentifier: "Flat 3 (First Floor Right)",
+          unitType: "3-Bedroom Flat",
+          occupancyStatus: "Owner-Occupied",
+          occupantName: "Property Owner",
+          annualRent: "450000",
+        },
+        {
+          unitIdentifier: "Flat 4 (First Floor Left)",
+          unitType: "2-Bedroom Flat",
+          occupancyStatus: "Tenant-Occupied",
+          occupantName: "Dr. T. Adeleke",
+          annualRent: "350000",
+        },
+      ],
+    },
+    mode: "onChange",
   });
 
-  // Repeatable: Property Units & Tenancy Schedule
-  const [units, setUnits] = useState<TenementUnit[]>([
-    {
-      unitIdentifier: "Flat 1 (Ground Floor Right)",
-      unitType: "3-Bedroom Flat",
-      occupancyStatus: "Tenant-Occupied",
-      occupantName: "Mr. Kunle Ajayi",
-      annualRent: "450000",
-    },
-    {
-      unitIdentifier: "Flat 2 (Ground Floor Left)",
-      unitType: "2-Bedroom Flat",
-      occupancyStatus: "Tenant-Occupied",
-      occupantName: "Alhaja S. Balogun",
-      annualRent: "350000",
-    },
-    {
-      unitIdentifier: "Flat 3 (First Floor Right)",
-      unitType: "3-Bedroom Flat",
-      occupancyStatus: "Owner-Occupied",
-      occupantName: "Property Owner",
-      annualRent: "450000",
-    },
-    {
-      unitIdentifier: "Flat 4 (First Floor Left)",
-      unitType: "2-Bedroom Flat",
-      occupancyStatus: "Tenant-Occupied",
-      occupantName: "Dr. T. Adeleke",
-      annualRent: "350000",
-    },
-  ]);
+  const {
+    fields: unitFields,
+    append: appendUnit,
+    remove: removeUnit,
+  } = useFieldArray({
+    control,
+    name: "units",
+  });
 
-  // Calculations
+  useEffect(() => {
+    if (initialApplicant) {
+      if (initialApplicant.name) setValue("ownerName", initialApplicant.name);
+      if (initialApplicant.companyName) {
+        setValue("isCorporate", "Yes");
+        setValue("corporateName", initialApplicant.companyName);
+      }
+      if (initialApplicant.phone) setValue("phone", initialApplicant.phone);
+      if (initialApplicant.email) setValue("email", initialApplicant.email);
+      if (initialApplicant.address) {
+        setValue("propertyAddress", initialApplicant.address);
+        setValue("ownerAddress", initialApplicant.address);
+      }
+      if (initialApplicant.ward) setValue("ward", initialApplicant.ward);
+    }
+  }, [initialApplicant, setValue]);
+
+  const formValues = watch();
+  const isCorporateValue = watch("isCorporate");
+  const unitsWatch = watch("units");
+
   const totalAnnualRent = useMemo(() => {
-    return units.reduce((acc, u) => acc + (parseFloat(u.annualRent) || 0), 0);
-  }, [units]);
-
-  // Handlers for Units
-  const addUnit = () => {
-    setUnits((prev) => [
-      ...prev,
-      {
-        unitIdentifier: `Unit ${prev.length + 1}`,
-        unitType: "2-Bedroom Flat",
-        occupancyStatus: "Tenant-Occupied",
-        occupantName: "",
-        annualRent: "300000",
-      },
-    ]);
-  };
-
-  const removeUnit = (idx: number) => {
-    setUnits((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateUnit = (idx: number, field: keyof TenementUnit, val: string) => {
-    setUnits((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
+    return (unitsWatch || []).reduce((acc, u) => acc + (parseFloat(u?.annualRent) || 0), 0);
+  }, [unitsWatch]);
 
   const handleFileUpload = (docId: string, fileName: string) => {
     setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
@@ -218,20 +263,32 @@ export default function TenementRateForm({
     });
   };
 
-  const validateStep = (index: number): boolean => {
+  const validateStep = async (index: number): Promise<boolean> => {
     if (index === 0) {
-      return (
-        !!formData.ownerName.trim() &&
-        !!formData.phone.trim() &&
-        !!formData.propertyAddress.trim() &&
-        !!formData.ward
-      );
+      return await trigger([
+        "ownerName",
+        "isCorporate",
+        "corporateName",
+        "phone",
+        "email",
+        "ward",
+        "cadastralPlotNo",
+        "propertyAddress",
+        "ownerAddress",
+      ]);
     }
     if (index === 1) {
-      return !!formData.propertyType && !!formData.numberOfFloors;
+      return await trigger([
+        "propertyType",
+        "numberOfFloors",
+        "constructionYear",
+        "buildingMaterials",
+        "accessRoadStatus",
+        "utilitiesAvailable",
+      ]);
     }
     if (index === 2) {
-      return units.length > 0 && !!units[0].unitIdentifier.trim();
+      return await trigger(["units"]);
     }
     if (index === 3) {
       const missing = DOCUMENTS.filter(
@@ -242,8 +299,9 @@ export default function TenementRateForm({
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStepIndex);
+    if (isValid) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
     }
   };
@@ -254,19 +312,18 @@ export default function TenementRateForm({
 
   const currentFee = service.feeConfig.amount;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFormSubmit = (data: TenementRateFormValues) => {
     if (!declaration) return;
 
+    const cleanedUnits = data.units.filter((u) => u.unitIdentifier.trim());
     onSubmit({
       formData: {
-        ...formData,
-        units: units.filter((u) => u.unitIdentifier.trim()),
+        ...data,
+        units: cleanedUnits,
         totalValuation: totalAnnualRent,
-        unitsCount: units.length,
+        unitsCount: cleanedUnits.length,
       },
       files: uploadedFiles,
-
       applicant: initialApplicant || null,
     });
   };
@@ -275,35 +332,35 @@ export default function TenementRateForm({
     {
       title: "Property Ownership & Physical Cadastre",
       items: [
-        { label: "Property Owner Full Name", value: formData.ownerName },
+        { label: "Property Owner Full Name", value: formValues.ownerName },
         {
           label: "Corporate Owner Entity",
           value:
-            formData.isCorporate === "Yes"
-              ? formData.corporateName
+            formValues.isCorporate === "Yes"
+              ? formValues.corporateName || "N/A"
               : "Private Individual",
         },
-        { label: "Owner Contact Phone", value: formData.phone },
-        { label: "Owner Email Address", value: formData.email },
-        { label: "Physical Property Address", value: formData.propertyAddress },
-        { label: "Ward in Odeda LGA", value: formData.ward },
-        { label: "Cadastral / Plot Number", value: formData.cadastralPlotNo },
-        { label: "Owner Mailing Address", value: formData.ownerAddress },
+        { label: "Owner Contact Phone", value: formValues.phone },
+        { label: "Owner Email Address", value: formValues.email || "N/A" },
+        { label: "Physical Property Address", value: formValues.propertyAddress },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
+        { label: "Cadastral / Plot Number", value: formValues.cadastralPlotNo || "N/A" },
+        { label: "Owner Mailing Address", value: formValues.ownerAddress || "N/A" },
       ],
     },
     {
       title: "Structural Specifications & Amenities",
       items: [
-        { label: "Property Classification", value: formData.propertyType },
+        { label: "Property Classification", value: formValues.propertyType },
         {
           label: "Number of Storeys/Floors",
-          value: `${formData.numberOfFloors} Floors`,
+          value: `${formValues.numberOfFloors} Floors`,
         },
-        { label: "Total Assessment Units", value: `${units.length} Units` },
-        { label: "Year of Construction", value: formData.constructionYear },
-        { label: "Building Materials", value: formData.buildingMaterials },
-        { label: "Access Road Condition", value: formData.accessRoadStatus },
-        { label: "Available Utilities", value: formData.utilitiesAvailable },
+        { label: "Total Assessment Units", value: `${unitFields.length} Units` },
+        { label: "Year of Construction", value: formValues.constructionYear || "N/A" },
+        { label: "Building Materials", value: formValues.buildingMaterials || "N/A" },
+        { label: "Access Road Condition", value: formValues.accessRoadStatus },
+        { label: "Available Utilities", value: formValues.utilitiesAvailable || "N/A" },
       ],
     },
   ];
@@ -312,13 +369,13 @@ export default function TenementRateForm({
     {
       title: "Tenement Units & Rental Valuation Schedule",
       countLabel: "Tenement Units",
-      items: units
-        .filter((u) => u.unitIdentifier.trim())
+      items: (formValues.units || [])
+        .filter((u) => u.unitIdentifier?.trim())
         .map((u) => ({
           "Unit Identifier": u.unitIdentifier,
           "Unit Type": u.unitType,
           "Occupancy Status": u.occupancyStatus,
-          "Current Occupant": u.occupantName,
+          "Current Occupant": u.occupantName || "N/A",
           "Annual Rental Value": `₦${(parseFloat(u.annualRent) || 0).toLocaleString()}`,
         })),
     },
@@ -332,16 +389,19 @@ export default function TenementRateForm({
       onStepChange={(idx) => setCurrentStepIndex(idx)}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onFormSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
       submitDisabled={
         !declaration ||
-        !validateStep(0) ||
-        !validateStep(1) ||
-        !validateStep(2) ||
-        !validateStep(3)
+        !formValues.ownerName ||
+        !formValues.phone ||
+        !formValues.propertyAddress ||
+        !formValues.ward ||
+        !formValues.propertyType ||
+        !formValues.numberOfFloors ||
+        unitFields.length === 0
       }
     >
       {/* STEP 1: Property Owner & Location */}
@@ -364,50 +424,50 @@ export default function TenementRateForm({
               </Label>
               <Input
                 id="ownerName"
-                required
-                value={formData.ownerName}
-                onChange={(e) =>
-                  setFormData({ ...formData, ownerName: e.target.value })
-                }
+                {...register("ownerName")}
                 placeholder="e.g. Chief Babatunde O. Adeleke"
               />
+              {errors.ownerName && (
+                <p className="text-xs text-red-500">{errors.ownerName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="isCorporate">
                 Is property owned by a Corporate Body / Trust?
               </Label>
-              <Select
-                value={formData.isCorporate}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, isCorporate: val })
-                }
-              >
-                <SelectTrigger id="isCorporate">
-                  <SelectValue placeholder="Corporate Ownership?" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="No">
-                    No - Individual / Family Owned
-                  </SelectItem>
-                  <SelectItem value="Yes">
-                    Yes - Registered Company / Trust
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="isCorporate"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="isCorporate">
+                      <SelectValue placeholder="Corporate Ownership?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="No">
+                        No - Individual / Family Owned
+                      </SelectItem>
+                      <SelectItem value="Yes">
+                        Yes - Registered Company / Trust
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
-            {formData.isCorporate === "Yes" && (
+            {isCorporateValue === "Yes" && (
               <div className="space-y-1.5">
                 <Label htmlFor="corporateName">
                   Company / Corporate Entity Name
                 </Label>
                 <Input
                   id="corporateName"
-                  value={formData.corporateName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, corporateName: e.target.value })
-                  }
+                  {...register("corporateName")}
                   placeholder="e.g. Odeda Properties & Investments Ltd"
                 />
               </div>
@@ -418,13 +478,12 @@ export default function TenementRateForm({
               <Input
                 id="phone"
                 type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                {...register("phone")}
                 placeholder="+234 800 000 0000"
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -432,31 +491,40 @@ export default function TenementRateForm({
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...register("email")}
                 placeholder="landlord@example.com"
               />
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward in Odeda LGA *</Label>
-              <Select
-                value={formData.ward}
-                onValueChange={(val) => setFormData({ ...formData, ward: val })}
-              >
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="ward"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -465,10 +533,7 @@ export default function TenementRateForm({
               </Label>
               <Input
                 id="cadastralPlotNo"
-                value={formData.cadastralPlotNo}
-                onChange={(e) =>
-                  setFormData({ ...formData, cadastralPlotNo: e.target.value })
-                }
+                {...register("cadastralPlotNo")}
                 placeholder="e.g. Plot 15, Block D, Layout 2"
               />
             </div>
@@ -479,13 +544,12 @@ export default function TenementRateForm({
               </Label>
               <Input
                 id="propertyAddress"
-                required
-                value={formData.propertyAddress}
-                onChange={(e) =>
-                  setFormData({ ...formData, propertyAddress: e.target.value })
-                }
+                {...register("propertyAddress")}
                 placeholder="House number, Street name, Community/Town in Odeda LGA"
               />
+              {errors.propertyAddress && (
+                <p className="text-xs text-red-500">{errors.propertyAddress.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
@@ -494,10 +558,7 @@ export default function TenementRateForm({
               </Label>
               <Input
                 id="ownerAddress"
-                value={formData.ownerAddress}
-                onChange={(e) =>
-                  setFormData({ ...formData, ownerAddress: e.target.value })
-                }
+                {...register("ownerAddress")}
                 placeholder="Mailing address for official assessment notices"
               />
             </div>
@@ -523,76 +584,87 @@ export default function TenementRateForm({
               <Label htmlFor="propertyType">
                 Property Building Classification *
               </Label>
-              <Select
-                value={formData.propertyType}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, propertyType: val })
-                }
-              >
-                <SelectTrigger id="propertyType">
-                  <SelectValue placeholder="Select Property Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Multi-Flat Block / Storey Building">
-                    Multi-Flat Block / Storey Building
-                  </SelectItem>
-                  <SelectItem value="Single Detached Duplex / Bungalow">
-                    Single Detached Duplex / Bungalow
-                  </SelectItem>
-                  <SelectItem value="Tenement Multi-Room (Face-me-I-face-you)">
-                    Tenement Multi-Room House
-                  </SelectItem>
-                  <SelectItem value="Commercial Shopping Complex / Plaza">
-                    Commercial Shopping Complex / Plaza
-                  </SelectItem>
-                  <SelectItem value="Industrial Factory / Warehouse">
-                    Industrial Factory / Warehouse
-                  </SelectItem>
-                  <SelectItem value="Mixed Residential / Commercial Property">
-                    Mixed Residential / Commercial Property
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="propertyType"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="propertyType">
+                      <SelectValue placeholder="Select Property Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Multi-Flat Block / Storey Building">
+                        Multi-Flat Block / Storey Building
+                      </SelectItem>
+                      <SelectItem value="Single Detached Duplex / Bungalow">
+                        Single Detached Duplex / Bungalow
+                      </SelectItem>
+                      <SelectItem value="Tenement Multi-Room (Face-me-I-face-you)">
+                        Tenement Multi-Room House
+                      </SelectItem>
+                      <SelectItem value="Commercial Shopping Complex / Plaza">
+                        Commercial Shopping Complex / Plaza
+                      </SelectItem>
+                      <SelectItem value="Industrial Factory / Warehouse">
+                        Industrial Factory / Warehouse
+                      </SelectItem>
+                      <SelectItem value="Mixed Residential / Commercial Property">
+                        Mixed Residential / Commercial Property
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.propertyType && (
+                <p className="text-xs text-red-500">{errors.propertyType.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="numberOfFloors">
                 Number of Floors / Storeys *
               </Label>
-              <Select
-                value={formData.numberOfFloors}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, numberOfFloors: val })
-                }
-              >
-                <SelectTrigger id="numberOfFloors">
-                  <SelectValue placeholder="Select Storeys" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">
-                    Bungalow (Ground Floor Only)
-                  </SelectItem>
-                  <SelectItem value="2">
-                    2 Floors (One Storey Building)
-                  </SelectItem>
-                  <SelectItem value="3">
-                    3 Floors (Two Storey Building)
-                  </SelectItem>
-                  <SelectItem value="4">
-                    4+ Floors (Multi-Storey Complex)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="numberOfFloors"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="numberOfFloors">
+                      <SelectValue placeholder="Select Storeys" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">
+                        Bungalow (Ground Floor Only)
+                      </SelectItem>
+                      <SelectItem value="2">
+                        2 Floors (One Storey Building)
+                      </SelectItem>
+                      <SelectItem value="3">
+                        3 Floors (Two Storey Building)
+                      </SelectItem>
+                      <SelectItem value="4">
+                        4+ Floors (Multi-Storey Complex)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.numberOfFloors && (
+                <p className="text-xs text-red-500">{errors.numberOfFloors.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="constructionYear">Year of Construction</Label>
               <Input
                 id="constructionYear"
-                value={formData.constructionYear}
-                onChange={(e) =>
-                  setFormData({ ...formData, constructionYear: e.target.value })
-                }
+                {...register("constructionYear")}
                 placeholder="e.g. 2018"
               />
             </div>
@@ -603,53 +675,45 @@ export default function TenementRateForm({
               </Label>
               <Input
                 id="buildingMaterials"
-                value={formData.buildingMaterials}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    buildingMaterials: e.target.value,
-                  })
-                }
+                {...register("buildingMaterials")}
                 placeholder="e.g. Sandcrete blockwall, corrugated aluminium roof"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="accessRoadStatus">Access Road Quality</Label>
-              <Select
-                value={formData.accessRoadStatus}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, accessRoadStatus: val })
-                }
-              >
-                <SelectTrigger id="accessRoadStatus">
-                  <SelectValue placeholder="Select Road Access" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Tarred / Paved Access Road">
-                    Tarred / Paved Access Road
-                  </SelectItem>
-                  <SelectItem value="Graded Earth Road with Concrete Gutters">
-                    Graded Earth Road with Gutters
-                  </SelectItem>
-                  <SelectItem value="Seasonal Unpaved Dirt Track">
-                    Seasonal Unpaved Dirt Track
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="accessRoadStatus"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="accessRoadStatus">
+                      <SelectValue placeholder="Select Road Access" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Tarred / Paved Access Road">
+                        Tarred / Paved Access Road
+                      </SelectItem>
+                      <SelectItem value="Graded Earth Road with Concrete Gutters">
+                        Graded Earth Road with Gutters
+                      </SelectItem>
+                      <SelectItem value="Seasonal Unpaved Dirt Track">
+                        Seasonal Unpaved Dirt Track
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="utilitiesAvailable">Installed Utilities</Label>
               <Input
                 id="utilitiesAvailable"
-                value={formData.utilitiesAvailable}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    utilitiesAvailable: e.target.value,
-                  })
-                }
+                {...register("utilitiesAvailable")}
                 placeholder="e.g. PHCN Electricity, Dedicated Transformer, Borehole"
               />
             </div>
@@ -683,7 +747,7 @@ export default function TenementRateForm({
                 <h4 className="text-lg font-bold text-foreground">
                   ₦{totalAnnualRent.toLocaleString()}{" "}
                   <span className="text-xs font-normal text-muted-foreground">
-                    ({units.length} Habitable Units)
+                    ({unitFields.length} Habitable Units)
                   </span>
                 </h4>
               </div>
@@ -692,7 +756,15 @@ export default function TenementRateForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={addUnit}
+              onClick={() =>
+                appendUnit({
+                  unitIdentifier: `Unit ${unitFields.length + 1}`,
+                  unitType: "2-Bedroom Flat",
+                  occupancyStatus: "Tenant-Occupied",
+                  occupantName: "",
+                  annualRent: "300000",
+                })
+              }
               className="gap-1 text-xs"
             >
               <Plus className="w-3.5 h-3.5" /> Add Tenement Unit
@@ -701,19 +773,19 @@ export default function TenementRateForm({
 
           {/* REPEATABLE SECTION: Tenement Units */}
           <div className="space-y-4">
-            {units.map((unit, idx) => (
+            {unitFields.map((fieldItem, idx) => (
               <div
-                key={idx}
+                key={fieldItem.id}
                 className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group"
               >
                 <div className="flex items-center justify-between border-b pb-2">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-primary" />
                     <span className="font-bold text-xs text-foreground">
-                      Unit #{idx + 1}: {unit.unitIdentifier || "Tenement Unit"}
+                      Unit #{idx + 1}: {formValues.units?.[idx]?.unitIdentifier || "Tenement Unit"}
                     </span>
                   </div>
-                  {units.length > 1 && (
+                  {unitFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -732,84 +804,98 @@ export default function TenementRateForm({
                       Unit Identifier / Flat Name *
                     </Label>
                     <Input
-                      value={unit.unitIdentifier}
-                      onChange={(e) =>
-                        updateUnit(idx, "unitIdentifier", e.target.value)
-                      }
+                      {...register(`units.${idx}.unitIdentifier`)}
                       placeholder="e.g. Flat 1 (Ground Floor Right) / Shop 3"
                     />
+                    {errors.units?.[idx]?.unitIdentifier && (
+                      <p className="text-xs text-red-500">
+                        {errors.units[idx]?.unitIdentifier?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Unit Type</Label>
-                    <Select
-                      value={unit.unitType}
-                      onValueChange={(val) => updateUnit(idx, "unitType", val)}
-                    >
-                      <SelectTrigger className="text-xs h-9">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="3-Bedroom Flat">
-                          3-Bedroom Flat
-                        </SelectItem>
-                        <SelectItem value="2-Bedroom Flat">
-                          2-Bedroom Flat
-                        </SelectItem>
-                        <SelectItem value="1-Bedroom Mini Flat">
-                          1-Bedroom Mini Flat
-                        </SelectItem>
-                        <SelectItem value="Self-Contained Studio">
-                          Self-Contained Studio
-                        </SelectItem>
-                        <SelectItem value="Single Room (Tenement)">
-                          Single Room (Tenement)
-                        </SelectItem>
-                        <SelectItem value="Retail Shop / Store">
-                          Retail Shop / Store
-                        </SelectItem>
-                        <SelectItem value="Office Suite">
-                          Office Suite
-                        </SelectItem>
-                        <SelectItem value="Warehouse / Storage Bay">
-                          Warehouse
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={control}
+                      name={`units.${idx}.unitType`}
+                      render={({ field }) => (
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="text-xs h-9">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3-Bedroom Flat">
+                              3-Bedroom Flat
+                            </SelectItem>
+                            <SelectItem value="2-Bedroom Flat">
+                              2-Bedroom Flat
+                            </SelectItem>
+                            <SelectItem value="1-Bedroom Mini Flat">
+                              1-Bedroom Mini Flat
+                            </SelectItem>
+                            <SelectItem value="Self-Contained Studio">
+                              Self-Contained Studio
+                            </SelectItem>
+                            <SelectItem value="Single Room (Tenement)">
+                              Single Room (Tenement)
+                            </SelectItem>
+                            <SelectItem value="Retail Shop / Store">
+                              Retail Shop / Store
+                            </SelectItem>
+                            <SelectItem value="Office Suite">
+                              Office Suite
+                            </SelectItem>
+                            <SelectItem value="Warehouse / Storage Bay">
+                              Warehouse
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Occupancy</Label>
-                    <Select
-                      value={unit.occupancyStatus}
-                      onValueChange={(val) =>
-                        updateUnit(idx, "occupancyStatus", val)
-                      }
-                    >
-                      <SelectTrigger className="text-xs h-9">
-                        <SelectValue placeholder="Occupancy" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Tenant-Occupied">
-                          Tenant-Occupied
-                        </SelectItem>
-                        <SelectItem value="Owner-Occupied">
-                          Owner-Occupied
-                        </SelectItem>
-                        <SelectItem value="Vacant / Unoccupied">
-                          Vacant
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={control}
+                      name={`units.${idx}.occupancyStatus`}
+                      render={({ field }) => (
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="text-xs h-9">
+                            <SelectValue placeholder="Occupancy" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Tenant-Occupied">
+                              Tenant-Occupied
+                            </SelectItem>
+                            <SelectItem value="Owner-Occupied">
+                              Owner-Occupied
+                            </SelectItem>
+                            <SelectItem value="Vacant / Unoccupied">
+                              Vacant
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Annual Rent (₦) *</Label>
                     <Input
                       type="number"
-                      value={unit.annualRent}
-                      onChange={(e) =>
-                        updateUnit(idx, "annualRent", e.target.value)
-                      }
+                      {...register(`units.${idx}.annualRent`)}
                       placeholder="e.g. 400000"
                     />
+                    {errors.units?.[idx]?.annualRent && (
+                      <p className="text-xs text-red-500">
+                        {errors.units[idx]?.annualRent?.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -819,10 +905,7 @@ export default function TenementRateForm({
                       Current Occupant / Tenant Name
                     </Label>
                     <Input
-                      value={unit.occupantName}
-                      onChange={(e) =>
-                        updateUnit(idx, "occupantName", e.target.value)
-                      }
+                      {...register(`units.${idx}.occupantName`)}
                       placeholder="e.g. Mr. S. O. Balogun"
                       className="h-8 text-xs"
                     />

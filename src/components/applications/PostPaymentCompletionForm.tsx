@@ -314,24 +314,32 @@ export function PostPaymentCompletionForm({
     nin: currentUser?.nin || application?.applicant?.nin || undefined,
   };
 
-  const handleFormSubmit = async (payload: {
-    applicant: ApplicantSnapshot;
-    formData: Record<string, any>;
-    files: Record<string, any>;
-    serviceId: Record<string, any>;
-  }) => {
+  const handleFormSubmit = async (payload: any) => {
     setSubmissionError(null);
     try {
+      let formData = {};
+      let files = {};
+      let applicantId = initialApplicant?.applicantId || currentUser?.id || undefined;
+
+      if (payload && (payload.applicant || payload.formData || payload.files)) {
+        formData = payload.formData || {};
+        files = payload.files || {};
+        if (payload.applicant?.applicantId) {
+          applicantId = payload.applicant.applicantId;
+        }
+      } else {
+        formData = payload || {};
+      }
+
       const res = await completeMutation.mutateAsync({
         id: applicationId,
         payload: {
-          formData: payload.formData || {},
-          files: payload.files || {},
-          applicantId: payload.applicant?.applicantId || currentUser?.id || undefined,
-          serviceId:application.serviceId
+          formData,
+          files,
+          applicantId,
+          serviceId: application.serviceId,
         },
       });
-
 
       setCompletedApplication(res || application);
     } catch (err: any) {

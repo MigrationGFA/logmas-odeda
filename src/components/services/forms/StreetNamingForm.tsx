@@ -1,5 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { WARDS } from "@/lib/mock-data";
-import {
-  ServiceType,
-  getConfiguredFeeForService,
-} from "@/config/odedaServices";
+import { ServiceType } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
 import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
 import {
@@ -24,8 +24,8 @@ import {
   ReviewRepeatableSection,
 } from "./ReviewSubmitStep";
 import { Plus, Trash2, MapPin, Building, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 
 interface Props {
   service: ServiceType;
@@ -38,24 +38,53 @@ interface Props {
   initialApplicant?: ApplicantSnapshot;
 }
 
-interface PropertyNumbering {
-  plotHouseNumber: string;
-  buildingType: string;
-  ownerName: string;
-  ownerPhone: string;
-}
+const propertyNumberingSchema = z.object({
+  plotHouseNumber: z.string().min(1, "House number is required"),
+  buildingType: z.string().default("Residential Building"),
+  ownerName: z.string().default(""),
+  ownerPhone: z.string().default(""),
+});
 
-interface SignpostSpec {
-  junctionLocation: string;
-  postType: string;
-  quantity: string;
-}
+const signpostSpecSchema = z.object({
+  junctionLocation: z.string().default(""),
+  postType: z.string().default("Reflective Steel Pole"),
+  quantity: z.string().default("1"),
+});
 
-interface ElderEndorsement {
-  elderName: string;
-  titleRole: string;
-  phone: string;
-}
+const elderEndorsementSchema = z.object({
+  elderName: z.string().default(""),
+  titleRole: z.string().default("Community Elder / Executive"),
+  phone: z.string().default(""),
+});
+
+const streetNamingSchema = z.object({
+  applicantName: z.string().min(1, "Sponsoring body / applicant name is required"),
+  applicantType: z.string().min(1, "Applicant category is required"),
+  contactPerson: z.string().min(1, "Lead representative name is required"),
+  phone: z
+    .string()
+    .min(1, "Contact phone number is required")
+    .refine((val) => formatAndValidateNigerianPhoneNumber(val).isValid, {
+      message: "Please enter a valid Nigerian phone number",
+    }),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .or(z.literal(""))
+    .optional(),
+  address: z.string().min(1, "Applicant address is required"),
+  ward: z.string().min(1, "Ward is required"),
+  proposedStreetName: z.string().min(1, "Proposed primary street name is required"),
+  alternativeStreetName: z.string().optional(),
+  streetLength: z.string().default("650 Metres"),
+  justification: z.string().min(1, "Historical/civic justification is required"),
+  cdaEndorsement: z.string().default("Unanimous approval passed at CDA Congress with 94 resident signatures"),
+  properties: z.array(propertyNumberingSchema).min(1, "At least one property must be listed"),
+  signposts: z.array(signpostSpecSchema),
+  elders: z.array(elderEndorsementSchema),
+});
+
+type StreetNamingFormValues = z.infer<typeof streetNamingSchema>;
 
 const STEPS: FormStep[] = [
   {
@@ -138,158 +167,122 @@ export default function StreetNamingForm({
   );
   const [declaration, setDeclaration] = useState(false);
 
-  // Form Basic Info
-  const [formData, setFormData] = useState({
-    applicantName: "nil",
-    applicantType: "Community Development Association (CDA)",
-    contactPerson: "2323",
-    phone: "23233",
-    email: "",
-    address: "fffff",
-    ward: WARDS[0] || "Odeda",
-    proposedStreetName: "Chief Obafemi Awolowo Crescent",
-    alternativeStreetName: "Unity Crescent",
-    streetLength: "650 Metres",
-    justification:
-      "Named in honor of pioneering community elder and educational benefactor in the community.",
-    cdaEndorsement:
-      "Unanimous approval passed at CDA Congress with 94 resident signatures",
+  const {
+    register,
+    control,
+    handleSubmit,
+    trigger,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<StreetNamingFormValues>({
+    resolver: zodResolver(streetNamingSchema),
+    defaultValues: {
+      applicantName: initialApplicant?.companyName || initialApplicant?.name || "Obantoko Peace CDA",
+      applicantType: "Community Development Association (CDA)",
+      contactPerson: initialApplicant?.name || "Elder David Ojo",
+      phone: initialApplicant?.phone || "08033322211",
+      email: initialApplicant?.email || "",
+      address: initialApplicant?.address || "Obantoko Community Secretariat, Odeda LGA",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda",
+      proposedStreetName: "Chief Obafemi Awolowo Crescent",
+      alternativeStreetName: "Unity Crescent",
+      streetLength: "650 Metres",
+      justification:
+        "Named in honor of pioneering community elder and educational benefactor in the community.",
+      cdaEndorsement:
+        "Unanimous approval passed at CDA Congress with 94 resident signatures",
+      properties: [
+        {
+          plotHouseNumber: "No. 1",
+          buildingType: "Detached 4-Bedroom Bungalow",
+          ownerName: "Pa Amos Ogundele",
+          ownerPhone: "08033300112",
+        },
+        {
+          plotHouseNumber: "No. 2",
+          buildingType: "Block of 4 Flats",
+          ownerName: "Alhaji R. Sanni",
+          ownerPhone: "08055500223",
+        },
+        {
+          plotHouseNumber: "No. 3",
+          buildingType: "Commercial Shopping Plaza",
+          ownerName: "Mrs. Folashade Adeyemi",
+          ownerPhone: "08077700334",
+        },
+      ],
+      signposts: [
+        {
+          junctionLocation: "Main Expressway Junction / Street Entrance",
+          postType: "Galvanized Steel Pole with Reflective Aluminum Blade",
+          quantity: "1",
+        },
+        {
+          junctionLocation: "T-Junction Intersection with Peace Avenue",
+          postType: "Dual-Faced Reflective Steel Signpost",
+          quantity: "1",
+        },
+      ],
+      elders: [
+        {
+          elderName: "Chief Samuel Adegbenro",
+          titleRole: "Baale of Community",
+          phone: "08022211100",
+        },
+        {
+          elderName: "Elder David Ojo",
+          titleRole: "CDA Chairman",
+          phone: "08033322211",
+        },
+      ],
+    },
+    mode: "onChange",
   });
 
-  // Repeatable: Properties along the street
-  const [properties, setProperties] = useState<PropertyNumbering[]>([
-    {
-      plotHouseNumber: "No. 1",
-      buildingType: "Detached 4-Bedroom Bungalow",
-      ownerName: "Pa Amos Ogundele",
-      ownerPhone: "08033300112",
-    },
-    {
-      plotHouseNumber: "No. 2",
-      buildingType: "Block of 4 Flats",
-      ownerName: "Alhaji R. Sanni",
-      ownerPhone: "08055500223",
-    },
-    {
-      plotHouseNumber: "No. 3",
-      buildingType: "Commercial Shopping Plaza",
-      ownerName: "Mrs. Folashade Adeyemi",
-      ownerPhone: "08077700334",
-    },
-  ]);
+  const {
+    fields: propertyFields,
+    append: appendProperty,
+    remove: removeProperty,
+  } = useFieldArray({
+    control,
+    name: "properties",
+  });
 
-  // Repeatable: Signposts
-  const [signposts, setSignposts] = useState<SignpostSpec[]>([
-    {
-      junctionLocation: "Main Expressway Junction / Street Entrance",
-      postType: "Galvanized Steel Pole with Reflective Aluminum Blade",
-      quantity: "1",
-    },
-    {
-      junctionLocation: "T-Junction Intersection with Peace Avenue",
-      postType: "Dual-Faced Reflective Steel Signpost",
-      quantity: "1",
-    },
-  ]);
+  const {
+    fields: signpostFields,
+    append: appendSignpost,
+    remove: removeSignpost,
+  } = useFieldArray({
+    control,
+    name: "signposts",
+  });
 
-  // Repeatable: Elders
-  const [elders, setElders] = useState<ElderEndorsement[]>([
-    {
-      elderName: "Chief Samuel Adegbenro",
-      titleRole: "Baale of Community",
-      phone: "08022211100",
-    },
-    {
-      elderName: "Elder David Ojo",
-      titleRole: "CDA Chairman",
-      phone: "08033322211",
-    },
-  ]);
+  const {
+    fields: elderFields,
+    append: appendElder,
+    remove: removeElder,
+  } = useFieldArray({
+    control,
+    name: "elders",
+  });
 
-  // Handlers for Properties
-  const addProperty = () => {
-    setProperties((prev) => [
-      ...prev,
-      {
-        plotHouseNumber: `No. ${prev.length + 1}`,
-        buildingType: "Residential Building",
-        ownerName: "",
-        ownerPhone: "",
-      },
-    ]);
-  };
+  useEffect(() => {
+    if (initialApplicant) {
+      if (initialApplicant.companyName) {
+        setValue("applicantName", initialApplicant.companyName);
+      } else if (initialApplicant.name) {
+        setValue("applicantName", initialApplicant.name);
+      }
+      if (initialApplicant.name) setValue("contactPerson", initialApplicant.name);
+      if (initialApplicant.phone) setValue("phone", initialApplicant.phone);
+      if (initialApplicant.email) setValue("email", initialApplicant.email);
+      if (initialApplicant.address) setValue("address", initialApplicant.address);
+      if (initialApplicant.ward) setValue("ward", initialApplicant.ward);
+    }
+  }, [initialApplicant, setValue]);
 
-  const removeProperty = (idx: number) => {
-    setProperties((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateProperty = (
-    idx: number,
-    field: keyof PropertyNumbering,
-    val: string,
-  ) => {
-    setProperties((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Signposts
-  const addSignpost = () => {
-    setSignposts((prev) => [
-      ...prev,
-      {
-        junctionLocation: "",
-        postType: "Reflective Steel Pole",
-        quantity: "1",
-      },
-    ]);
-  };
-
-  const removeSignpost = (idx: number) => {
-    setSignposts((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateSignpost = (
-    idx: number,
-    field: keyof SignpostSpec,
-    val: string,
-  ) => {
-    setSignposts((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Elders
-  const addElder = () => {
-    setElders((prev) => [
-      ...prev,
-      {
-        elderName: "",
-        titleRole: "Community Elder / Executive",
-        phone: "",
-      },
-    ]);
-  };
-
-  const removeElder = (idx: number) => {
-    setElders((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateElder = (
-    idx: number,
-    field: keyof ElderEndorsement,
-    val: string,
-  ) => {
-    setElders((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
+  const formValues = watch();
 
   const handleFileUpload = (docId: string, fileName: string) => {
     setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
@@ -303,27 +296,29 @@ export default function StreetNamingForm({
     });
   };
 
-  const validateStep = (index: number): boolean => {
+  const validateStep = async (index: number): Promise<boolean> => {
     if (index === 0) {
-      return (
-        !!formData.applicantName.trim() &&
-        !!formData.contactPerson.trim() &&
-        !!formData.phone.trim() &&
-        !!formData.address.trim() &&
-        !!formData.ward
-      );
+      return await trigger([
+        "applicantName",
+        "applicantType",
+        "contactPerson",
+        "phone",
+        "email",
+        "address",
+        "ward",
+      ]);
     }
     if (index === 1) {
-      return (
-        !!formData.proposedStreetName.trim() && !!formData.justification.trim()
-      );
+      return await trigger([
+        "proposedStreetName",
+        "alternativeStreetName",
+        "streetLength",
+        "justification",
+        "cdaEndorsement",
+      ]);
     }
     if (index === 2) {
-      return (
-        properties.length > 0 &&
-        !!properties[0].plotHouseNumber.trim() &&
-        elders.length > 0
-      );
+      return await trigger(["properties", "signposts", "elders"]);
     }
     if (index === 3) {
       const missing = DOCUMENTS.filter(
@@ -334,8 +329,9 @@ export default function StreetNamingForm({
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStepIndex);
+    if (isValid) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
     }
   };
@@ -346,19 +342,17 @@ export default function StreetNamingForm({
 
   const currentFee = service.feeConfig.amount;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFormSubmit = (data: StreetNamingFormValues) => {
     if (!declaration) return;
 
     onSubmit({
       formData: {
-        ...formData,
-        properties: properties.filter((p) => p.plotHouseNumber.trim()),
-        signposts: signposts.filter((s) => s.junctionLocation.trim()),
-        elders: elders.filter((el) => el.elderName.trim()),
+        ...data,
+        properties: data.properties.filter((p) => p.plotHouseNumber.trim()),
+        signposts: data.signposts.filter((s) => s.junctionLocation.trim()),
+        elders: data.elders.filter((el) => el.elderName.trim()),
       },
       files: uploadedFiles,
-
       applicant: initialApplicant || null,
     });
   };
@@ -367,13 +361,13 @@ export default function StreetNamingForm({
     {
       title: "Applicant & Sponsoring Entity",
       items: [
-        { label: "Sponsoring Body Name", value: formData.applicantName },
-        { label: "Applicant Category", value: formData.applicantType },
-        { label: "Lead Representative", value: formData.contactPerson },
-        { label: "Contact Phone Number", value: formData.phone },
-        { label: "Email Address", value: formData.email },
-        { label: "Physical Address", value: formData.address },
-        { label: "Ward in Odeda LGA", value: formData.ward },
+        { label: "Sponsoring Body Name", value: formValues.applicantName },
+        { label: "Applicant Category", value: formValues.applicantType },
+        { label: "Lead Representative", value: formValues.contactPerson },
+        { label: "Contact Phone Number", value: formValues.phone },
+        { label: "Email Address", value: formValues.email || "N/A" },
+        { label: "Physical Address", value: formValues.address },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
       ],
     },
     {
@@ -381,21 +375,21 @@ export default function StreetNamingForm({
       items: [
         {
           label: "Proposed Primary Street Name",
-          value: formData.proposedStreetName,
+          value: formValues.proposedStreetName,
         },
         {
           label: "Alternative Backup Name",
-          value: formData.alternativeStreetName,
+          value: formValues.alternativeStreetName || "N/A",
         },
         {
           label: "Estimated Street Route Length",
-          value: formData.streetLength,
+          value: formValues.streetLength,
         },
         {
           label: "Historical / Civic Justification",
-          value: formData.justification,
+          value: formValues.justification,
         },
-        { label: "Community Consensus", value: formData.cdaEndorsement },
+        { label: "Community Consensus", value: formValues.cdaEndorsement },
       ],
     },
   ];
@@ -404,35 +398,35 @@ export default function StreetNamingForm({
     {
       title: "Properties & House Numbering Schedule",
       countLabel: "Properties Numbered",
-      items: properties
-        .filter((p) => p.plotHouseNumber.trim())
+      items: (formValues.properties || [])
+        .filter((p) => p.plotHouseNumber?.trim())
         .map((p) => ({
           "Assigned House Number": p.plotHouseNumber,
-          "Building Type": p.buildingType,
-          "Property Owner": p.ownerName,
-          "Owner Contact Phone": p.ownerPhone,
+          "Building Type": p.buildingType || "N/A",
+          "Property Owner": p.ownerName || "N/A",
+          "Owner Contact Phone": p.ownerPhone || "N/A",
         })),
     },
     {
       title: "Reflective Signpost / Plaque Installation",
       countLabel: "Signposts",
-      items: signposts
-        .filter((s) => s.junctionLocation.trim())
+      items: (formValues.signposts || [])
+        .filter((s) => s.junctionLocation?.trim())
         .map((s) => ({
           "Junction / Location": s.junctionLocation,
-          "Plaque Hardware Specification": s.postType,
+          "Plaque Hardware Specification": s.postType || "N/A",
           Quantity: `${s.quantity} Units`,
         })),
     },
     {
       title: "Community Elders & Baale Endorsements",
       countLabel: "Signatories",
-      items: elders
-        .filter((el) => el.elderName.trim())
+      items: (formValues.elders || [])
+        .filter((el) => el.elderName?.trim())
         .map((el) => ({
           "Elder / Signatory Name": el.elderName,
-          "Title / Traditional Office": el.titleRole,
-          "Phone Number": el.phone,
+          "Title / Traditional Office": el.titleRole || "N/A",
+          "Phone Number": el.phone || "N/A",
         })),
     },
   ];
@@ -445,16 +439,20 @@ export default function StreetNamingForm({
       onStepChange={(idx) => setCurrentStepIndex(idx)}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onFormSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
       submitDisabled={
         !declaration ||
-        !validateStep(0) ||
-        !validateStep(1) ||
-        !validateStep(2) ||
-        !validateStep(3)
+        !formValues.applicantName ||
+        !formValues.contactPerson ||
+        !formValues.phone ||
+        !formValues.address ||
+        !formValues.ward ||
+        !formValues.proposedStreetName ||
+        !formValues.justification ||
+        propertyFields.length === 0
       }
     >
       {/* STEP 1: Applicant & Sponsor */}
@@ -477,44 +475,50 @@ export default function StreetNamingForm({
               </Label>
               <Input
                 id="applicantName"
-                required
-                value={formData.applicantName}
-                onChange={(e) =>
-                  setFormData({ ...formData, applicantName: e.target.value })
-                }
+                {...register("applicantName")}
                 placeholder="e.g. Obantoko Peace Community Development Association (CDA)"
               />
+              {errors.applicantName && (
+                <p className="text-xs text-red-500">{errors.applicantName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="applicantType">Applicant Category *</Label>
-              <Select
-                value={formData.applicantType}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, applicantType: val })
-                }
-              >
-                <SelectTrigger id="applicantType">
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Community Development Association (CDA)">
-                    Community Development Association (CDA)
-                  </SelectItem>
-                  <SelectItem value="Private Residential Estate Developer">
-                    Private Residential Estate Developer
-                  </SelectItem>
-                  <SelectItem value="Family / Descendants Heritage Council">
-                    Family / Descendants Heritage Council
-                  </SelectItem>
-                  <SelectItem value="Corporate / Institutional Sponsor">
-                    Corporate / Institutional Sponsor
-                  </SelectItem>
-                  <SelectItem value="Individual Philanthropist / Sponsor">
-                    Individual Philanthropist / Sponsor
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="applicantType"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="applicantType">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Community Development Association (CDA)">
+                        Community Development Association (CDA)
+                      </SelectItem>
+                      <SelectItem value="Private Residential Estate Developer">
+                        Private Residential Estate Developer
+                      </SelectItem>
+                      <SelectItem value="Family / Descendants Heritage Council">
+                        Family / Descendants Heritage Council
+                      </SelectItem>
+                      <SelectItem value="Corporate / Institutional Sponsor">
+                        Corporate / Institutional Sponsor
+                      </SelectItem>
+                      <SelectItem value="Individual Philanthropist / Sponsor">
+                        Individual Philanthropist / Sponsor
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.applicantType && (
+                <p className="text-xs text-red-500">{errors.applicantType.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -523,13 +527,12 @@ export default function StreetNamingForm({
               </Label>
               <Input
                 id="contactPerson"
-                required
-                value={formData.contactPerson}
-                onChange={(e) =>
-                  setFormData({ ...formData, contactPerson: e.target.value })
-                }
+                {...register("contactPerson")}
                 placeholder="e.g. Elder David Ojo"
               />
+              {errors.contactPerson && (
+                <p className="text-xs text-red-500">{errors.contactPerson.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -537,13 +540,12 @@ export default function StreetNamingForm({
               <Input
                 id="phone"
                 type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                {...register("phone")}
                 placeholder="+234 800 000 0000"
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -551,44 +553,52 @@ export default function StreetNamingForm({
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...register("email")}
                 placeholder="cda@example.com"
               />
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward in Odeda LGA *</Label>
-              <Select
-                value={formData.ward}
-                onValueChange={(val) => setFormData({ ...formData, ward: val })}
-              >
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="ward"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="address">Applicant / Secretariat Address *</Label>
               <Input
                 id="address"
-                required
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
+                {...register("address")}
                 placeholder="Secretariat or residential address in Odeda LGA"
               />
+              {errors.address && (
+                <p className="text-xs text-red-500">{errors.address.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -614,17 +624,13 @@ export default function StreetNamingForm({
               </Label>
               <Input
                 id="proposedStreetName"
-                required
-                value={formData.proposedStreetName}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    proposedStreetName: e.target.value,
-                  })
-                }
+                {...register("proposedStreetName")}
                 placeholder="e.g. Chief Obafemi Awolowo Crescent"
                 className="font-semibold"
               />
+              {errors.proposedStreetName && (
+                <p className="text-xs text-red-500">{errors.proposedStreetName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -633,13 +639,7 @@ export default function StreetNamingForm({
               </Label>
               <Input
                 id="alternativeStreetName"
-                value={formData.alternativeStreetName}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    alternativeStreetName: e.target.value,
-                  })
-                }
+                {...register("alternativeStreetName")}
                 placeholder="e.g. Unity Crescent"
               />
             </div>
@@ -650,10 +650,7 @@ export default function StreetNamingForm({
               </Label>
               <Input
                 id="streetLength"
-                value={formData.streetLength}
-                onChange={(e) =>
-                  setFormData({ ...formData, streetLength: e.target.value })
-                }
+                {...register("streetLength")}
                 placeholder="e.g. 750 Metres"
               />
             </div>
@@ -662,10 +659,7 @@ export default function StreetNamingForm({
               <Label htmlFor="cdaEndorsement">Community Consensus Status</Label>
               <Input
                 id="cdaEndorsement"
-                value={formData.cdaEndorsement}
-                onChange={(e) =>
-                  setFormData({ ...formData, cdaEndorsement: e.target.value })
-                }
+                {...register("cdaEndorsement")}
                 placeholder="e.g. Unanimously ratified at general congress"
               />
             </div>
@@ -676,14 +670,13 @@ export default function StreetNamingForm({
               </Label>
               <Textarea
                 id="justification"
-                required
                 rows={3}
-                value={formData.justification}
-                onChange={(e) =>
-                  setFormData({ ...formData, justification: e.target.value })
-                }
+                {...register("justification")}
                 placeholder="Provide biographical or civic background justifying the honour of naming this public thoroughfare..."
               />
+              {errors.justification && (
+                <p className="text-xs text-red-500">{errors.justification.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -719,24 +712,31 @@ export default function StreetNamingForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addProperty}
+                onClick={() =>
+                  appendProperty({
+                    plotHouseNumber: `No. ${propertyFields.length + 1}`,
+                    buildingType: "Residential Building",
+                    ownerName: "",
+                    ownerPhone: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Property
               </Button>
             </div>
 
-            {properties.map((prop, idx) => (
+            {propertyFields.map((fieldItem, idx) => (
               <div
-                key={idx}
+                key={fieldItem.id}
                 className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group"
               >
                 <div className="flex items-center justify-between border-b pb-2">
                   <span className="font-bold text-xs text-foreground">
-                    Property #{idx + 1}: {prop.plotHouseNumber} (
-                    {prop.buildingType})
+                    Property #{idx + 1}: {formValues.properties?.[idx]?.plotHouseNumber || "New Property"} (
+                    {formValues.properties?.[idx]?.buildingType || "Residential"})
                   </span>
-                  {properties.length > 1 && (
+                  {propertyFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -753,41 +753,34 @@ export default function StreetNamingForm({
                   <div className="space-y-1">
                     <Label className="text-xs">Assigned House No *</Label>
                     <Input
-                      value={prop.plotHouseNumber}
-                      onChange={(e) =>
-                        updateProperty(idx, "plotHouseNumber", e.target.value)
-                      }
+                      {...register(`properties.${idx}.plotHouseNumber`)}
                       placeholder="e.g. No. 1 / Plot 14"
                       className="font-bold"
                     />
+                    {errors.properties?.[idx]?.plotHouseNumber && (
+                      <p className="text-xs text-red-500">
+                        {errors.properties[idx]?.plotHouseNumber?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Building Typology</Label>
                     <Input
-                      value={prop.buildingType}
-                      onChange={(e) =>
-                        updateProperty(idx, "buildingType", e.target.value)
-                      }
+                      {...register(`properties.${idx}.buildingType`)}
                       placeholder="e.g. Bungalow / 4-Flat Block"
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Landlord / Owner Name</Label>
                     <Input
-                      value={prop.ownerName}
-                      onChange={(e) =>
-                        updateProperty(idx, "ownerName", e.target.value)
-                      }
+                      {...register(`properties.${idx}.ownerName`)}
                       placeholder="Landlord Name"
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Owner Phone</Label>
                     <Input
-                      value={prop.ownerPhone}
-                      onChange={(e) =>
-                        updateProperty(idx, "ownerPhone", e.target.value)
-                      }
+                      {...register(`properties.${idx}.ownerPhone`)}
                       placeholder="080..."
                     />
                   </div>
@@ -813,7 +806,13 @@ export default function StreetNamingForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addSignpost}
+                onClick={() =>
+                  appendSignpost({
+                    junctionLocation: "",
+                    postType: "Reflective Steel Pole",
+                    quantity: "1",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Signpost
@@ -821,9 +820,9 @@ export default function StreetNamingForm({
             </div>
 
             <div className="space-y-2.5">
-              {signposts.map((sp, idx) => (
+              {signpostFields.map((fieldItem, idx) => (
                 <div
-                  key={idx}
+                  key={fieldItem.id}
                   className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end"
                 >
                   <div className="space-y-1 sm:col-span-2">
@@ -831,10 +830,7 @@ export default function StreetNamingForm({
                       Junction / Intersection Location
                     </Label>
                     <Input
-                      value={sp.junctionLocation}
-                      onChange={(e) =>
-                        updateSignpost(idx, "junctionLocation", e.target.value)
-                      }
+                      {...register(`signposts.${idx}.junctionLocation`)}
                       placeholder="e.g. Main Road Entry Junction"
                       className="h-8 text-xs"
                     />
@@ -842,10 +838,7 @@ export default function StreetNamingForm({
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">Plaque Specification</Label>
                     <Input
-                      value={sp.postType}
-                      onChange={(e) =>
-                        updateSignpost(idx, "postType", e.target.value)
-                      }
+                      {...register(`signposts.${idx}.postType`)}
                       placeholder="e.g. Reflective Aluminum Blade on Steel Pole"
                       className="h-8 text-xs"
                     />
@@ -883,7 +876,13 @@ export default function StreetNamingForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addElder}
+                onClick={() =>
+                  appendElder({
+                    elderName: "",
+                    titleRole: "Community Elder / Executive",
+                    phone: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Endorser
@@ -891,9 +890,9 @@ export default function StreetNamingForm({
             </div>
 
             <div className="space-y-2.5">
-              {elders.map((el, idx) => (
+              {elderFields.map((fieldItem, idx) => (
                 <div
-                  key={idx}
+                  key={fieldItem.id}
                   className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end"
                 >
                   <div className="space-y-1 sm:col-span-2">
@@ -901,10 +900,7 @@ export default function StreetNamingForm({
                       Elder / Ruler Full Name
                     </Label>
                     <Input
-                      value={el.elderName}
-                      onChange={(e) =>
-                        updateElder(idx, "elderName", e.target.value)
-                      }
+                      {...register(`elders.${idx}.elderName`)}
                       placeholder="Chief / Elder Name"
                       className="h-8 text-xs"
                     />
@@ -912,10 +908,7 @@ export default function StreetNamingForm({
                   <div className="space-y-1">
                     <Label className="text-[11px]">Title / Role</Label>
                     <Input
-                      value={el.titleRole}
-                      onChange={(e) =>
-                        updateElder(idx, "titleRole", e.target.value)
-                      }
+                      {...register(`elders.${idx}.titleRole`)}
                       placeholder="Baale / Chairman"
                       className="h-8 text-xs"
                     />
@@ -923,10 +916,7 @@ export default function StreetNamingForm({
                   <div className="space-y-1">
                     <Label className="text-[11px]">Phone Number</Label>
                     <Input
-                      value={el.phone}
-                      onChange={(e) =>
-                        updateElder(idx, "phone", e.target.value)
-                      }
+                      {...register(`elders.${idx}.phone`)}
                       placeholder="080..."
                       className="h-8 text-xs"
                     />

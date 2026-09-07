@@ -1,5 +1,9 @@
 "use client";
 import React, { useState } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +17,53 @@ import { ReviewSubmitStep, ReviewSection, ReviewRepeatableSection } from "./Revi
 import { Plus, Trash2, Building, ShieldCheck, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
+
+const facilityUnitSchema = z.object({
+  unitName: z.string().min(1, "Unit name is required"),
+  unitType: z.string().optional(),
+  restroomsCount: z.string().optional(),
+  wasteBinsCount: z.string().optional(),
+});
+
+const safetyOfficerSchema = z.object({
+  fullName: z.string().optional(),
+  role: z.string().optional(),
+  phone: z.string().refine((val) => !val || formatAndValidateNigerianPhoneNumber(val).isValid, {
+    message: "Valid Nigerian phone number required",
+  }).optional(),
+  certNumber: z.string().optional(),
+});
+
+const wasteStreamSchema = z.object({
+  wasteType: z.string().optional(),
+  estimatedVolume: z.string().optional(),
+  disposalMethod: z.string().optional(),
+});
+
+export const environmentalSanitationSchema = z.object({
+  businessName: z.string().min(2, "Business name is required"),
+  facilityCategory: z.string().min(1, "Facility category is required"),
+  contactPerson: z.string().min(2, "Contact person is required"),
+  phone: z.string().refine((val) => formatAndValidateNigerianPhoneNumber(val).isValid, {
+    message: "Valid Nigerian phone number is required",
+  }),
+  email: z.string().email("Valid email address required").or(z.literal("")).optional(),
+  physicalAddress: z.string().min(3, "Physical address is required"),
+  ward: z.string().min(1, "Ward is required"),
+  cacNumber: z.string().optional(),
+  operatingHours: z.string().optional(),
+  totalDailyStaff: z.string().optional(),
+  primaryWaterSource: z.string().min(1, "Primary water source is required"),
+  drainageType: z.string().min(1, "Drainage type is required"),
+  wasteContractor: z.string().min(2, "Waste contractor is required"),
+  evacuationFrequency: z.string().optional(),
+  fumigationFrequency: z.string().optional(),
+  units: z.array(facilityUnitSchema).min(1, "At least one facility unit is required"),
+  safetyOfficers: z.array(safetyOfficerSchema).optional(),
+  wasteStreams: z.array(wasteStreamSchema).optional(),
+});
+
+export type EnvironmentalSanitationFormData = z.infer<typeof environmentalSanitationSchema>;
 
 interface Props {
   service: ServiceType;
@@ -113,116 +164,75 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
   const [declaration, setDeclaration] = useState(false);
 
-  // Form State
-  const [formData, setFormData] = useState({
-    businessName: "",
-    facilityCategory: "Hospitality / Hotel / Event Centre",
-    contactPerson: "",
-    phone: "",
-    email: "",
-    physicalAddress: "",
-    ward: WARDS[0] || "Odeda",
-    cacNumber: "",
-    operatingHours: "8:00 AM - 10:00 PM (Daily)",
-    totalDailyStaff: "25",
-    primaryWaterSource: "Treated Motorized Borehole & Overhead Storage",
-    drainageType: "Concrete Covered Drainage Gutter to Central Soakaway",
-    wasteContractor: "Ogun State Waste Management Authority (OGWAMA) / Accredited PSP",
-    evacuationFrequency: "Twice Weekly",
-    fumigationFrequency: "Quarterly (Every 3 Months)",
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    trigger,
+    formState: { errors },
+  } = useForm<EnvironmentalSanitationFormData>({
+    resolver: zodResolver(environmentalSanitationSchema),
+    defaultValues: {
+      businessName: "",
+      facilityCategory: "Hospitality / Hotel / Event Centre",
+      contactPerson: "",
+      phone: "",
+      email: "",
+      physicalAddress: "",
+      ward: WARDS[0] || "Odeda",
+      cacNumber: "",
+      operatingHours: "8:00 AM - 10:00 PM (Daily)",
+      totalDailyStaff: "25",
+      primaryWaterSource: "Treated Motorized Borehole & Overhead Storage",
+      drainageType: "Concrete Covered Drainage Gutter to Central Soakaway",
+      wasteContractor: "Ogun State Waste Management Authority (OGWAMA) / Accredited PSP",
+      evacuationFrequency: "Twice Weekly",
+      fumigationFrequency: "Quarterly (Every 3 Months)",
+      units: [
+        { unitName: "Main Customer Area & Hall", unitType: "Public Dining & Lounges", restroomsCount: "4", wasteBinsCount: "6" },
+        { unitName: "Commercial Kitchen & Pantry", unitType: "Food Preparation & Cold Storage", restroomsCount: "2", wasteBinsCount: "4" },
+        { unitName: "Rear Waste Yard & Generator Area", unitType: "Refuse Storage & Mechanical", restroomsCount: "1", wasteBinsCount: "3" },
+      ],
+      safetyOfficers: [
+        { fullName: "", role: "Environmental Health & Safety Manager", phone: "", certNumber: "EHO-2024-089" },
+      ],
+      wasteStreams: [
+        { wasteType: "Organic Food Waste & Biodegradables", estimatedVolume: "150 kg/week", disposalMethod: "Segregated PSP Municipal Evacuation" },
+        { wasteType: "Plastics, Glass & Cans (Recyclables)", estimatedVolume: "80 kg/week", disposalMethod: "Recycling Vendor Collection" },
+      ],
+    },
+    mode: "onChange",
   });
 
-  // Repeatable: Facility Units
-  const [units, setUnits] = useState<FacilityUnit[]>([
-    { unitName: "Main Customer Area & Hall", unitType: "Public Dining & Lounges", restroomsCount: "4", wasteBinsCount: "6" },
-    { unitName: "Commercial Kitchen & Pantry", unitType: "Food Preparation & Cold Storage", restroomsCount: "2", wasteBinsCount: "4" },
-    { unitName: "Rear Waste Yard & Generator Area", unitType: "Refuse Storage & Mechanical", restroomsCount: "1", wasteBinsCount: "3" },
-  ]);
+  const {
+    fields: unitFields,
+    append: appendUnit,
+    remove: removeUnit,
+  } = useFieldArray({
+    control,
+    name: "units",
+  });
 
-  // Repeatable: Health & Safety Officers
-  const [safetyOfficers, setSafetyOfficers] = useState<SafetyOfficer[]>([
-    { fullName: "", role: "Environmental Health & Safety Manager", phone: "", certNumber: "EHO-2024-089" },
-  ]);
+  const {
+    fields: safetyOfficerFields,
+    append: appendSafetyOfficer,
+    remove: removeSafetyOfficer,
+  } = useFieldArray({
+    control,
+    name: "safetyOfficers",
+  });
 
-  // Repeatable: Waste Streams
-  const [wasteStreams, setWasteStreams] = useState<WasteStream[]>([
-    { wasteType: "Organic Food Waste & Biodegradables", estimatedVolume: "150 kg/week", disposalMethod: "Segregated PSP Municipal Evacuation" },
-    { wasteType: "Plastics, Glass & Cans (Recyclables)", estimatedVolume: "80 kg/week", disposalMethod: "Recycling Vendor Collection" },
-  ]);
+  const {
+    fields: wasteStreamFields,
+    append: appendWasteStream,
+    remove: removeWasteStream,
+  } = useFieldArray({
+    control,
+    name: "wasteStreams",
+  });
 
-  // Handlers for Units
-  const addUnit = () => {
-    setUnits((prev) => [
-      ...prev,
-      {
-        unitName: "",
-        unitType: "Operational Unit",
-        restroomsCount: "1",
-        wasteBinsCount: "2",
-      },
-    ]);
-  };
-
-  const removeUnit = (idx: number) => {
-    setUnits((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateUnit = (idx: number, field: keyof FacilityUnit, val: string) => {
-    setUnits((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Safety Officers
-  const addSafetyOfficer = () => {
-    setSafetyOfficers((prev) => [
-      ...prev,
-      {
-        fullName: "",
-        role: "Designated Sanitation Officer",
-        phone: "",
-        certNumber: "",
-      },
-    ]);
-  };
-
-  const removeSafetyOfficer = (idx: number) => {
-    setSafetyOfficers((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateSafetyOfficer = (idx: number, field: keyof SafetyOfficer, val: string) => {
-    setSafetyOfficers((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Waste Streams
-  const addWasteStream = () => {
-    setWasteStreams((prev) => [
-      ...prev,
-      {
-        wasteType: "",
-        estimatedVolume: "50 kg/week",
-        disposalMethod: "PSP Evacuation",
-      },
-    ]);
-  };
-
-  const removeWasteStream = (idx: number) => {
-    setWasteStreams((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateWasteStream = (idx: number, field: keyof WasteStream, val: string) => {
-    setWasteStreams((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
+  const formValues = watch();
 
   const handleFileUpload = (docId: string, fileName: string) => {
     setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
@@ -236,31 +246,29 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
     });
   };
 
-  const validateStep = (index: number): boolean => {
+  const validateStep = async (index: number): Promise<boolean> => {
     if (index === 0) {
-      return (
-        !!formData.businessName.trim() &&
-        !!formData.contactPerson.trim() &&
-        !!formData.phone.trim() &&
-        !!formData.physicalAddress.trim() &&
-        !!formData.ward
-      );
+      return await trigger(["businessName", "facilityCategory", "contactPerson", "phone", "physicalAddress", "ward"]);
     }
     if (index === 1) {
-      return !!formData.primaryWaterSource.trim() && !!formData.drainageType.trim();
+      return await trigger(["primaryWaterSource", "drainageType", "wasteContractor"]);
     }
     if (index === 2) {
-      return units.length > 0 && !!units[0].unitName.trim();
+      return await trigger(["units"]);
     }
     if (index === 3) {
       const missing = DOCUMENTS.filter((d) => d.required && !uploadedFiles[d.id]);
       return missing.length === 0;
     }
+    if (index === 4) {
+      return declaration;
+    }
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+  const handleNext = async () => {
+    const isStepValid = await validateStep(currentStepIndex);
+    if (isStepValid) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
     }
   };
@@ -269,22 +277,25 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  const currentFee = service.feeConfig.amount
+  const currentFee = service.feeConfig.amount;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onValidSubmit = (data: EnvironmentalSanitationFormData) => {
     if (!declaration) return;
 
+    const cleanUnits = (data.units || []).filter((u) => u.unitName.trim());
+    const cleanOfficers = (data.safetyOfficers || []).filter((o) => o.fullName?.trim());
+    const cleanWasteStreams = (data.wasteStreams || []).filter((w) => w.wasteType?.trim());
+
+    const { units: _u, safetyOfficers: _so, wasteStreams: _ws, ...rest } = data;
+
     onSubmit({
-
-      formData:{
-        ...formData,
-
-        units: units.filter((u) => u.unitName.trim()),
-        safetyOfficers: safetyOfficers.filter((o) => o.fullName.trim()),
-        wasteStreams: wasteStreams.filter((w) => w.wasteType.trim()),
+      formData: {
+        ...rest,
+        units: cleanUnits,
+        safetyOfficers: cleanOfficers,
+        wasteStreams: cleanWasteStreams,
       },
-      files:uploadedFiles,
+      files: uploadedFiles,
       applicant: initialApplicant || null,
     });
   };
@@ -293,26 +304,26 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
     {
       title: "Commercial Facility Profile",
       items: [
-        { label: "Business / Facility Name", value: formData.businessName },
-        { label: "Facility Classification", value: formData.facilityCategory },
-        { label: "Contact Representative", value: formData.contactPerson },
-        { label: "Phone Number", value: formData.phone },
-        { label: "Email Address", value: formData.email },
-        { label: "Physical Facility Address", value: formData.physicalAddress },
-        { label: "Ward in Odeda LGA", value: formData.ward },
-        { label: "CAC Reg Number", value: formData.cacNumber },
-        { label: "Operating Hours", value: formData.operatingHours },
-        { label: "Daily Staff & Occupants", value: `${formData.totalDailyStaff} persons` },
+        { label: "Business / Facility Name", value: formValues.businessName },
+        { label: "Facility Classification", value: formValues.facilityCategory },
+        { label: "Contact Representative", value: formValues.contactPerson },
+        { label: "Phone Number", value: formValues.phone },
+        { label: "Email Address", value: formValues.email || "N/A" },
+        { label: "Physical Facility Address", value: formValues.physicalAddress },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
+        { label: "CAC Reg Number", value: formValues.cacNumber || "N/A" },
+        { label: "Operating Hours", value: formValues.operatingHours || "N/A" },
+        { label: "Daily Staff & Occupants", value: `${formValues.totalDailyStaff || "0"} persons` },
       ],
     },
     {
       title: "Drainage, Water & Evacuation Protocols",
       items: [
-        { label: "Water Supply System", value: formData.primaryWaterSource },
-        { label: "Drainage & Sewerage", value: formData.drainageType },
-        { label: "Accredited PSP Waste Contractor", value: formData.wasteContractor },
-        { label: "Waste Evacuation Frequency", value: formData.evacuationFrequency },
-        { label: "Mandatory Fumigation Schedule", value: formData.fumigationFrequency },
+        { label: "Water Supply System", value: formValues.primaryWaterSource },
+        { label: "Drainage & Sewerage", value: formValues.drainageType },
+        { label: "Accredited PSP Waste Contractor", value: formValues.wasteContractor },
+        { label: "Waste Evacuation Frequency", value: formValues.evacuationFrequency || "N/A" },
+        { label: "Mandatory Fumigation Schedule", value: formValues.fumigationFrequency || "N/A" },
       ],
     },
   ];
@@ -321,36 +332,36 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
     {
       title: "Facility Operational Units & Restrooms",
       countLabel: "Facility Units",
-      items: units
-        .filter((u) => u.unitName.trim())
+      items: (formValues.units || [])
+        .filter((u) => u?.unitName?.trim())
         .map((u) => ({
           "Unit Name": u.unitName,
-          "Unit Function": u.unitType,
-          "Restrooms Count": `${u.restroomsCount} Units`,
-          "Waste Bins Installed": `${u.wasteBinsCount} Bins`,
+          "Unit Function": u.unitType || "Operational Unit",
+          "Restrooms Count": `${u.restroomsCount || 0} Units`,
+          "Waste Bins Installed": `${u.wasteBinsCount || 0} Bins`,
         })),
     },
     {
       title: "Designated Health & Safety Officers",
       countLabel: "Safety Personnel",
-      items: safetyOfficers
-        .filter((o) => o.fullName.trim())
+      items: (formValues.safetyOfficers || [])
+        .filter((o) => o?.fullName?.trim())
         .map((o) => ({
-          "Officer Name": o.fullName,
-          "Designation / Role": o.role,
-          "Phone Number": o.phone,
-          "Certification / License": o.certNumber,
+          "Officer Name": o.fullName || "",
+          "Designation / Role": o.role || "Hygiene Officer",
+          "Phone Number": o.phone || "N/A",
+          "Certification / License": o.certNumber || "N/A",
         })),
     },
     {
       title: "Waste Stream Classification & Disposal",
       countLabel: "Waste Streams",
-      items: wasteStreams
-        .filter((w) => w.wasteType.trim())
+      items: (formValues.wasteStreams || [])
+        .filter((w) => w?.wasteType?.trim())
         .map((w) => ({
-          "Waste Stream Type": w.wasteType,
-          "Estimated Volume": w.estimatedVolume,
-          "Disposal Protocol": w.disposalMethod,
+          "Waste Stream Type": w.wasteType || "",
+          "Estimated Volume": w.estimatedVolume || "N/A",
+          "Disposal Protocol": w.disposalMethod || "N/A",
         })),
     },
   ];
@@ -360,14 +371,15 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
       service={service}
       steps={STEPS}
       currentStepIndex={currentStepIndex}
-      onStepChange={(idx) => setCurrentStepIndex(idx)}
+      onStepChange={setCurrentStepIndex}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onValidSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
-      submitDisabled={!declaration || !validateStep(0) || !validateStep(1) || !validateStep(2) || !validateStep(3)}
+      submitDisabled={!declaration}
+      submitLabel="Submit Environmental Sanitation Application"
     >
       {/* STEP 1: Facility Profile */}
       {currentStepIndex === 0 && (
@@ -386,40 +398,57 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
               <Label htmlFor="businessName">Facility / Business Trading Name *</Label>
               <Input
                 id="businessName"
-                required
-                value={formData.businessName}
-                onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                {...register("businessName")}
                 placeholder="e.g. Obantoko Royal Grand Suites & Events Centre"
+                disabled={isSubmitting}
               />
+              {errors.businessName && (
+                <p className="text-xs text-red-500">{errors.businessName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="facilityCategory">Facility Classification *</Label>
-              <Select value={formData.facilityCategory} onValueChange={(val) => setFormData({ ...formData, facilityCategory: val })}>
-                <SelectTrigger id="facilityCategory">
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Hospitality / Hotel / Event Centre">Hospitality / Hotel / Event Centre</SelectItem>
-                  <SelectItem value="Food Processing / Restaurant / Bakery">Food Processing / Restaurant / Bakery</SelectItem>
-                  <SelectItem value="Healthcare Facility / Private Clinic / Lab">Healthcare Facility / Private Clinic / Lab</SelectItem>
-                  <SelectItem value="Educational Institution / School">Educational Institution / School</SelectItem>
-                  <SelectItem value="Commercial Shopping Plaza / Supermarket">Commercial Shopping Plaza / Supermarket</SelectItem>
-                  <SelectItem value="Industrial Factory / Manufacturing Plant">Industrial Factory / Manufacturing Plant</SelectItem>
-                  <SelectItem value="Petrol Station / Auto Workshop">Petrol Station / Auto Workshop</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="facilityCategory"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="facilityCategory">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Hospitality / Hotel / Event Centre">Hospitality / Hotel / Event Centre</SelectItem>
+                      <SelectItem value="Food Processing / Restaurant / Bakery">Food Processing / Restaurant / Bakery</SelectItem>
+                      <SelectItem value="Healthcare Facility / Private Clinic / Lab">Healthcare Facility / Private Clinic / Lab</SelectItem>
+                      <SelectItem value="Educational Institution / School">Educational Institution / School</SelectItem>
+                      <SelectItem value="Commercial Shopping Plaza / Supermarket">Commercial Shopping Plaza / Supermarket</SelectItem>
+                      <SelectItem value="Industrial Factory / Manufacturing Plant">Industrial Factory / Manufacturing Plant</SelectItem>
+                      <SelectItem value="Petrol Station / Auto Workshop">Petrol Station / Auto Workshop</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.facilityCategory && (
+                <p className="text-xs text-red-500">{errors.facilityCategory.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="contactPerson">Designated Manager / Contact Person *</Label>
               <Input
                 id="contactPerson"
-                required
-                value={formData.contactPerson}
-                onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                {...register("contactPerson")}
                 placeholder="e.g. Mr. Olawale Davies"
+                disabled={isSubmitting}
               />
+              {errors.contactPerson && (
+                <p className="text-xs text-red-500">{errors.contactPerson.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -427,11 +456,13 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
               <Input
                 id="phone"
                 type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                {...register("phone")}
                 placeholder="+234 800 000 0000"
+                disabled={isSubmitting}
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -439,56 +470,74 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                {...register("email")}
                 placeholder="info@facility.com"
+                disabled={isSubmitting}
               />
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="cacNumber">CAC Registration (RC/BN Number)</Label>
               <Input
                 id="cacNumber"
-                value={formData.cacNumber}
-                onChange={(e) => setFormData({ ...formData, cacNumber: e.target.value })}
+                {...register("cacNumber")}
                 placeholder="RC-123456"
+                disabled={isSubmitting}
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward in Odeda LGA *</Label>
-              <Select value={formData.ward} onValueChange={(val) => setFormData({ ...formData, ward: val })}>
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="ward"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="physicalAddress">Facility Physical Premises Address *</Label>
               <Input
                 id="physicalAddress"
-                required
-                value={formData.physicalAddress}
-                onChange={(e) => setFormData({ ...formData, physicalAddress: e.target.value })}
+                {...register("physicalAddress")}
                 placeholder="Plot/Building No, Street name, Village/Town in Odeda LGA"
+                disabled={isSubmitting}
               />
+              {errors.physicalAddress && (
+                <p className="text-xs text-red-500">{errors.physicalAddress.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="operatingHours">Daily Operating Hours</Label>
               <Input
                 id="operatingHours"
-                value={formData.operatingHours}
-                onChange={(e) => setFormData({ ...formData, operatingHours: e.target.value })}
+                {...register("operatingHours")}
                 placeholder="e.g. 24 Hours / 8am - 8pm"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -497,9 +546,9 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
               <Input
                 id="totalDailyStaff"
                 type="number"
-                value={formData.totalDailyStaff}
-                onChange={(e) => setFormData({ ...formData, totalDailyStaff: e.target.value })}
+                {...register("totalDailyStaff")}
                 placeholder="e.g. 50"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -521,73 +570,121 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="primaryWaterSource">Potable Water Supply *</Label>
-              <Select value={formData.primaryWaterSource} onValueChange={(val) => setFormData({ ...formData, primaryWaterSource: val })}>
-                <SelectTrigger id="primaryWaterSource">
-                  <SelectValue placeholder="Select Water Source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Treated Motorized Borehole & Overhead Storage">Treated Motorized Borehole & Overhead Storage</SelectItem>
-                  <SelectItem value="Public Water Corporation Main">Public Water Corporation Main</SelectItem>
-                  <SelectItem value="Certified Commercial Water Tanker Supply">Certified Commercial Water Tanker Supply</SelectItem>
-                  <SelectItem value="Deep Protected Hand-Pump Well">Deep Protected Hand-Pump Well</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="primaryWaterSource"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="primaryWaterSource">
+                      <SelectValue placeholder="Select Water Source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Treated Motorized Borehole & Overhead Storage">Treated Motorized Borehole & Overhead Storage</SelectItem>
+                      <SelectItem value="Public Water Corporation Main">Public Water Corporation Main</SelectItem>
+                      <SelectItem value="Certified Commercial Water Tanker Supply">Certified Commercial Water Tanker Supply</SelectItem>
+                      <SelectItem value="Deep Protected Hand-Pump Well">Deep Protected Hand-Pump Well</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.primaryWaterSource && (
+                <p className="text-xs text-red-500">{errors.primaryWaterSource.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="drainageType">Drainage & Liquid Waste System *</Label>
-              <Select value={formData.drainageType} onValueChange={(val) => setFormData({ ...formData, drainageType: val })}>
-                <SelectTrigger id="drainageType">
-                  <SelectValue placeholder="Select Drainage System" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Concrete Covered Drainage Gutter to Central Soakaway">Concrete Covered Gutter to Soakaway</SelectItem>
-                  <SelectItem value="Underground Septic Tank & Bio-Digester">Underground Septic Tank & Bio-Digester</SelectItem>
-                  <SelectItem value="Central Sewage Line Connection">Central Sewage Line Connection</SelectItem>
-                  <SelectItem value="Effluent Treatment Plant (ETP)">Effluent Treatment Plant (ETP)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="drainageType"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="drainageType">
+                      <SelectValue placeholder="Select Drainage System" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Concrete Covered Drainage Gutter to Central Soakaway">Concrete Covered Gutter to Soakaway</SelectItem>
+                      <SelectItem value="Underground Septic Tank & Bio-Digester">Underground Septic Tank & Bio-Digester</SelectItem>
+                      <SelectItem value="Central Sewage Line Connection">Central Sewage Line Connection</SelectItem>
+                      <SelectItem value="Effluent Treatment Plant (ETP)">Effluent Treatment Plant (ETP)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.drainageType && (
+                <p className="text-xs text-red-500">{errors.drainageType.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="wasteContractor">Accredited PSP / Refuse Evacuation Contractor *</Label>
               <Input
                 id="wasteContractor"
-                required
-                value={formData.wasteContractor}
-                onChange={(e) => setFormData({ ...formData, wasteContractor: e.target.value })}
+                {...register("wasteContractor")}
                 placeholder="e.g. OGWAMA / CleanCity Waste Management Ltd"
+                disabled={isSubmitting}
               />
+              {errors.wasteContractor && (
+                <p className="text-xs text-red-500">{errors.wasteContractor.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="evacuationFrequency">Refuse Evacuation Schedule</Label>
-              <Select value={formData.evacuationFrequency} onValueChange={(val) => setFormData({ ...formData, evacuationFrequency: val })}>
-                <SelectTrigger id="evacuationFrequency">
-                  <SelectValue placeholder="Select Frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Daily Evacuation">Daily Evacuation</SelectItem>
-                  <SelectItem value="Twice Weekly">Twice Weekly</SelectItem>
-                  <SelectItem value="Weekly">Weekly</SelectItem>
-                  <SelectItem value="Bi-Weekly">Bi-Weekly</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="evacuationFrequency"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="evacuationFrequency">
+                      <SelectValue placeholder="Select Frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Daily Evacuation">Daily Evacuation</SelectItem>
+                      <SelectItem value="Twice Weekly">Twice Weekly</SelectItem>
+                      <SelectItem value="Weekly">Weekly</SelectItem>
+                      <SelectItem value="Bi-Weekly">Bi-Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="fumigationFrequency">Periodic Fumigation & Pest Control Routine</Label>
-              <Select value={formData.fumigationFrequency} onValueChange={(val) => setFormData({ ...formData, fumigationFrequency: val })}>
-                <SelectTrigger id="fumigationFrequency">
-                  <SelectValue placeholder="Select Fumigation Schedule" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Monthly (High Risk Food/Hospitality)">Monthly (High Risk)</SelectItem>
-                  <SelectItem value="Bi-Monthly (Every 2 Months)">Bi-Monthly</SelectItem>
-                  <SelectItem value="Quarterly (Every 3 Months)">Quarterly (Standard)</SelectItem>
-                  <SelectItem value="Bi-Annually (Every 6 Months)">Bi-Annually</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="fumigationFrequency"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="fumigationFrequency">
+                      <SelectValue placeholder="Select Fumigation Schedule" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Monthly (High Risk Food/Hospitality)">Monthly (High Risk)</SelectItem>
+                      <SelectItem value="Bi-Monthly (Every 2 Months)">Bi-Monthly</SelectItem>
+                      <SelectItem value="Quarterly (Every 3 Months)">Quarterly (Standard)</SelectItem>
+                      <SelectItem value="Bi-Annually (Every 6 Months)">Bi-Annually</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
         </div>
@@ -620,24 +717,39 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addUnit}
+                onClick={() =>
+                  appendUnit({
+                    unitName: "",
+                    unitType: "Operational Unit",
+                    restroomsCount: "1",
+                    wasteBinsCount: "2",
+                  })
+                }
                 className="gap-1 text-xs h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" /> Add Facility Unit
               </Button>
             </div>
 
-            {units.map((unit, idx) => (
-              <div key={idx} className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group">
+            {errors.units && (
+              <p className="text-xs text-red-500">{errors.units.message}</p>
+            )}
+
+            {unitFields.map((field, idx) => (
+              <div key={field.id} className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <span className="font-bold text-xs text-foreground">Unit #{idx + 1}: {unit.unitName || "New Unit"}</span>
-                  {units.length > 1 && (
+                  <span className="font-bold text-xs text-foreground">
+                    Unit #{idx + 1}: {formValues.units?.[idx]?.unitName || "New Unit"}
+                  </span>
+                  {unitFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => removeUnit(idx)}
                       className="text-red-500 hover:text-red-700 h-7 px-2 text-xs"
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
                     </Button>
@@ -648,35 +760,38 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-xs">Unit Name / Department *</Label>
                     <Input
-                      value={unit.unitName}
-                      onChange={(e) => updateUnit(idx, "unitName", e.target.value)}
+                      {...register(`units.${idx}.unitName`)}
                       placeholder="e.g. Main Kitchen / Public Restroom Wing"
+                      disabled={isSubmitting}
                     />
+                    {errors.units?.[idx]?.unitName && (
+                      <p className="text-xs text-red-500">{errors.units[idx]?.unitName?.message}</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Unit Function / Description</Label>
                     <Input
-                      value={unit.unitType}
-                      onChange={(e) => updateUnit(idx, "unitType", e.target.value)}
+                      {...register(`units.${idx}.unitType`)}
                       placeholder="e.g. Food Prep & Service"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Restroom Fixtures</Label>
                     <Input
                       type="number"
-                      value={unit.restroomsCount}
-                      onChange={(e) => updateUnit(idx, "restroomsCount", e.target.value)}
+                      {...register(`units.${idx}.restroomsCount`)}
                       placeholder="e.g. 4"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Waste Bins Stationed</Label>
                     <Input
                       type="number"
-                      value={unit.wasteBinsCount}
-                      onChange={(e) => updateUnit(idx, "wasteBinsCount", e.target.value)}
+                      {...register(`units.${idx}.wasteBinsCount`)}
                       placeholder="e.g. 6"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -699,42 +814,53 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addSafetyOfficer}
+                onClick={() =>
+                  appendSafetyOfficer({
+                    fullName: "",
+                    role: "Designated Sanitation Officer",
+                    phone: "",
+                    certNumber: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" /> Add Officer
               </Button>
             </div>
 
             <div className="space-y-2.5">
-              {safetyOfficers.map((officer, idx) => (
-                <div key={idx} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
+              {safetyOfficerFields.map((field, idx) => (
+                <div key={field.id} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">Officer Full Name</Label>
                     <Input
-                      value={officer.fullName}
-                      onChange={(e) => updateSafetyOfficer(idx, "fullName", e.target.value)}
+                      {...register(`safetyOfficers.${idx}.fullName`)}
                       placeholder="e.g. Mrs. Funke Adeleke"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Role / Designation</Label>
                     <Input
-                      value={officer.role}
-                      onChange={(e) => updateSafetyOfficer(idx, "role", e.target.value)}
+                      {...register(`safetyOfficers.${idx}.role`)}
                       placeholder="Hygiene Officer"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Phone / Cert No</Label>
                     <Input
-                      value={officer.phone}
-                      onChange={(e) => updateSafetyOfficer(idx, "phone", e.target.value)}
+                      {...register(`safetyOfficers.${idx}.phone`)}
                       placeholder="080... / Reg No"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
+                    {errors.safetyOfficers?.[idx]?.phone && (
+                      <p className="text-[10px] text-red-500">{errors.safetyOfficers[idx]?.phone?.message}</p>
+                    )}
                   </div>
                   <div className="flex justify-end">
                     <Button
@@ -743,6 +869,7 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
                       size="sm"
                       onClick={() => removeSafetyOfficer(idx)}
                       className="text-red-500 hover:text-red-700 h-8 px-2 text-xs"
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -767,41 +894,48 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addWasteStream}
+                onClick={() =>
+                  appendWasteStream({
+                    wasteType: "",
+                    estimatedVolume: "50 kg/week",
+                    disposalMethod: "PSP Evacuation",
+                  })
+                }
                 className="gap-1 text-xs h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" /> Add Waste Stream
               </Button>
             </div>
 
             <div className="space-y-2.5">
-              {wasteStreams.map((ws, idx) => (
-                <div key={idx} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
+              {wasteStreamFields.map((field, idx) => (
+                <div key={field.id} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">Waste Stream / Material Type</Label>
                     <Input
-                      value={ws.wasteType}
-                      onChange={(e) => updateWasteStream(idx, "wasteType", e.target.value)}
+                      {...register(`wasteStreams.${idx}.wasteType`)}
                       placeholder="e.g. Organic, Medical, Scraps"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Estimated Volume</Label>
                     <Input
-                      value={ws.estimatedVolume}
-                      onChange={(e) => updateWasteStream(idx, "estimatedVolume", e.target.value)}
+                      {...register(`wasteStreams.${idx}.estimatedVolume`)}
                       placeholder="e.g. 100 kg/week"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Disposal Protocol</Label>
                     <Input
-                      value={ws.disposalMethod}
-                      onChange={(e) => updateWasteStream(idx, "disposalMethod", e.target.value)}
+                      {...register(`wasteStreams.${idx}.disposalMethod`)}
                       placeholder="e.g. PSP Evacuation"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="flex justify-end">
@@ -811,6 +945,7 @@ export default function EnvironmentalSanitationForm({ service, onSubmit, isSubmi
                       size="sm"
                       onClick={() => removeWasteStream(idx)}
                       className="text-red-500 hover:text-red-700 h-8 px-2 text-xs"
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>

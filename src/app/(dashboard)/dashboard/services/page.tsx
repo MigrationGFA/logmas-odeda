@@ -40,6 +40,7 @@ import { useServices } from "@/hooks/queries/useServices";
 import { tokenManager } from "@/services/apiAuth";
 import { CreateServiceModal } from "@/components/treasurer/CreateServiceModal";
 import { EditServiceModal } from "@/components/treasurer/EditServiceModal";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 const ICON_MAP: Record<string, any> = {
   FileBadge,
@@ -79,7 +80,23 @@ export default function ServicesPage() {
     "Urban Development",
   ];
 
-  const { services, isLoading, refetch } = useServices();
+  const { services, isLoading, error, refetch } = useServices();
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Odeda LGA Government Services Catalogue"
+          subtitle="Select an official local government service to apply, obtain statutory assessments, or pay levies online."
+        />
+        <ErrorState
+          title="Failed to load services catalogue"
+          error={error}
+          refetch={refetch}
+        />
+      </div>
+    );
+  }
 
   const filteredServices = services.filter((service) => {
     const matchesSearch =

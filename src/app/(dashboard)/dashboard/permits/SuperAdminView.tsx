@@ -46,6 +46,8 @@ import {
   useWardManagement,
 } from "@/hooks/queries/useLgaAdmin";
 import Link from "next/link";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { MetricsSkeleton, TableSkeleton } from "@/components/ui/LoadingSkeleton";
 import { NGN, statusClass } from "./page";
 
 function SuperAdminView() {
@@ -55,7 +57,7 @@ function SuperAdminView() {
 
   const { useGetWards } = useWardManagement();
 
-  const { data, isLoading, refetch } = usePermits({
+  const { data, isLoading, error, refetch } = usePermits({
     search: search || undefined,
     wardId: ward !== "all" ? ward : undefined,
     page,
@@ -98,7 +100,7 @@ function SuperAdminView() {
 
   if (isLoading && permits.length === 0) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader
           title="Global Trade Permits Ledger"
           subtitle="Comprehensive local government authority compliance tracker."
@@ -111,9 +113,32 @@ function SuperAdminView() {
             </Button>
           }
         />
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <MetricsSkeleton count={4} />
+        <TableSkeleton rows={8} cols={7} />
+      </div>
+    );
+  }
+
+  if (error && permits.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Global Trade Permits Ledger"
+          subtitle="Comprehensive local government authority compliance tracker."
+          action={
+            <Button asChild>
+              <Link href="/dashboard/permits/new">
+                <FilePlus2 className="h-4 w-4 mr-2" />
+                New Application
+              </Link>
+            </Button>
+          }
+        />
+        <ErrorState
+          title="Failed to load permits ledger"
+          error={error}
+          refetch={refetch}
+        />
       </div>
     );
   }

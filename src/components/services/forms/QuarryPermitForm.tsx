@@ -1,46 +1,79 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { WARDS } from "@/lib/mock-data";
-import { ServiceType, getConfiguredFeeForService } from "@/config/odedaServices";
+import { ServiceType } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
 import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
 import { ReviewSubmitStep, ReviewSection, ReviewRepeatableSection } from "./ReviewSubmitStep";
 import { Plus, Trash2, Mountain, HardHat, Cog } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 
 interface Props {
   service: ServiceType;
   onSubmit: (formData: Record<string, any>) => void;
   isSubmitting?: boolean;
-    initialApplicant?: ApplicantSnapshot;
+  initialApplicant?: ApplicantSnapshot;
 }
 
-interface MiningMachinery {
-  equipmentType: string;
-  makeModel: string;
-  quantity: string;
-  ratedCapacity: string;
-}
+const miningMachinerySchema = z.object({
+  equipmentType: z.string().min(1, "Equipment type is required"),
+  makeModel: z.string().default(""),
+  quantity: z.string().default("1"),
+  ratedCapacity: z.string().default(""),
+});
 
-interface BlastingEngineer {
-  fullName: string;
-  licenseNumber: string;
-  ministryRef: string;
-  phone: string;
-}
+const blastingEngineerSchema = z.object({
+  fullName: z.string().default(""),
+  licenseNumber: z.string().default(""),
+  ministryRef: z.string().default(""),
+  phone: z.string().default(""),
+});
 
-interface ExtractionPit {
-  pitIdentifier: string;
-  mineralOre: string;
-  pitDepth: string;
-  dailyTonnage: string;
-}
+const extractionPitSchema = z.object({
+  pitIdentifier: z.string().default(""),
+  mineralOre: z.string().default("Granite Aggregate"),
+  pitDepth: z.string().default("10 Metres"),
+  dailyTonnage: z.string().default("500 Tons/Day"),
+});
+
+const quarryPermitSchema = z.object({
+  companyName: z.string().min(1, "Mining enterprise name is required"),
+  rcNumber: z.string().optional(),
+  miningCadastreNo: z.string().min(1, "Mining Cadastre Lease (QL) number is required"),
+  managingDirector: z.string().min(1, "Managing Director is required"),
+  residentEngineer: z.string().optional(),
+  phone: z
+    .string()
+    .min(1, "Phone number is required")
+    .refine((val) => formatAndValidateNigerianPhoneNumber(val).isValid, {
+      message: "Please enter a valid Nigerian phone number",
+    }),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .or(z.literal(""))
+    .optional(),
+  siteLocation: z.string().min(1, "Site location description is required"),
+  ward: z.string().min(1, "Ward is required"),
+  concessionAcreage: z.string().default("45 Hectares"),
+  blastingFrequency: z.string().min(1, "Blasting schedule is required"),
+  setbackDistance: z.string().min(1, "Buffer distance is required"),
+  dustSuppression: z.string().default("Continuous Water Tanker Sprinklers & Wet Crusher System"),
+  cdaStatus: z.string().default("Active 5-Year CDA Executed with Baale and Elders in Council"),
+  machinery: z.array(miningMachinerySchema).min(1, "At least one machinery item is required"),
+  engineers: z.array(blastingEngineerSchema),
+  pits: z.array(extractionPitSchema),
+});
+
+type QuarryPermitFormValues = z.infer<typeof quarryPermitSchema>;
 
 const STEPS: FormStep[] = [
   {
@@ -113,117 +146,88 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
   const [declaration, setDeclaration] = useState(false);
 
-  // Form Basic Info
-  const [formData, setFormData] = useState({
-    companyName: "",
-    rcNumber: "",
-    miningCadastreNo: "QL/2022/OG/089",
-    managingDirector: "",
-    residentEngineer: "",
-    phone: "",
-    email: "",
-    siteLocation: "Alagbagba Quarry Ridge, Odeda LGA",
-    ward: WARDS[0] || "Odeda",
-    concessionAcreage: "45 Hectares",
-    blastingFrequency: "Twice Weekly (Tuesdays & Thursdays, 1:00 PM - 3:00 PM)",
-    setbackDistance: "1.5 Kilometers to Nearest Village",
-    dustSuppression: "Continuous Water Tanker Sprinklers & Wet Crusher System",
-    cdaStatus: "Active 5-Year CDA Executed with Baale and Elders in Council",
+  const {
+    register,
+    control,
+    handleSubmit,
+    trigger,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<QuarryPermitFormValues>({
+    resolver: zodResolver(quarryPermitSchema),
+    defaultValues: {
+      companyName: initialApplicant?.companyName || initialApplicant?.name || "",
+      rcNumber: "",
+      miningCadastreNo: "QL/2022/OG/089",
+      managingDirector: initialApplicant?.name || "",
+      residentEngineer: "",
+      phone: initialApplicant?.phone || "",
+      email: initialApplicant?.email || "",
+      siteLocation: initialApplicant?.address || "Alagbagba Quarry Ridge, Odeda LGA",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda",
+      concessionAcreage: "45 Hectares",
+      blastingFrequency: "Twice Weekly (Tuesdays & Thursdays, 1:00 PM - 3:00 PM)",
+      setbackDistance: "1.0 to 2.0 Kilometers",
+      dustSuppression: "Continuous Water Tanker Sprinklers & Wet Crusher System",
+      cdaStatus: "Active 5-Year CDA Executed with Baale and Elders in Council",
+      machinery: [
+        { equipmentType: "Mobile Rock Crusher & Screen Plant", makeModel: "Metso Nordberg LT106", quantity: "2", ratedCapacity: "250 Tons/Hour" },
+        { equipmentType: "Hydraulic Crawler Excavator", makeModel: "CAT 349D Heavy Duty", quantity: "3", ratedCapacity: "3.2 m³ Bucket" },
+        { equipmentType: "Down-The-Hole Rotary Drill Rig", makeModel: "Atlas Copco ROC D7", quantity: "2", ratedCapacity: "115mm Hole Diameter" },
+      ],
+      engineers: [
+        { fullName: "Engr. Olufemi Balogun, FNSE", licenseNumber: "COMEG/MIN/1429", ministryRef: "MMSD/EXPL/2023/44", phone: "08033311122" },
+        { fullName: "Mr. Yakubu Danjuma", licenseNumber: "NPD-BLAST-2024/09", ministryRef: "NPF/EOD/SW/891", phone: "08055522233" },
+      ],
+      pits: [
+        { pitIdentifier: "Pit Alpha (Main Granite Face)", mineralOre: "Grey Granite / Biotite Gneiss", pitDepth: "28 Metres", dailyTonnage: "1,500 Tons/Day" },
+        { pitIdentifier: "Pit Beta (Upper Concession)", mineralOre: "Pink Granite Aggregate", pitDepth: "15 Metres", dailyTonnage: "800 Tons/Day" },
+      ],
+    },
+    mode: "onChange",
   });
 
-  // Repeatable: Heavy Machinery
-  const [machinery, setMachinery] = useState<MiningMachinery[]>([
-    { equipmentType: "Mobile Rock Crusher & Screen Plant", makeModel: "Metso Nordberg LT106", quantity: "2", ratedCapacity: "250 Tons/Hour" },
-    { equipmentType: "Hydraulic Crawler Excavator", makeModel: "CAT 349D Heavy Duty", quantity: "3", ratedCapacity: "3.2 m³ Bucket" },
-    { equipmentType: "Down-The-Hole Rotary Drill Rig", makeModel: "Atlas Copco ROC D7", quantity: "2", ratedCapacity: "115mm Hole Diameter" },
-  ]);
+  const {
+    fields: machineryFields,
+    append: appendMachinery,
+    remove: removeMachinery,
+  } = useFieldArray({
+    control,
+    name: "machinery",
+  });
 
-  // Repeatable: Certified Engineers
-  const [engineers, setEngineers] = useState<BlastingEngineer[]>([
-    { fullName: "Engr. Olufemi Balogun, FNSE", licenseNumber: "COMEG/MIN/1429", ministryRef: "MMSD/EXPL/2023/44", phone: "08033311122" },
-    { fullName: "Mr. Yakubu Danjuma", licenseNumber: "NPD-BLAST-2024/09", ministryRef: "NPF/EOD/SW/891", phone: "08055522233" },
-  ]);
+  const {
+    fields: engineerFields,
+    append: appendEngineer,
+    remove: removeEngineer,
+  } = useFieldArray({
+    control,
+    name: "engineers",
+  });
 
-  // Repeatable: Extraction Pits
-  const [pits, setPits] = useState<ExtractionPit[]>([
-    { pitIdentifier: "Pit Alpha (Main Granite Face)", mineralOre: "Grey Granite / Biotite Gneiss", pitDepth: "28 Metres", dailyTonnage: "1,500 Tons/Day" },
-    { pitIdentifier: "Pit Beta (Upper Concession)", mineralOre: "Pink Granite Aggregate", pitDepth: "15 Metres", dailyTonnage: "800 Tons/Day" },
-  ]);
+  const {
+    fields: pitFields,
+    append: appendPit,
+    remove: removePit,
+  } = useFieldArray({
+    control,
+    name: "pits",
+  });
 
-  // Handlers for Machinery
-  const addMachinery = () => {
-    setMachinery((prev) => [
-      ...prev,
-      {
-        equipmentType: "",
-        makeModel: "",
-        quantity: "1",
-        ratedCapacity: "",
-      },
-    ]);
-  };
+  useEffect(() => {
+    if (initialApplicant) {
+      if (initialApplicant.companyName) setValue("companyName", initialApplicant.companyName);
+      else if (initialApplicant.name) setValue("companyName", initialApplicant.name);
+      if (initialApplicant.name) setValue("managingDirector", initialApplicant.name);
+      if (initialApplicant.phone) setValue("phone", initialApplicant.phone);
+      if (initialApplicant.email) setValue("email", initialApplicant.email);
+      if (initialApplicant.address) setValue("siteLocation", initialApplicant.address);
+      if (initialApplicant.ward) setValue("ward", initialApplicant.ward);
+    }
+  }, [initialApplicant, setValue]);
 
-  const removeMachinery = (idx: number) => {
-    setMachinery((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateMachinery = (idx: number, field: keyof MiningMachinery, val: string) => {
-    setMachinery((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Engineers
-  const addEngineer = () => {
-    setEngineers((prev) => [
-      ...prev,
-      {
-        fullName: "",
-        licenseNumber: "",
-        ministryRef: "",
-        phone: "",
-      },
-    ]);
-  };
-
-  const removeEngineer = (idx: number) => {
-    setEngineers((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateEngineer = (idx: number, field: keyof BlastingEngineer, val: string) => {
-    setEngineers((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Extraction Pits
-  const addPit = () => {
-    setPits((prev) => [
-      ...prev,
-      {
-        pitIdentifier: "",
-        mineralOre: "Granite Aggregate",
-        pitDepth: "10 Metres",
-        dailyTonnage: "500 Tons/Day",
-      },
-    ]);
-  };
-
-  const removePit = (idx: number) => {
-    setPits((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updatePit = (idx: number, field: keyof ExtractionPit, val: string) => {
-    setPits((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
+  const formValues = watch();
 
   const handleFileUpload = (docId: string, fileName: string) => {
     setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
@@ -237,21 +241,28 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
     });
   };
 
-  const validateStep = (index: number): boolean => {
+  const validateStep = async (index: number): Promise<boolean> => {
     if (index === 0) {
-      return (
-        !!formData.companyName.trim() &&
-        !!formData.miningCadastreNo.trim() &&
-        !!formData.phone.trim() &&
-        !!formData.siteLocation.trim() &&
-        !!formData.ward
-      );
+      return await trigger([
+        "companyName",
+        "miningCadastreNo",
+        "managingDirector",
+        "phone",
+        "email",
+        "siteLocation",
+        "ward",
+      ]);
     }
     if (index === 1) {
-      return !!formData.blastingFrequency.trim() && !!formData.setbackDistance.trim();
+      return await trigger([
+        "blastingFrequency",
+        "setbackDistance",
+        "dustSuppression",
+        "cdaStatus",
+      ]);
     }
     if (index === 2) {
-      return machinery.length > 0 && !!machinery[0].equipmentType.trim() && pits.length > 0;
+      return await trigger(["machinery"]);
     }
     if (index === 3) {
       const missing = DOCUMENTS.filter((d) => d.required && !uploadedFiles[d.id]);
@@ -260,8 +271,9 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStepIndex);
+    if (isValid) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
     }
   };
@@ -270,21 +282,19 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  const currentFee = service.feeConfig.amount
+  const currentFee = service.feeConfig.amount;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFormSubmit = (data: QuarryPermitFormValues) => {
     if (!declaration) return;
 
     onSubmit({
       formData: {
-        ...formData,
-        machinery: machinery.filter((m) => m.equipmentType.trim()),
-        engineers: engineers.filter((eng) => eng.fullName.trim()),
-        pits: pits.filter((p) => p.pitIdentifier.trim()),
+        ...data,
+        machinery: data.machinery.filter((m) => m.equipmentType.trim()),
+        engineers: data.engineers.filter((eng) => eng.fullName.trim()),
+        pits: data.pits.filter((p) => p.pitIdentifier.trim()),
       },
       files: uploadedFiles,
-
       applicant: initialApplicant || null,
     });
   };
@@ -293,25 +303,25 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
     {
       title: "Mining Operator & Cadastre Concession",
       items: [
-        { label: "Mining Company Name", value: formData.companyName },
-        { label: "RC / Corporate Registration", value: formData.rcNumber },
-        { label: "Mining Cadastre Lease (QL) No", value: formData.miningCadastreNo },
-        { label: "Managing Director", value: formData.managingDirector },
-        { label: "Resident Mining Engineer", value: formData.residentEngineer },
-        { label: "Contact Phone Number", value: formData.phone },
-        { label: "Email Address", value: formData.email },
-        { label: "Quarry Site Location", value: formData.siteLocation },
-        { label: "Ward in Odeda LGA", value: formData.ward },
-        { label: "Total Concession Size", value: formData.concessionAcreage },
+        { label: "Mining Company Name", value: formValues.companyName },
+        { label: "RC / Corporate Registration", value: formValues.rcNumber || "N/A" },
+        { label: "Mining Cadastre Lease (QL) No", value: formValues.miningCadastreNo },
+        { label: "Managing Director", value: formValues.managingDirector },
+        { label: "Resident Mining Engineer", value: formValues.residentEngineer || "N/A" },
+        { label: "Contact Phone Number", value: formValues.phone },
+        { label: "Email Address", value: formValues.email || "N/A" },
+        { label: "Quarry Site Location", value: formValues.siteLocation },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
+        { label: "Total Concession Size", value: formValues.concessionAcreage },
       ],
     },
     {
       title: "Blasting Protocol, EIA & Host Community Agreement",
       items: [
-        { label: "Designated Blasting Schedule", value: formData.blastingFrequency },
-        { label: "Community Buffer Distance", value: formData.setbackDistance },
-        { label: "Environmental Dust Control", value: formData.dustSuppression },
-        { label: "Community Development Agreement", value: formData.cdaStatus },
+        { label: "Designated Blasting Schedule", value: formValues.blastingFrequency },
+        { label: "Community Buffer Distance", value: formValues.setbackDistance },
+        { label: "Environmental Dust Control", value: formValues.dustSuppression },
+        { label: "Community Development Agreement", value: formValues.cdaStatus },
       ],
     },
   ];
@@ -320,37 +330,37 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
     {
       title: "Heavy Extraction Machinery & Rock Crushers",
       countLabel: "Equipment",
-      items: machinery
-        .filter((m) => m.equipmentType.trim())
+      items: (formValues.machinery || [])
+        .filter((m) => m.equipmentType?.trim())
         .map((m) => ({
           "Equipment Type": m.equipmentType,
-          "Make & Model": m.makeModel,
+          "Make & Model": m.makeModel || "N/A",
           Quantity: `${m.quantity} Units`,
-          "Rated Capacity": m.ratedCapacity,
+          "Rated Capacity": m.ratedCapacity || "N/A",
         })),
     },
     {
       title: "Certified Blasting Engineers & Explosives Officers",
       countLabel: "Engineers",
-      items: engineers
-        .filter((e) => e.fullName.trim())
+      items: (formValues.engineers || [])
+        .filter((e) => e.fullName?.trim())
         .map((e) => ({
           "Engineer Name": e.fullName,
-          "COMEG / COREN Reg No": e.licenseNumber,
-          "Mines Ministry Ref": e.ministryRef,
-          "Phone Number": e.phone,
+          "COMEG / COREN Reg No": e.licenseNumber || "N/A",
+          "Mines Ministry Ref": e.ministryRef || "N/A",
+          "Phone Number": e.phone || "N/A",
         })),
     },
     {
       title: "Quarry Extraction Pits & Geological Benches",
       countLabel: "Extraction Pits",
-      items: pits
-        .filter((p) => p.pitIdentifier.trim())
+      items: (formValues.pits || [])
+        .filter((p) => p.pitIdentifier?.trim())
         .map((p) => ({
           "Pit Identifier": p.pitIdentifier,
-          "Mineral Rock Type": p.mineralOre,
-          "Depth of Pit": p.pitDepth,
-          "Daily Output": p.dailyTonnage,
+          "Mineral Rock Type": p.mineralOre || "N/A",
+          "Depth of Pit": p.pitDepth || "N/A",
+          "Daily Output": p.dailyTonnage || "N/A",
         })),
     },
   ];
@@ -363,11 +373,22 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
       onStepChange={(idx) => setCurrentStepIndex(idx)}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onFormSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
-      submitDisabled={!declaration || !validateStep(0) || !validateStep(1) || !validateStep(2) || !validateStep(3)}
+      submitDisabled={
+        !declaration ||
+        !formValues.companyName ||
+        !formValues.miningCadastreNo ||
+        !formValues.managingDirector ||
+        !formValues.phone ||
+        !formValues.siteLocation ||
+        !formValues.ward ||
+        !formValues.blastingFrequency ||
+        !formValues.setbackDistance ||
+        machineryFields.length === 0
+      }
     >
       {/* STEP 1: Operator & Concession */}
       {currentStepIndex === 0 && (
@@ -386,31 +407,32 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Label htmlFor="companyName">Mining / Quarry Enterprise Name *</Label>
               <Input
                 id="companyName"
-                required
-                value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                {...register("companyName")}
                 placeholder="e.g. Odeda Granite Quarries & Mining Nigeria Limited"
               />
+              {errors.companyName && (
+                <p className="text-xs text-red-500">{errors.companyName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="miningCadastreNo">Mining Cadastre Lease (QL) Number *</Label>
               <Input
                 id="miningCadastreNo"
-                required
-                value={formData.miningCadastreNo}
-                onChange={(e) => setFormData({ ...formData, miningCadastreNo: e.target.value })}
+                {...register("miningCadastreNo")}
                 placeholder="e.g. QL-2022-OG-089"
                 className="font-mono uppercase font-bold"
               />
+              {errors.miningCadastreNo && (
+                <p className="text-xs text-red-500">{errors.miningCadastreNo.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="rcNumber">CAC Registration (RC Number)</Label>
               <Input
                 id="rcNumber"
-                value={formData.rcNumber}
-                onChange={(e) => setFormData({ ...formData, rcNumber: e.target.value })}
+                {...register("rcNumber")}
                 placeholder="RC-554433"
               />
             </div>
@@ -419,19 +441,19 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Label htmlFor="managingDirector">Managing Director / Concession Holder *</Label>
               <Input
                 id="managingDirector"
-                required
-                value={formData.managingDirector}
-                onChange={(e) => setFormData({ ...formData, managingDirector: e.target.value })}
+                {...register("managingDirector")}
                 placeholder="e.g. Alhaji Mustapha Danladi"
               />
+              {errors.managingDirector && (
+                <p className="text-xs text-red-500">{errors.managingDirector.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="residentEngineer">Resident Mining Engineer (COMEG / COREN)</Label>
               <Input
                 id="residentEngineer"
-                value={formData.residentEngineer}
-                onChange={(e) => setFormData({ ...formData, residentEngineer: e.target.value })}
+                {...register("residentEngineer")}
                 placeholder="e.g. Engr. O. Balogun, COMEG No: 1429"
               />
             </div>
@@ -441,11 +463,12 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Input
                 id="phone"
                 type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                {...register("phone")}
                 placeholder="+234 800 000 0000"
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -453,34 +476,44 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                {...register("email")}
                 placeholder="operations@quarry.com"
               />
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward in Odeda LGA *</Label>
-              <Select value={formData.ward} onValueChange={(val) => setFormData({ ...formData, ward: val })}>
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="ward"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="concessionAcreage">Concession Area Size (Hectares)</Label>
               <Input
                 id="concessionAcreage"
-                value={formData.concessionAcreage}
-                onChange={(e) => setFormData({ ...formData, concessionAcreage: e.target.value })}
+                {...register("concessionAcreage")}
                 placeholder="e.g. 40 Hectares"
               />
             </div>
@@ -489,11 +522,12 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Label htmlFor="siteLocation">Quarry Site Physical GPS / Route Description *</Label>
               <Input
                 id="siteLocation"
-                required
-                value={formData.siteLocation}
-                onChange={(e) => setFormData({ ...formData, siteLocation: e.target.value })}
+                {...register("siteLocation")}
                 placeholder="Ridge Name, Village Corridor, Odeda LGA"
               />
+              {errors.siteLocation && (
+                <p className="text-xs text-red-500">{errors.siteLocation.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -516,33 +550,42 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Label htmlFor="blastingFrequency">Authorized Blasting Schedule & Timing *</Label>
               <Input
                 id="blastingFrequency"
-                required
-                value={formData.blastingFrequency}
-                onChange={(e) => setFormData({ ...formData, blastingFrequency: e.target.value })}
+                {...register("blastingFrequency")}
                 placeholder="e.g. Tuesdays & Thursdays, 1:00 PM - 3:00 PM Only"
               />
+              {errors.blastingFrequency && (
+                <p className="text-xs text-red-500">{errors.blastingFrequency.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="setbackDistance">Distance to Nearest Human Settlement *</Label>
-              <Select value={formData.setbackDistance} onValueChange={(val) => setFormData({ ...formData, setbackDistance: val })}>
-                <SelectTrigger id="setbackDistance">
-                  <SelectValue placeholder="Select Setback" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Over 2.0 Kilometers">Over 2.0 Kilometers (Highly Safe)</SelectItem>
-                  <SelectItem value="1.0 to 2.0 Kilometers">1.0 to 2.0 Kilometers (Standard)</SelectItem>
-                  <SelectItem value="500m to 1.0 Kilometer (Special Blast Mats Required)">500m - 1.0 km (Blast Mats Required)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="setbackDistance"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="setbackDistance">
+                      <SelectValue placeholder="Select Setback" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Over 2.0 Kilometers">Over 2.0 Kilometers (Highly Safe)</SelectItem>
+                      <SelectItem value="1.0 to 2.0 Kilometers">1.0 to 2.0 Kilometers (Standard)</SelectItem>
+                      <SelectItem value="500m to 1.0 Kilometer (Special Blast Mats Required)">500m - 1.0 km (Blast Mats Required)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.setbackDistance && (
+                <p className="text-xs text-red-500">{errors.setbackDistance.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="dustSuppression">Dust & Vibration Suppression System</Label>
               <Input
                 id="dustSuppression"
-                value={formData.dustSuppression}
-                onChange={(e) => setFormData({ ...formData, dustSuppression: e.target.value })}
+                {...register("dustSuppression")}
                 placeholder="e.g. Water bowsers on haul roads, wet crushing screens"
               />
             </div>
@@ -551,8 +594,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Label htmlFor="cdaStatus">Community Development Agreement (CDA) Status</Label>
               <Input
                 id="cdaStatus"
-                value={formData.cdaStatus}
-                onChange={(e) => setFormData({ ...formData, cdaStatus: e.target.value })}
+                {...register("cdaStatus")}
                 placeholder="e.g. 5-Year CDA Signed with Baale and Elders in Council"
               />
             </div>
@@ -587,18 +629,27 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addMachinery}
+                onClick={() =>
+                  appendMachinery({
+                    equipmentType: "",
+                    makeModel: "",
+                    quantity: "1",
+                    ratedCapacity: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Equipment
               </Button>
             </div>
 
-            {machinery.map((m, idx) => (
-              <div key={idx} className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group">
+            {machineryFields.map((fieldItem, idx) => (
+              <div key={fieldItem.id} className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <span className="font-bold text-xs text-foreground">Machinery #{idx + 1}: {m.equipmentType} ({m.makeModel})</span>
-                  {machinery.length > 1 && (
+                  <span className="font-bold text-xs text-foreground">
+                    Machinery #{idx + 1}: {formValues.machinery?.[idx]?.equipmentType || "New Machinery"}
+                  </span>
+                  {machineryFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -615,16 +666,19 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-xs">Equipment Type *</Label>
                     <Input
-                      value={m.equipmentType}
-                      onChange={(e) => updateMachinery(idx, "equipmentType", e.target.value)}
+                      {...register(`machinery.${idx}.equipmentType`)}
                       placeholder="e.g. Jaw Crusher / Hydraulic Excavator"
                     />
+                    {errors.machinery?.[idx]?.equipmentType && (
+                      <p className="text-xs text-red-500">
+                        {errors.machinery[idx]?.equipmentType?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Make & Model</Label>
                     <Input
-                      value={m.makeModel}
-                      onChange={(e) => updateMachinery(idx, "makeModel", e.target.value)}
+                      {...register(`machinery.${idx}.makeModel`)}
                       placeholder="e.g. CAT 349D"
                     />
                   </div>
@@ -632,16 +686,14 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                     <Label className="text-xs">Quantity</Label>
                     <Input
                       type="number"
-                      value={m.quantity}
-                      onChange={(e) => updateMachinery(idx, "quantity", e.target.value)}
+                      {...register(`machinery.${idx}.quantity`)}
                       placeholder="1"
                     />
                   </div>
                   <div className="space-y-1 sm:col-span-4">
                     <Label className="text-xs">Rated Output Capacity</Label>
                     <Input
-                      value={m.ratedCapacity}
-                      onChange={(e) => updateMachinery(idx, "ratedCapacity", e.target.value)}
+                      {...register(`machinery.${idx}.ratedCapacity`)}
                       placeholder="e.g. 200 Tons/Hour / 3.0 m³ Bucket"
                       className="h-8 text-xs"
                     />
@@ -666,7 +718,14 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addEngineer}
+                onClick={() =>
+                  appendEngineer({
+                    fullName: "",
+                    licenseNumber: "",
+                    ministryRef: "",
+                    phone: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Engineer
@@ -674,13 +733,12 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
             </div>
 
             <div className="space-y-2.5">
-              {engineers.map((eng, idx) => (
-                <div key={idx} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
+              {engineerFields.map((fieldItem, idx) => (
+                <div key={fieldItem.id} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">Engineer Name</Label>
                     <Input
-                      value={eng.fullName}
-                      onChange={(e) => updateEngineer(idx, "fullName", e.target.value)}
+                      {...register(`engineers.${idx}.fullName`)}
                       placeholder="Full Name"
                       className="h-8 text-xs"
                     />
@@ -688,8 +746,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                   <div className="space-y-1">
                     <Label className="text-[11px]">COMEG / Licence No</Label>
                     <Input
-                      value={eng.licenseNumber}
-                      onChange={(e) => updateEngineer(idx, "licenseNumber", e.target.value)}
+                      {...register(`engineers.${idx}.licenseNumber`)}
                       placeholder="COMEG No"
                       className="h-8 text-xs"
                     />
@@ -697,8 +754,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                   <div className="space-y-1">
                     <Label className="text-[11px]">Phone / Ministry Ref</Label>
                     <Input
-                      value={eng.phone}
-                      onChange={(e) => updateEngineer(idx, "phone", e.target.value)}
+                      {...register(`engineers.${idx}.phone`)}
                       placeholder="080... / MMSD Ref"
                       className="h-8 text-xs"
                     />
@@ -734,7 +790,14 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addPit}
+                onClick={() =>
+                  appendPit({
+                    pitIdentifier: "",
+                    mineralOre: "Granite Aggregate",
+                    pitDepth: "10 Metres",
+                    dailyTonnage: "500 Tons/Day",
+                  })
+                }
                 className="gap-1 text-xs h-8"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Extraction Pit
@@ -742,13 +805,12 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
             </div>
 
             <div className="space-y-2.5">
-              {pits.map((p, idx) => (
-                <div key={idx} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
+              {pitFields.map((fieldItem, idx) => (
+                <div key={fieldItem.id} className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end">
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">Pit Face Identifier</Label>
                     <Input
-                      value={p.pitIdentifier}
-                      onChange={(e) => updatePit(idx, "pitIdentifier", e.target.value)}
+                      {...register(`pits.${idx}.pitIdentifier`)}
                       placeholder="e.g. Pit Alpha (North Face)"
                       className="h-8 text-xs"
                     />
@@ -756,8 +818,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                   <div className="space-y-1">
                     <Label className="text-[11px]">Mineral Ore</Label>
                     <Input
-                      value={p.mineralOre}
-                      onChange={(e) => updatePit(idx, "mineralOre", e.target.value)}
+                      {...register(`pits.${idx}.mineralOre`)}
                       placeholder="Granite Aggregate"
                       className="h-8 text-xs"
                     />
@@ -765,8 +826,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
                   <div className="space-y-1">
                     <Label className="text-[11px]">Daily Output</Label>
                     <Input
-                      value={p.dailyTonnage}
-                      onChange={(e) => updatePit(idx, "dailyTonnage", e.target.value)}
+                      {...register(`pits.${idx}.dailyTonnage`)}
                       placeholder="e.g. 1000 Tons/Day"
                       className="h-8 text-xs"
                     />

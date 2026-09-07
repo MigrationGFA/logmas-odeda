@@ -1,5 +1,9 @@
 "use client";
 import React, { useState } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { WARDS } from "@/lib/mock-data";
-import {
-  ServiceType,
-  getConfiguredFeeForService,
-} from "@/config/odedaServices";
+import { ServiceType } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
 import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
 import {
@@ -24,31 +24,64 @@ import {
   ReviewRepeatableSection,
 } from "./ReviewSubmitStep";
 import { Plus, Trash2, Store, ShoppingBag, ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
+
+const productLineSchema = z.object({
+  itemCategory: z.string().min(1, "Merchandise category is required"),
+  stockValue: z.string().optional().default(""),
+  sourceSupplier: z.string().optional().default(""),
+});
+
+const kioskAttendantSchema = z.object({
+  fullName: z.string().min(1, "Attendant name is required"),
+  role: z.string().optional().default("Sales Attendant"),
+  phone: z.string().optional().default(""),
+});
+
+const safetyFixtureSchema = z.object({
+  fixtureType: z.string().min(1, "Fixture type is required"),
+  quantity: z.string().optional().default("1"),
+});
+
+export const kioskLicenceSchema = z.object({
+  operatorName: z.string().min(2, "Operator full name is required"),
+  tradingName: z.string().min(2, "Kiosk trading name is required"),
+  tradeCategory: z.string().min(1, "Trade category is required"),
+  phone: z.string().refine(
+    (val) => {
+      const res = formatAndValidateNigerianPhoneNumber(val);
+      return res.isValid;
+    },
+    { message: "Please enter a valid Nigerian phone number" }
+  ),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .optional()
+    .or(z.literal("")),
+  residentialAddress: z.string().min(3, "Residential address is required"),
+  ward: z.string().min(1, "Ward is required"),
+  nin: z.string().regex(/^\d{11}$/, "NIN must be an 11-digit number"),
+  proposedLocation: z.string().min(3, "Proposed kiosk location is required"),
+  structureType: z.string().min(1, "Structure type is required"),
+  dimensions: z.string().optional().default(""),
+  setbackFromRoad: z.string().min(1, "Setback distance is required"),
+  powerSource: z.string().optional().default(""),
+  wasteManagement: z.string().optional().default(""),
+  productLines: z
+    .array(productLineSchema)
+    .min(1, "At least one product line is required"),
+  attendants: z.array(kioskAttendantSchema).default([]),
+  fixtures: z.array(safetyFixtureSchema).default([]),
+});
+
+export type KioskLicenceFormData = z.infer<typeof kioskLicenceSchema>;
 
 interface Props {
   service: ServiceType;
   onSubmit: (formData: Record<string, any>) => void;
   isSubmitting?: boolean;
   initialApplicant?: ApplicantSnapshot;
-}
-
-interface ProductLine {
-  itemCategory: string;
-  stockValue: string;
-  sourceSupplier: string;
-}
-
-interface KioskAttendant {
-  fullName: string;
-  role: string;
-  phone: string;
-}
-
-interface SafetyFixture {
-  fixtureType: string;
-  quantity: string;
 }
 
 const STEPS: FormStep[] = [
@@ -133,135 +166,91 @@ export default function KioskLicenceForm({
   );
   const [declaration, setDeclaration] = useState(false);
 
-  // Form Basic Info
-  const [formData, setFormData] = useState({
-    operatorName: "",
-    tradingName: "",
-    tradeCategory: "Provisions, Cold Drinks & Retail FMCG",
-    phone: "",
-    email: "",
-    residentialAddress: "",
-    ward: WARDS[0] || "Odeda",
-    nin: "",
-    proposedLocation: "Opposite Community Primary School Gate, Odeda",
-    structureType: "Fabricated Metal Container (8ft x 10ft)",
-    dimensions: "8ft x 10ft (Footprint 7.4 sqm)",
-    setbackFromRoad: "3.5 Metres from Road Kerb / Drainage",
-    powerSource: "Rechargeable Solar LED Light & Small 1.5kVA Generator",
-    wasteManagement: "Dedicated Covered Waste Bin & Municipal PSP Collection",
+  const {
+    register,
+    handleSubmit,
+    control,
+    trigger,
+    watch,
+    formState: { errors },
+  } = useForm<KioskLicenceFormData>({
+    resolver: zodResolver(kioskLicenceSchema),
+    mode: "onBlur",
+    defaultValues: {
+      operatorName: initialApplicant?.name || "",
+      tradingName: initialApplicant?.name
+        ? `${initialApplicant.name}'s Kiosk`
+        : "",
+      tradeCategory: "Provisions, Cold Drinks & Retail FMCG",
+      phone: initialApplicant?.phone || "",
+      email: initialApplicant?.email || "",
+      residentialAddress: initialApplicant?.address || "",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda",
+      nin: initialApplicant?.nin || "12345678901",
+      proposedLocation: "Opposite Community Primary School Gate, Odeda",
+      structureType: "Fabricated Metal Container (8ft x 10ft)",
+      dimensions: "8ft x 10ft (Footprint 7.4 sqm)",
+      setbackFromRoad: "3.5 Metres from Road Kerb / Drainage",
+      powerSource: "Rechargeable Solar LED Light & Small 1.5kVA Generator",
+      wasteManagement:
+        "Dedicated Covered Waste Bin & Municipal PSP Collection",
+      productLines: [
+        {
+          itemCategory: "Packaged Foodstuff, Beverages & Soft Drinks",
+          stockValue: "₦150,000",
+          sourceSupplier: "Abeokuta Major Wholesale Depot",
+        },
+        {
+          itemCategory: "Toiletries, Confectioneries & Snacks",
+          stockValue: "₦80,000",
+          sourceSupplier: "Direct FMCG Distributors",
+        },
+      ],
+      attendants: [
+        {
+          fullName: "Bose Adeyemi",
+          role: "Sales Attendant / Cashier",
+          phone: "08033399911",
+        },
+      ],
+      fixtures: [
+        { fixtureType: "2kg Dry Powder Fire Extinguisher", quantity: "1" },
+        {
+          fixtureType: "Reinforced Steel Padlocks & Iron Grille",
+          quantity: "3",
+        },
+      ],
+    },
   });
 
-  // Repeatable: Product Lines
-  const [productLines, setProductLines] = useState<ProductLine[]>([
-    {
-      itemCategory: "Packaged Foodstuff, Beverages & Soft Drinks",
-      stockValue: "₦150,000",
-      sourceSupplier: "Abeokuta Major Wholesale Depot",
-    },
-    {
-      itemCategory: "Toiletries, Confectioneries & Snacks",
-      stockValue: "₦80,000",
-      sourceSupplier: "Direct FMCG Distributors",
-    },
-  ]);
+  const {
+    fields: productFields,
+    append: appendProduct,
+    remove: removeProduct,
+  } = useFieldArray({
+    control,
+    name: "productLines",
+  });
 
-  // Repeatable: Attendants
-  const [attendants, setAttendants] = useState<KioskAttendant[]>([
-    {
-      fullName: "Bose Adeyemi",
-      role: "Sales Attendant / Cashier",
-      phone: "08033399911",
-    },
-  ]);
+  const {
+    fields: attendantFields,
+    append: appendAttendant,
+    remove: removeAttendant,
+  } = useFieldArray({
+    control,
+    name: "attendants",
+  });
 
-  // Repeatable: Safety Fixtures
-  const [fixtures, setFixtures] = useState<SafetyFixture[]>([
-    { fixtureType: "2kg Dry Powder Fire Extinguisher", quantity: "1" },
-    { fixtureType: "Reinforced Steel Padlocks & Iron Grille", quantity: "3" },
-  ]);
+  const {
+    fields: fixtureFields,
+    append: appendFixture,
+    remove: removeFixture,
+  } = useFieldArray({
+    control,
+    name: "fixtures",
+  });
 
-  // Handlers for Products
-  const addProductLine = () => {
-    setProductLines((prev) => [
-      ...prev,
-      {
-        itemCategory: "",
-        stockValue: "₦50,000",
-        sourceSupplier: "",
-      },
-    ]);
-  };
-
-  const removeProductLine = (idx: number) => {
-    setProductLines((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateProductLine = (
-    idx: number,
-    field: keyof ProductLine,
-    val: string,
-  ) => {
-    setProductLines((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Attendants
-  const addAttendant = () => {
-    setAttendants((prev) => [
-      ...prev,
-      {
-        fullName: "",
-        role: "Sales Assistant",
-        phone: "",
-      },
-    ]);
-  };
-
-  const removeAttendant = (idx: number) => {
-    setAttendants((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateAttendant = (
-    idx: number,
-    field: keyof KioskAttendant,
-    val: string,
-  ) => {
-    setAttendants((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
-
-  // Handlers for Fixtures
-  const addFixture = () => {
-    setFixtures((prev) => [
-      ...prev,
-      {
-        fixtureType: "",
-        quantity: "1",
-      },
-    ]);
-  };
-
-  const removeFixture = (idx: number) => {
-    setFixtures((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateFixture = (
-    idx: number,
-    field: keyof SafetyFixture,
-    val: string,
-  ) => {
-    setFixtures((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
+  const formValues = watch();
 
   const handleFileUpload = (docId: string, fileName: string) => {
     setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
@@ -275,34 +264,37 @@ export default function KioskLicenceForm({
     });
   };
 
-  const validateStep = (index: number): boolean => {
-    if (index === 0) {
-      return (
-        !!formData.operatorName.trim() &&
-        !!formData.tradingName.trim() &&
-        !!formData.phone.trim() &&
-        !!formData.residentialAddress.trim() &&
-        !!formData.ward &&
-        !!formData.nin.trim()
-      );
-    }
-    if (index === 1) {
-      return !!formData.proposedLocation.trim() && !!formData.structureType;
-    }
-    if (index === 2) {
-      return productLines.length > 0 && !!productLines[0].itemCategory.trim();
-    }
-    if (index === 3) {
+  const handleNext = async () => {
+    let isValid = false;
+    if (currentStepIndex === 0) {
+      isValid = await trigger([
+        "tradingName",
+        "operatorName",
+        "tradeCategory",
+        "phone",
+        "email",
+        "nin",
+        "ward",
+        "residentialAddress",
+      ]);
+    } else if (currentStepIndex === 1) {
+      isValid = await trigger([
+        "proposedLocation",
+        "structureType",
+        "setbackFromRoad",
+      ]);
+    } else if (currentStepIndex === 2) {
+      isValid = await trigger("productLines");
+    } else if (currentStepIndex === 3) {
       const missing = DOCUMENTS.filter(
         (d) => d.required && !uploadedFiles[d.id],
       );
-      return missing.length === 0;
+      isValid = missing.length === 0;
+    } else {
+      isValid = true;
     }
-    return true;
-  };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+    if (isValid) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
     }
   };
@@ -313,18 +305,17 @@ export default function KioskLicenceForm({
 
   const currentFee = service.feeConfig.amount;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onValidSubmit = (data: KioskLicenceFormData) => {
     if (!declaration) return;
 
     onSubmit({
       files: uploadedFiles,
       applicant: initialApplicant || null,
       formData: {
-        ...formData,
-        productLines: productLines.filter((p) => p.itemCategory.trim()),
-        attendants: attendants.filter((a) => a.fullName.trim()),
-        fixtures: fixtures.filter((f) => f.fixtureType.trim()),
+        ...data,
+        productLines: data.productLines.filter((p) => p.itemCategory.trim()),
+        attendants: data.attendants.filter((a) => a.fullName.trim()),
+        fixtures: data.fixtures.filter((f) => f.fixtureType.trim()),
       },
     });
   };
@@ -333,25 +324,46 @@ export default function KioskLicenceForm({
     {
       title: "Kiosk Operator & Enterprise Profile",
       items: [
-        { label: "Operator Full Name", value: formData.operatorName },
-        { label: "Kiosk / Business Trading Name", value: formData.tradingName },
-        { label: "Trade Category", value: formData.tradeCategory },
-        { label: "Contact Phone Number", value: formData.phone },
-        { label: "Email Address", value: formData.email },
-        { label: "National ID (NIN)", value: formData.nin },
-        { label: "Residential Address", value: formData.residentialAddress },
-        { label: "Ward in Odeda LGA", value: formData.ward },
+        { label: "Operator Full Name", value: formValues.operatorName },
+        {
+          label: "Kiosk / Business Trading Name",
+          value: formValues.tradingName,
+        },
+        { label: "Trade Category", value: formValues.tradeCategory },
+        { label: "Contact Phone Number", value: formValues.phone },
+        { label: "Email Address", value: formValues.email || "N/A" },
+        { label: "National ID (NIN)", value: formValues.nin },
+        {
+          label: "Residential Address",
+          value: formValues.residentialAddress,
+        },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
       ],
     },
     {
       title: "Structure Fabrication, Setback & Hygiene",
       items: [
-        { label: "Physical Kiosk Location", value: formData.proposedLocation },
-        { label: "Structure Typology", value: formData.structureType },
-        { label: "Dimensions / Footprint", value: formData.dimensions },
-        { label: "Roadway Setback Distance", value: formData.setbackFromRoad },
-        { label: "Power / Lighting Source", value: formData.powerSource },
-        { label: "Refuse Disposal Protocol", value: formData.wasteManagement },
+        {
+          label: "Physical Kiosk Location",
+          value: formValues.proposedLocation,
+        },
+        { label: "Structure Typology", value: formValues.structureType },
+        {
+          label: "Dimensions / Footprint",
+          value: formValues.dimensions || "N/A",
+        },
+        {
+          label: "Roadway Setback Distance",
+          value: formValues.setbackFromRoad,
+        },
+        {
+          label: "Power / Lighting Source",
+          value: formValues.powerSource || "N/A",
+        },
+        {
+          label: "Refuse Disposal Protocol",
+          value: formValues.wasteManagement || "N/A",
+        },
       ],
     },
   ];
@@ -360,33 +372,33 @@ export default function KioskLicenceForm({
     {
       title: "Retail Merchandise & Inventory Handled",
       countLabel: "Product Lines",
-      items: productLines
-        .filter((p) => p.itemCategory.trim())
+      items: (formValues.productLines || [])
+        .filter((p) => p.itemCategory?.trim())
         .map((p) => ({
           "Merchandise Category": p.itemCategory,
-          "Estimated Stock Value": p.stockValue,
-          "Supplier Channel": p.sourceSupplier,
+          "Estimated Stock Value": p.stockValue || "N/A",
+          "Supplier Channel": p.sourceSupplier || "N/A",
         })),
     },
     {
       title: "Kiosk Staff & Sales Attendants",
       countLabel: "Attendants",
-      items: attendants
-        .filter((a) => a.fullName.trim())
+      items: (formValues.attendants || [])
+        .filter((a) => a.fullName?.trim())
         .map((a) => ({
           "Attendant Name": a.fullName,
-          "Role / Duty": a.role,
-          "Phone Number": a.phone,
+          "Role / Duty": a.role || "Sales Attendant",
+          "Phone Number": a.phone || "N/A",
         })),
     },
     {
       title: "Installed Safety & Lock Security Fixtures",
       countLabel: "Fixtures",
-      items: fixtures
-        .filter((f) => f.fixtureType.trim())
+      items: (formValues.fixtures || [])
+        .filter((f) => f.fixtureType?.trim())
         .map((f) => ({
           "Fixture Type": f.fixtureType,
-          Quantity: `${f.quantity} Units`,
+          Quantity: `${f.quantity || "1"} Units`,
         })),
     },
   ];
@@ -396,20 +408,15 @@ export default function KioskLicenceForm({
       service={service}
       steps={STEPS}
       currentStepIndex={currentStepIndex}
-      onStepChange={(idx) => setCurrentStepIndex(idx)}
+      onStepChange={setCurrentStepIndex}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onValidSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
-      submitDisabled={
-        !declaration ||
-        !validateStep(0) ||
-        !validateStep(1) ||
-        !validateStep(2) ||
-        !validateStep(3)
-      }
+      submitDisabled={!declaration}
+      submitLabel="Submit Kiosk Licence Application"
     >
       {/* STEP 1: Operator Identity */}
       {currentStepIndex === 0 && (
@@ -431,63 +438,71 @@ export default function KioskLicenceForm({
               </Label>
               <Input
                 id="tradingName"
-                required
-                value={formData.tradingName}
-                onChange={(e) =>
-                  setFormData({ ...formData, tradingName: e.target.value })
-                }
+                {...register("tradingName")}
                 placeholder="e.g. Mama Funke Mini Provisions & Cold Drinks Kiosk"
+                disabled={isSubmitting}
               />
+              {errors.tradingName && (
+                <p className="text-xs text-red-500">{errors.tradingName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="operatorName">Operator Legal Full Name *</Label>
               <Input
                 id="operatorName"
-                required
-                value={formData.operatorName}
-                onChange={(e) =>
-                  setFormData({ ...formData, operatorName: e.target.value })
-                }
+                {...register("operatorName")}
                 placeholder="e.g. Mrs. Funke Adebayo"
+                disabled={isSubmitting}
               />
+              {errors.operatorName && (
+                <p className="text-xs text-red-500">{errors.operatorName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="tradeCategory">Kiosk Commercial Category *</Label>
-              <Select
-                value={formData.tradeCategory}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, tradeCategory: val })
-                }
-              >
-                <SelectTrigger id="tradeCategory">
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Provisions, Cold Drinks & Retail FMCG">
-                    Provisions, Cold Drinks & Retail FMCG
-                  </SelectItem>
-                  <SelectItem value="Cooked Food, Snacks & Refreshment Kiosk">
-                    Cooked Food, Snacks & Refreshment
-                  </SelectItem>
-                  <SelectItem value="POS Agency Banking & Financial Services">
-                    POS Agency Banking & Financial Services
-                  </SelectItem>
-                  <SelectItem value="Phone Accessories, Gadgets & Electronics">
-                    Phone Accessories, Gadgets & Electronics
-                  </SelectItem>
-                  <SelectItem value="Tailoring, Fashion & Dry Cleaning Depot">
-                    Tailoring, Fashion & Dry Cleaning Depot
-                  </SelectItem>
-                  <SelectItem value="Barbershop / Hair Salon Kiosk">
-                    Barbershop / Hair Salon Kiosk
-                  </SelectItem>
-                  <SelectItem value="Auto Electrician / Battery Charging Booth">
-                    Auto Electrician / Battery Booth
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="tradeCategory"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="tradeCategory">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Provisions, Cold Drinks & Retail FMCG">
+                        Provisions, Cold Drinks & Retail FMCG
+                      </SelectItem>
+                      <SelectItem value="Cooked Food, Snacks & Refreshment Kiosk">
+                        Cooked Food, Snacks & Refreshment
+                      </SelectItem>
+                      <SelectItem value="POS Agency Banking & Financial Services">
+                        POS Agency Banking & Financial Services
+                      </SelectItem>
+                      <SelectItem value="Phone Accessories, Gadgets & Electronics">
+                        Phone Accessories, Gadgets & Electronics
+                      </SelectItem>
+                      <SelectItem value="Tailoring, Fashion & Dry Cleaning Depot">
+                        Tailoring, Fashion & Dry Cleaning Depot
+                      </SelectItem>
+                      <SelectItem value="Barbershop / Hair Salon Kiosk">
+                        Barbershop / Hair Salon Kiosk
+                      </SelectItem>
+                      <SelectItem value="Auto Electrician / Battery Charging Booth">
+                        Auto Electrician / Battery Booth
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.tradeCategory && (
+                <p className="text-xs text-red-500">{errors.tradeCategory.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -495,13 +510,13 @@ export default function KioskLicenceForm({
               <Input
                 id="phone"
                 type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                {...register("phone")}
                 placeholder="+234 800 000 0000"
+                disabled={isSubmitting}
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -509,45 +524,56 @@ export default function KioskLicenceForm({
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...register("email")}
                 placeholder="kiosk@example.com"
+                disabled={isSubmitting}
               />
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="nin">National Identity Number (NIN) *</Label>
               <Input
                 id="nin"
-                required
                 maxLength={11}
-                value={formData.nin}
-                onChange={(e) =>
-                  setFormData({ ...formData, nin: e.target.value })
-                }
+                {...register("nin")}
                 placeholder="11-digit NIN"
+                disabled={isSubmitting}
               />
+              {errors.nin && (
+                <p className="text-xs text-red-500">{errors.nin.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward in Odeda LGA *</Label>
-              <Select
-                value={formData.ward}
-                onValueChange={(val) => setFormData({ ...formData, ward: val })}
-              >
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="ward"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
@@ -556,16 +582,13 @@ export default function KioskLicenceForm({
               </Label>
               <Input
                 id="residentialAddress"
-                required
-                value={formData.residentialAddress}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    residentialAddress: e.target.value,
-                  })
-                }
+                {...register("residentialAddress")}
                 placeholder="Residential home address in Odeda LGA"
+                disabled={isSubmitting}
               />
+              {errors.residentialAddress && (
+                <p className="text-xs text-red-500">{errors.residentialAddress.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -591,46 +614,54 @@ export default function KioskLicenceForm({
               </Label>
               <Input
                 id="proposedLocation"
-                required
-                value={formData.proposedLocation}
-                onChange={(e) =>
-                  setFormData({ ...formData, proposedLocation: e.target.value })
-                }
+                {...register("proposedLocation")}
                 placeholder="e.g. Opposite Community Primary School Gate, Odeda Road"
+                disabled={isSubmitting}
               />
+              {errors.proposedLocation && (
+                <p className="text-xs text-red-500">{errors.proposedLocation.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="structureType">
                 Structure Fabrication Material *
               </Label>
-              <Select
-                value={formData.structureType}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, structureType: val })
-                }
-              >
-                <SelectTrigger id="structureType">
-                  <SelectValue placeholder="Select Structure" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Fabricated Metal Container (8ft x 10ft)">
-                    Fabricated Metal Container (8x10)
-                  </SelectItem>
-                  <SelectItem value="Fabricated Metal Container (6ft x 8ft)">
-                    Fabricated Metal Container (6x8)
-                  </SelectItem>
-                  <SelectItem value="Prefabricated Fiberglass Booth">
-                    Prefabricated Fiberglass Booth
-                  </SelectItem>
-                  <SelectItem value="Movable Wooden Kiosk with Corrugated Roof">
-                    Movable Wooden Kiosk
-                  </SelectItem>
-                  <SelectItem value="Movable Metal Canopy / Lockup Stall">
-                    Movable Canopy / Lockup Stall
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="structureType"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="structureType">
+                      <SelectValue placeholder="Select Structure" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Fabricated Metal Container (8ft x 10ft)">
+                        Fabricated Metal Container (8x10)
+                      </SelectItem>
+                      <SelectItem value="Fabricated Metal Container (6ft x 8ft)">
+                        Fabricated Metal Container (6x8)
+                      </SelectItem>
+                      <SelectItem value="Prefabricated Fiberglass Booth">
+                        Prefabricated Fiberglass Booth
+                      </SelectItem>
+                      <SelectItem value="Movable Wooden Kiosk with Corrugated Roof">
+                        Movable Wooden Kiosk
+                      </SelectItem>
+                      <SelectItem value="Movable Metal Canopy / Lockup Stall">
+                        Movable Canopy / Lockup Stall
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.structureType && (
+                <p className="text-xs text-red-500">{errors.structureType.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -639,11 +670,9 @@ export default function KioskLicenceForm({
               </Label>
               <Input
                 id="dimensions"
-                value={formData.dimensions}
-                onChange={(e) =>
-                  setFormData({ ...formData, dimensions: e.target.value })
-                }
+                {...register("dimensions")}
                 placeholder="e.g. 8ft x 10ft"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -653,24 +682,22 @@ export default function KioskLicenceForm({
               </Label>
               <Input
                 id="setbackFromRoad"
-                required
-                value={formData.setbackFromRoad}
-                onChange={(e) =>
-                  setFormData({ ...formData, setbackFromRoad: e.target.value })
-                }
+                {...register("setbackFromRoad")}
                 placeholder="e.g. Minimum 3.0 Metres clear of gutter"
+                disabled={isSubmitting}
               />
+              {errors.setbackFromRoad && (
+                <p className="text-xs text-red-500">{errors.setbackFromRoad.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="powerSource">Lighting & Power Source</Label>
               <Input
                 id="powerSource"
-                value={formData.powerSource}
-                onChange={(e) =>
-                  setFormData({ ...formData, powerSource: e.target.value })
-                }
+                {...register("powerSource")}
                 placeholder="e.g. Solar Lamp / Extension line"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -680,11 +707,9 @@ export default function KioskLicenceForm({
               </Label>
               <Input
                 id="wasteManagement"
-                value={formData.wasteManagement}
-                onChange={(e) =>
-                  setFormData({ ...formData, wasteManagement: e.target.value })
-                }
+                {...register("wasteManagement")}
                 placeholder="e.g. Covered trash bin with municipal PSP waste collection"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -721,29 +746,41 @@ export default function KioskLicenceForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addProductLine}
+                onClick={() =>
+                  appendProduct({
+                    itemCategory: "",
+                    stockValue: "₦50,000",
+                    sourceSupplier: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" /> Add Product Line
               </Button>
             </div>
 
-            {productLines.map((pl, idx) => (
+            {errors.productLines && (
+              <p className="text-xs text-red-500">{errors.productLines.message}</p>
+            )}
+
+            {productFields.map((field, idx) => (
               <div
-                key={idx}
+                key={field.id}
                 className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group"
               >
                 <div className="flex items-center justify-between border-b pb-2">
                   <span className="font-bold text-xs text-foreground">
-                    Product Line #{idx + 1}: {pl.itemCategory || "New Line"}
+                    Product Line #{idx + 1}: {formValues.productLines?.[idx]?.itemCategory || "New Line"}
                   </span>
-                  {productLines.length > 1 && (
+                  {productFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeProductLine(idx)}
+                      onClick={() => removeProduct(idx)}
                       className="text-red-500 hover:text-red-700 h-7 px-2 text-xs"
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
                     </Button>
@@ -754,31 +791,30 @@ export default function KioskLicenceForm({
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-xs">Merchandise Category *</Label>
                     <Input
-                      value={pl.itemCategory}
-                      onChange={(e) =>
-                        updateProductLine(idx, "itemCategory", e.target.value)
-                      }
+                      {...register(`productLines.${idx}.itemCategory`)}
                       placeholder="e.g. Cold Soft Drinks, Biscuits & Toiletries"
+                      disabled={isSubmitting}
                     />
+                    {errors.productLines?.[idx]?.itemCategory && (
+                      <p className="text-xs text-red-500">
+                        {errors.productLines[idx]?.itemCategory?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Estimated Stock Value</Label>
                     <Input
-                      value={pl.stockValue}
-                      onChange={(e) =>
-                        updateProductLine(idx, "stockValue", e.target.value)
-                      }
+                      {...register(`productLines.${idx}.stockValue`)}
                       placeholder="e.g. ₦100,000"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Supplier Channel</Label>
                     <Input
-                      value={pl.sourceSupplier}
-                      onChange={(e) =>
-                        updateProductLine(idx, "sourceSupplier", e.target.value)
-                      }
+                      {...register(`productLines.${idx}.sourceSupplier`)}
                       placeholder="e.g. Wholesale Market"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -802,50 +838,56 @@ export default function KioskLicenceForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addAttendant}
+                onClick={() =>
+                  appendAttendant({
+                    fullName: "",
+                    role: "Sales Assistant",
+                    phone: "",
+                  })
+                }
                 className="gap-1 text-xs h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" /> Add Attendant
               </Button>
             </div>
 
             <div className="space-y-2.5">
-              {attendants.map((att, idx) => (
+              {attendantFields.map((field, idx) => (
                 <div
-                  key={idx}
+                  key={field.id}
                   className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end"
                 >
                   <div className="space-y-1 sm:col-span-2">
-                    <Label className="text-[11px]">Attendant Name</Label>
+                    <Label className="text-[11px]">Attendant Name *</Label>
                     <Input
-                      value={att.fullName}
-                      onChange={(e) =>
-                        updateAttendant(idx, "fullName", e.target.value)
-                      }
+                      {...register(`attendants.${idx}.fullName`)}
                       placeholder="Full Name"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
+                    {errors.attendants?.[idx]?.fullName && (
+                      <p className="text-xs text-red-500">
+                        {errors.attendants[idx]?.fullName?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Role / Duty</Label>
                     <Input
-                      value={att.role}
-                      onChange={(e) =>
-                        updateAttendant(idx, "role", e.target.value)
-                      }
+                      {...register(`attendants.${idx}.role`)}
                       placeholder="Sales Attendant"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Phone Number</Label>
                     <Input
-                      value={att.phone}
-                      onChange={(e) =>
-                        updateAttendant(idx, "phone", e.target.value)
-                      }
+                      {...register(`attendants.${idx}.phone`)}
                       placeholder="080..."
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="flex justify-end">
@@ -855,6 +897,7 @@ export default function KioskLicenceForm({
                       size="sm"
                       onClick={() => removeAttendant(idx)}
                       className="text-red-500 hover:text-red-700 h-8 px-2 text-xs"
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -881,41 +924,48 @@ export default function KioskLicenceForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addFixture}
+                onClick={() =>
+                  appendFixture({
+                    fixtureType: "",
+                    quantity: "1",
+                  })
+                }
                 className="gap-1 text-xs h-8"
+                disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" /> Add Fixture
               </Button>
             </div>
 
             <div className="space-y-2.5">
-              {fixtures.map((fix, idx) => (
+              {fixtureFields.map((field, idx) => (
                 <div
-                  key={idx}
+                  key={field.id}
                   className="bg-card border rounded-lg p-3 grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-end"
                 >
                   <div className="space-y-1 sm:col-span-3">
                     <Label className="text-[11px]">
-                      Fixture / Equipment Type
+                      Fixture / Equipment Type *
                     </Label>
                     <Input
-                      value={fix.fixtureType}
-                      onChange={(e) =>
-                        updateFixture(idx, "fixtureType", e.target.value)
-                      }
+                      {...register(`fixtures.${idx}.fixtureType`)}
                       placeholder="e.g. 2kg Fire Extinguisher / Heavy-Duty Padlocks"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
+                    {errors.fixtures?.[idx]?.fixtureType && (
+                      <p className="text-xs text-red-500">
+                        {errors.fixtures[idx]?.fixtureType?.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Quantity</Label>
                     <Input
-                      value={fix.quantity}
-                      onChange={(e) =>
-                        updateFixture(idx, "quantity", e.target.value)
-                      }
+                      {...register(`fixtures.${idx}.quantity`)}
                       placeholder="1"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="flex justify-end">
@@ -925,6 +975,7 @@ export default function KioskLicenceForm({
                       size="sm"
                       onClick={() => removeFixture(idx)}
                       className="text-red-500 hover:text-red-700 h-8 px-2 text-xs"
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>

@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import { useInvoices } from "@/hooks/queries/useInvoices";
 import { useAuth } from "@/hooks/queries/useAuth";
 import Link from "next/link";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { MetricsSkeleton, TableSkeleton } from "@/components/ui/LoadingSkeleton";
 
 export default function InvoicesPage() {
   const [tab, setTab] = useState("all");
@@ -98,17 +100,29 @@ export default function InvoicesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <PageHeader
+          title="Invoices & Payments"
+          subtitle="Every invoice issued across the platform, with collections overview"
+        />
+        <MetricsSkeleton count={4} />
+        <TableSkeleton rows={8} cols={7} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-500 mb-4">Failed to load invoices</p>
-        <Button onClick={() => refetch()}>Retry</Button>
+      <div className="space-y-6">
+        <PageHeader
+          title="Invoices & Payments"
+          subtitle="Every invoice issued across the platform, with collections overview"
+        />
+        <ErrorState
+          title="Failed to load invoices"
+          error={error}
+          refetch={refetch}
+        />
       </div>
     );
   }

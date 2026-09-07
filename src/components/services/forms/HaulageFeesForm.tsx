@@ -1,5 +1,9 @@
 "use client";
 import React, { useState, useMemo } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { WARDS } from "@/lib/mock-data";
-import {
-  ServiceType,
-  getConfiguredFeeForService,
-} from "@/config/odedaServices";
+import { ServiceType } from "@/config/odedaServices";
 import { FormWizard, FormStep } from "./FormWizard";
 import { DocumentUploadStep, DocumentSpec } from "./DocumentUploadStep";
 import {
@@ -23,25 +23,55 @@ import {
   ReviewSection,
   ReviewRepeatableSection,
 } from "./ReviewSubmitStep";
-import { Plus, Trash2, Truck, ShieldCheck, Gauge } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, Truck, Gauge } from "lucide-react";
 import { ApplicantSnapshot } from "../ApplicantSelectionStep";
+
+const vehicleSchema = z.object({
+  plateNumber: z.string().min(1, "Plate / Reg number is required"),
+  chassisNumber: z.string().optional().default(""),
+  vehicleMakeModel: z.string().min(1, "Make & model is required"),
+  tonnageCapacity: z.string().default("30"),
+  driverName: z.string().min(1, "Driver name is required"),
+  driverLicence: z.string().optional().default(""),
+  driverPhone: z.string().optional().default(""),
+});
+
+export const haulageFeesSchema = z.object({
+  companyName: z.string().min(2, "Transport company/operator name is required"),
+  rcNumber: z.string().optional().default(""),
+  managingDirector: z
+    .string()
+    .min(2, "Managing Director / Fleet Manager name is required"),
+  phone: z.string().refine(
+    (val) => {
+      const res = formatAndValidateNigerianPhoneNumber(val);
+      return res.isValid;
+    },
+    { message: "Please enter a valid Nigerian phone number" }
+  ),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .optional()
+    .or(z.literal("")),
+  officeAddress: z.string().min(3, "Office / Garage address is required"),
+  ward: z.string().min(1, "Ward is required"),
+  primaryCargo: z.string().min(1, "Primary cargo material is required"),
+  loadingPoints: z.string().min(2, "Loading points / quarry sites are required"),
+  destinationCorridor: z.string().optional().default(""),
+  paymentPlan: z.string().min(1, "Payment plan is required"),
+  vehicles: z
+    .array(vehicleSchema)
+    .min(1, "At least one fleet vehicle is required"),
+});
+
+export type HaulageFeesFormData = z.infer<typeof haulageFeesSchema>;
 
 interface Props {
   service: ServiceType;
   onSubmit: (formData: Record<string, any>) => void;
   isSubmitting?: boolean;
   initialApplicant?: ApplicantSnapshot;
-}
-
-interface FleetVehicle {
-  plateNumber: string;
-  chassisNumber: string;
-  vehicleMakeModel: string;
-  tonnageCapacity: string;
-  driverName: string;
-  driverLicence: string;
-  driverPhone: string;
 }
 
 const STEPS: FormStep[] = [
@@ -132,82 +162,68 @@ export default function HaulageFeesForm({
   );
   const [declaration, setDeclaration] = useState(false);
 
-  // Form State
-  const [formData, setFormData] = useState({
-    companyName: "",
-    rcNumber: "",
-    managingDirector: "",
-    phone: "",
-    email: "",
-    officeAddress: "",
-    ward: WARDS[0] || "Odeda",
-    primaryCargo: "Granite & Quarry Stone Aggregates",
-    loadingPoints: "Odeda Granite Quarry Corridor, Alagbagba & Olodo Pits",
-    destinationCorridor: "Lagos - Ibadan Interstate Expressway Corridor",
-    paymentPlan: "Monthly Fleet Haulage Permit Pass",
+  const {
+    register,
+    handleSubmit,
+    control,
+    trigger,
+    watch,
+    formState: { errors },
+  } = useForm<HaulageFeesFormData>({
+    resolver: zodResolver(haulageFeesSchema),
+    mode: "onBlur",
+    defaultValues: {
+      companyName: initialApplicant?.name || "",
+      rcNumber: "",
+      managingDirector: initialApplicant?.name || "",
+      phone: initialApplicant?.phone || "",
+      email: initialApplicant?.email || "",
+      officeAddress: initialApplicant?.address || "",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda",
+      primaryCargo: "Granite & Quarry Stone Aggregates",
+      loadingPoints: "Odeda Granite Quarry Corridor, Alagbagba & Olodo Pits",
+      destinationCorridor: "Lagos - Ibadan Interstate Expressway Corridor",
+      paymentPlan: "Monthly Fleet Haulage Permit Pass",
+      vehicles: [
+        {
+          plateNumber: "OG-482-A01",
+          chassisNumber: "WDB9540321K892011",
+          vehicleMakeModel: "Mack Granite 10-Tyre Tipper (30 Tons)",
+          tonnageCapacity: "30",
+          driverName: "Sikiru Adebayo",
+          driverLicence: "FRSC-OG-882910-A",
+          driverPhone: "08033344455",
+        },
+        {
+          plateNumber: "OG-619-B02",
+          chassisNumber: "WDB9340321K441092",
+          vehicleMakeModel: "Mercedes Actros 3340 (30 Tons)",
+          tonnageCapacity: "30",
+          driverName: "Kazeem Oladipo",
+          driverLicence: "FRSC-OG-772911-B",
+          driverPhone: "08022233344",
+        },
+      ],
+    },
   });
 
-  // Repeatable: Fleet Vehicles (Multiple Trucks / Tippers)
-  const [vehicles, setVehicles] = useState<FleetVehicle[]>([
-    {
-      plateNumber: "OG-482-A01",
-      chassisNumber: "WDB9540321K892011",
-      vehicleMakeModel: "Mack Granite 10-Tyre Tipper (30 Tons)",
-      tonnageCapacity: "30",
-      driverName: "Sikiru Adebayo",
-      driverLicence: "FRSC-OG-882910-A",
-      driverPhone: "08033344455",
-    },
-    {
-      plateNumber: "OG-619-B02",
-      chassisNumber: "WDB9340321K441092",
-      vehicleMakeModel: "Mercedes Actros 3340 (30 Tons)",
-      tonnageCapacity: "30",
-      driverName: "Kazeem Oladipo",
-      driverLicence: "FRSC-OG-772911-B",
-      driverPhone: "08022233344",
-    },
-  ]);
+  const {
+    fields: vehicleFields,
+    append: appendVehicle,
+    remove: removeVehicle,
+  } = useFieldArray({
+    control,
+    name: "vehicles",
+  });
 
-  // Calculations
+  const formValues = watch();
+
   const totalFleetTonnage = useMemo(() => {
-    return vehicles.reduce(
+    return (formValues.vehicles || []).reduce(
       (acc, v) => acc + (parseFloat(v.tonnageCapacity) || 0),
       0,
     );
-  }, [vehicles]);
-
-  // Handlers for Vehicles
-  const addVehicle = () => {
-    setVehicles((prev) => [
-      ...prev,
-      {
-        plateNumber: "",
-        chassisNumber: "",
-        vehicleMakeModel: "Sinotruk Howo 371 (30 Tons)",
-        tonnageCapacity: "30",
-        driverName: "",
-        driverLicence: "",
-        driverPhone: "",
-      },
-    ]);
-  };
-
-  const removeVehicle = (idx: number) => {
-    setVehicles((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateVehicle = (
-    idx: number,
-    field: keyof FleetVehicle,
-    val: string,
-  ) => {
-    setVehicles((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      return next;
-    });
-  };
+  }, [formValues.vehicles]);
 
   const handleFileUpload = (docId: string, fileName: string) => {
     setUploadedFiles((prev) => ({ ...prev, [docId]: fileName }));
@@ -221,37 +237,35 @@ export default function HaulageFeesForm({
     });
   };
 
-  const validateStep = (index: number): boolean => {
-    if (index === 0) {
-      return (
-        !!formData.companyName.trim() &&
-        !!formData.managingDirector.trim() &&
-        !!formData.phone.trim() &&
-        !!formData.officeAddress.trim() &&
-        !!formData.ward
-      );
-    }
-    if (index === 1) {
-      return !!formData.primaryCargo && !!formData.loadingPoints.trim();
-    }
-    if (index === 2) {
-      return (
-        vehicles.length > 0 &&
-        !!vehicles[0].plateNumber.trim() &&
-        !!vehicles[0].driverName.trim()
-      );
-    }
-    if (index === 3) {
+  const handleNext = async () => {
+    let isValid = false;
+    if (currentStepIndex === 0) {
+      isValid = await trigger([
+        "companyName",
+        "managingDirector",
+        "phone",
+        "email",
+        "officeAddress",
+        "ward",
+      ]);
+    } else if (currentStepIndex === 1) {
+      isValid = await trigger([
+        "primaryCargo",
+        "loadingPoints",
+        "paymentPlan",
+      ]);
+    } else if (currentStepIndex === 2) {
+      isValid = await trigger("vehicles");
+    } else if (currentStepIndex === 3) {
       const missing = DOCUMENTS.filter(
         (d) => d.required && !uploadedFiles[d.id],
       );
-      return missing.length === 0;
+      isValid = missing.length === 0;
+    } else {
+      isValid = true;
     }
-    return true;
-  };
 
-  const handleNext = () => {
-    if (validateStep(currentStepIndex)) {
+    if (isValid) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
     }
   };
@@ -262,19 +276,17 @@ export default function HaulageFeesForm({
 
   const currentFee = service.feeConfig.amount;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onValidSubmit = (data: HaulageFeesFormData) => {
     if (!declaration) return;
 
     onSubmit({
       formData: {
-        ...formData,
-        vehicles: vehicles.filter((v) => v.plateNumber.trim()),
+        ...data,
+        vehicles: data.vehicles.filter((v) => v.plateNumber.trim()),
         totalFleetTonnage,
-        fleetCount: vehicles.length,
+        fleetCount: data.vehicles.length,
       },
       files: uploadedFiles,
-
       applicant: initialApplicant || null,
     });
   };
@@ -283,35 +295,35 @@ export default function HaulageFeesForm({
     {
       title: "Transport Operator & Fleet Profile",
       items: [
-        { label: "Company / Operator Name", value: formData.companyName },
+        { label: "Company / Operator Name", value: formValues.companyName },
         {
           label: "CAC / RC Number",
-          value: formData.rcNumber || "Private Carrier",
+          value: formValues.rcNumber || "Private Carrier",
         },
         {
           label: "Managing Director / Manager",
-          value: formData.managingDirector,
+          value: formValues.managingDirector,
         },
-        { label: "Contact Phone", value: formData.phone },
-        { label: "Email Address", value: formData.email },
-        { label: "Operating Office Address", value: formData.officeAddress },
-        { label: "Ward in Odeda LGA", value: formData.ward },
+        { label: "Contact Phone", value: formValues.phone },
+        { label: "Email Address", value: formValues.email || "N/A" },
+        { label: "Operating Office Address", value: formValues.officeAddress },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
         {
           label: "Active Fleet Count",
-          value: `${vehicles.length} Heavy Commercial Vehicles`,
+          value: `${vehicleFields.length} Heavy Commercial Vehicles`,
         },
       ],
     },
     {
       title: "Haulage Logistics & Transit Corridors",
       items: [
-        { label: "Primary Cargo Material", value: formData.primaryCargo },
-        { label: "Loading Points / Quarries", value: formData.loadingPoints },
+        { label: "Primary Cargo Material", value: formValues.primaryCargo },
+        { label: "Loading Points / Quarries", value: formValues.loadingPoints },
         {
           label: "Destination Route Corridor",
-          value: formData.destinationCorridor,
+          value: formValues.destinationCorridor || "Standard Regional Corridors",
         },
-        { label: "Haulage Fee Permit Plan", value: formData.paymentPlan },
+        { label: "Haulage Fee Permit Plan", value: formValues.paymentPlan },
         {
           label: "Cumulative Fleet Capacity",
           value: `${totalFleetTonnage} Metric Tons`,
@@ -324,16 +336,16 @@ export default function HaulageFeesForm({
     {
       title: "Fleet Vehicles & Driver Particulars",
       countLabel: "Vehicles",
-      items: vehicles
-        .filter((v) => v.plateNumber.trim())
+      items: (formValues.vehicles || [])
+        .filter((v) => v.plateNumber?.trim())
         .map((v) => ({
           "Plate Number": v.plateNumber,
-          "Chassis Number": v.chassisNumber,
+          "Chassis Number": v.chassisNumber || "N/A",
           "Make & Model": v.vehicleMakeModel,
-          Capacity: `${v.tonnageCapacity} Tons`,
+          Capacity: `${v.tonnageCapacity || "30"} Tons`,
           "Assigned Driver": v.driverName,
-          "Driver Licence": v.driverLicence,
-          "Driver Phone": v.driverPhone,
+          "Driver Licence": v.driverLicence || "N/A",
+          "Driver Phone": v.driverPhone || "N/A",
         })),
     },
   ];
@@ -343,20 +355,15 @@ export default function HaulageFeesForm({
       service={service}
       steps={STEPS}
       currentStepIndex={currentStepIndex}
-      onStepChange={(idx) => setCurrentStepIndex(idx)}
+      onStepChange={setCurrentStepIndex}
       onNext={handleNext}
       onPrev={handlePrev}
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onValidSubmit)}
       isSubmitting={isSubmitting}
-      isStepValid={validateStep(currentStepIndex)}
+      isStepValid={true}
       currentFee={currentFee}
-      submitDisabled={
-        !declaration ||
-        !validateStep(0) ||
-        !validateStep(1) ||
-        !validateStep(2) ||
-        !validateStep(3)
-      }
+      submitDisabled={!declaration}
+      submitLabel="Submit Haulage Permit Application"
     >
       {/* STEP 1: Operator Profile */}
       {currentStepIndex === 0 && (
@@ -378,13 +385,13 @@ export default function HaulageFeesForm({
               </Label>
               <Input
                 id="companyName"
-                required
-                value={formData.companyName}
-                onChange={(e) =>
-                  setFormData({ ...formData, companyName: e.target.value })
-                }
+                {...register("companyName")}
                 placeholder="e.g. Odeda Heavy Haulage & Logistics Limited"
+                disabled={isSubmitting}
               />
+              {errors.companyName && (
+                <p className="text-xs text-red-500">{errors.companyName.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -393,13 +400,13 @@ export default function HaulageFeesForm({
               </Label>
               <Input
                 id="managingDirector"
-                required
-                value={formData.managingDirector}
-                onChange={(e) =>
-                  setFormData({ ...formData, managingDirector: e.target.value })
-                }
+                {...register("managingDirector")}
                 placeholder="e.g. Alhaji Rasheed Adeyemi"
+                disabled={isSubmitting}
               />
+              {errors.managingDirector && (
+                <p className="text-xs text-red-500">{errors.managingDirector.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -408,11 +415,9 @@ export default function HaulageFeesForm({
               </Label>
               <Input
                 id="rcNumber"
-                value={formData.rcNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, rcNumber: e.target.value })
-                }
+                {...register("rcNumber")}
                 placeholder="RC-984321"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -421,13 +426,13 @@ export default function HaulageFeesForm({
               <Input
                 id="phone"
                 type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                {...register("phone")}
                 placeholder="+234 800 000 0000"
+                disabled={isSubmitting}
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500">{errors.phone.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -435,31 +440,42 @@ export default function HaulageFeesForm({
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...register("email")}
                 placeholder="fleet@company.com"
+                disabled={isSubmitting}
               />
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ward">Ward Operating Base in Odeda LGA *</Label>
-              <Select
-                value={formData.ward}
-                onValueChange={(val) => setFormData({ ...formData, ward: val })}
-              >
-                <SelectTrigger id="ward">
-                  <SelectValue placeholder="Select Ward" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WARDS.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w} Ward
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="ward"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="ward">
+                      <SelectValue placeholder="Select Ward" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WARDS.map((w) => (
+                        <SelectItem key={w} value={w}>
+                          {w} Ward
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ward && (
+                <p className="text-xs text-red-500">{errors.ward.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
@@ -468,13 +484,13 @@ export default function HaulageFeesForm({
               </Label>
               <Input
                 id="officeAddress"
-                required
-                value={formData.officeAddress}
-                onChange={(e) =>
-                  setFormData({ ...formData, officeAddress: e.target.value })
-                }
+                {...register("officeAddress")}
                 placeholder="Garage / Terminal Address, Highway Corridor, Odeda LGA"
+                disabled={isSubmitting}
               />
+              {errors.officeAddress && (
+                <p className="text-xs text-red-500">{errors.officeAddress.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -496,67 +512,83 @@ export default function HaulageFeesForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="primaryCargo">Primary Cargo Material *</Label>
-              <Select
-                value={formData.primaryCargo}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, primaryCargo: val })
-                }
-              >
-                <SelectTrigger id="primaryCargo">
-                  <SelectValue placeholder="Select Cargo Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Granite & Quarry Stone Aggregates">
-                    Granite & Quarry Stone Aggregates
-                  </SelectItem>
-                  <SelectItem value="Sand & Laterite Earth Fill">
-                    Sand & Laterite Earth Fill
-                  </SelectItem>
-                  <SelectItem value="Timber, Hardwood & Logs">
-                    Timber, Hardwood & Logs
-                  </SelectItem>
-                  <SelectItem value="Agricultural Produce & Cocoa/Cassava">
-                    Agricultural Produce & Cocoa/Cassava
-                  </SelectItem>
-                  <SelectItem value="Cement & Manufactured Building Materials">
-                    Cement & Manufactured Building Materials
-                  </SelectItem>
-                  <SelectItem value="Petroleum & Industrial Chemicals">
-                    Petroleum & Industrial Chemicals
-                  </SelectItem>
-                  <SelectItem value="General Merchandise & Freight">
-                    General Merchandise & Freight
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="primaryCargo"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="primaryCargo">
+                      <SelectValue placeholder="Select Cargo Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Granite & Quarry Stone Aggregates">
+                        Granite & Quarry Stone Aggregates
+                      </SelectItem>
+                      <SelectItem value="Sand & Laterite Earth Fill">
+                        Sand & Laterite Earth Fill
+                      </SelectItem>
+                      <SelectItem value="Timber, Hardwood & Logs">
+                        Timber, Hardwood & Logs
+                      </SelectItem>
+                      <SelectItem value="Agricultural Produce & Cocoa/Cassava">
+                        Agricultural Produce & Cocoa/Cassava
+                      </SelectItem>
+                      <SelectItem value="Cement & Manufactured Building Materials">
+                        Cement & Manufactured Building Materials
+                      </SelectItem>
+                      <SelectItem value="Petroleum & Industrial Chemicals">
+                        Petroleum & Industrial Chemicals
+                      </SelectItem>
+                      <SelectItem value="General Merchandise & Freight">
+                        General Merchandise & Freight
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.primaryCargo && (
+                <p className="text-xs text-red-500">{errors.primaryCargo.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="paymentPlan">Haulage Permit Schedule *</Label>
-              <Select
-                value={formData.paymentPlan}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, paymentPlan: val })
-                }
-              >
-                <SelectTrigger id="paymentPlan">
-                  <SelectValue placeholder="Select Permit Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Monthly Fleet Haulage Permit Pass">
-                    Monthly Fleet Haulage Permit Pass
-                  </SelectItem>
-                  <SelectItem value="Quarterly Fleet Transit Sticker">
-                    Quarterly Fleet Transit Sticker
-                  </SelectItem>
-                  <SelectItem value="Annual Heavy Haulage Operating Licence">
-                    Annual Heavy Haulage Operating Licence
-                  </SelectItem>
-                  <SelectItem value="Single-Trip Statutory Haulage Ticket">
-                    Single-Trip Statutory Haulage Ticket
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="paymentPlan"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="paymentPlan">
+                      <SelectValue placeholder="Select Permit Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Monthly Fleet Haulage Permit Pass">
+                        Monthly Fleet Haulage Permit Pass
+                      </SelectItem>
+                      <SelectItem value="Quarterly Fleet Transit Sticker">
+                        Quarterly Fleet Transit Sticker
+                      </SelectItem>
+                      <SelectItem value="Annual Heavy Haulage Operating Licence">
+                        Annual Heavy Haulage Operating Licence
+                      </SelectItem>
+                      <SelectItem value="Single-Trip Statutory Haulage Ticket">
+                        Single-Trip Statutory Haulage Ticket
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.paymentPlan && (
+                <p className="text-xs text-red-500">{errors.paymentPlan.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
@@ -565,13 +597,13 @@ export default function HaulageFeesForm({
               </Label>
               <Input
                 id="loadingPoints"
-                required
-                value={formData.loadingPoints}
-                onChange={(e) =>
-                  setFormData({ ...formData, loadingPoints: e.target.value })
-                }
+                {...register("loadingPoints")}
                 placeholder="e.g. Alagbagba Granite Quarries, Olodo Stone Site, Camp Sand Beach"
+                disabled={isSubmitting}
               />
+              {errors.loadingPoints && (
+                <p className="text-xs text-red-500">{errors.loadingPoints.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
@@ -580,14 +612,9 @@ export default function HaulageFeesForm({
               </Label>
               <Input
                 id="destinationCorridor"
-                value={formData.destinationCorridor}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    destinationCorridor: e.target.value,
-                  })
-                }
+                {...register("destinationCorridor")}
                 placeholder="e.g. Abeokuta - Ibadan Expressway to Lagos State / Sagamu Interchange"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -620,7 +647,7 @@ export default function HaulageFeesForm({
                 <h4 className="text-lg font-bold text-foreground">
                   {totalFleetTonnage} Metric Tons{" "}
                   <span className="text-xs font-normal text-muted-foreground">
-                    ({vehicles.length} Trucks Enrolled)
+                    ({vehicleFields.length} Trucks Enrolled)
                   </span>
                 </h4>
               </div>
@@ -629,35 +656,51 @@ export default function HaulageFeesForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={addVehicle}
+              onClick={() =>
+                appendVehicle({
+                  plateNumber: "",
+                  chassisNumber: "",
+                  vehicleMakeModel: "Sinotruk Howo 371 (30 Tons)",
+                  tonnageCapacity: "30",
+                  driverName: "",
+                  driverLicence: "",
+                  driverPhone: "",
+                })
+              }
               className="gap-1 text-xs"
+              disabled={isSubmitting}
             >
               <Plus className="w-3.5 h-3.5" /> Add Fleet Truck
             </Button>
           </div>
 
+          {errors.vehicles && (
+            <p className="text-xs text-red-500">{errors.vehicles.message}</p>
+          )}
+
           {/* REPEATABLE SECTION: Vehicles */}
           <div className="space-y-4">
-            {vehicles.map((v, idx) => (
+            {vehicleFields.map((field, idx) => (
               <div
-                key={idx}
+                key={field.id}
                 className="bg-muted/10 border rounded-xl p-4 space-y-3 relative group"
               >
                 <div className="flex items-center justify-between border-b pb-2">
                   <div className="flex items-center gap-2">
                     <Truck className="w-4 h-4 text-primary" />
                     <span className="font-bold text-xs text-foreground">
-                      Truck #{idx + 1}: {v.plateNumber || "New Vehicle"} (
-                      {v.vehicleMakeModel})
+                      Truck #{idx + 1}: {formValues.vehicles?.[idx]?.plateNumber || "New Vehicle"} (
+                      {formValues.vehicles?.[idx]?.vehicleMakeModel})
                     </span>
                   </div>
-                  {vehicles.length > 1 && (
+                  {vehicleFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => removeVehicle(idx)}
                       className="text-red-500 hover:text-red-700 h-7 px-2 text-xs"
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
                     </Button>
@@ -668,64 +711,69 @@ export default function HaulageFeesForm({
                   <div className="space-y-1">
                     <Label className="text-xs">Plate / Reg Number *</Label>
                     <Input
-                      value={v.plateNumber}
-                      onChange={(e) =>
-                        updateVehicle(idx, "plateNumber", e.target.value)
-                      }
+                      {...register(`vehicles.${idx}.plateNumber`)}
                       placeholder="e.g. OG-482-A01"
                       className="font-mono uppercase font-bold"
+                      disabled={isSubmitting}
                     />
+                    {errors.vehicles?.[idx]?.plateNumber && (
+                      <p className="text-xs text-red-500">{errors.vehicles[idx]?.plateNumber?.message}</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Chassis / VIN Number</Label>
                     <Input
-                      value={v.chassisNumber}
-                      onChange={(e) =>
-                        updateVehicle(idx, "chassisNumber", e.target.value)
-                      }
+                      {...register(`vehicles.${idx}.chassisNumber`)}
                       placeholder="Chassis Number"
                       className="font-mono text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Make & Model *</Label>
                     <Input
-                      value={v.vehicleMakeModel}
-                      onChange={(e) =>
-                        updateVehicle(idx, "vehicleMakeModel", e.target.value)
-                      }
+                      {...register(`vehicles.${idx}.vehicleMakeModel`)}
                       placeholder="e.g. Mack 10-Tyre Tipper"
+                      disabled={isSubmitting}
                     />
+                    {errors.vehicles?.[idx]?.vehicleMakeModel && (
+                      <p className="text-xs text-red-500">{errors.vehicles[idx]?.vehicleMakeModel?.message}</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Tonnage Capacity (Tons) *</Label>
-                    <Select
-                      value={v.tonnageCapacity}
-                      onValueChange={(val) =>
-                        updateVehicle(idx, "tonnageCapacity", val)
-                      }
-                    >
-                      <SelectTrigger className="text-xs h-9">
-                        <SelectValue placeholder="Tonnage" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">
-                          10 Tons (Light Tipper)
-                        </SelectItem>
-                        <SelectItem value="20">
-                          20 Tons (6-Tyre Truck)
-                        </SelectItem>
-                        <SelectItem value="30">
-                          30 Tons (10-Tyre Tipper)
-                        </SelectItem>
-                        <SelectItem value="45">
-                          45 Tons (Articulated Trailer)
-                        </SelectItem>
-                        <SelectItem value="60">
-                          60+ Tons (Heavy Multi-Axle)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      name={`vehicles.${idx}.tonnageCapacity`}
+                      control={control}
+                      render={({ field: tonnageField }) => (
+                        <Select
+                          value={tonnageField.value}
+                          onValueChange={tonnageField.onChange}
+                          disabled={isSubmitting}
+                        >
+                          <SelectTrigger className="text-xs h-9">
+                            <SelectValue placeholder="Tonnage" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">
+                              10 Tons (Light Tipper)
+                            </SelectItem>
+                            <SelectItem value="20">
+                              20 Tons (6-Tyre Truck)
+                            </SelectItem>
+                            <SelectItem value="30">
+                              30 Tons (10-Tyre Tipper)
+                            </SelectItem>
+                            <SelectItem value="45">
+                              45 Tons (Articulated Trailer)
+                            </SelectItem>
+                            <SelectItem value="60">
+                              60+ Tons (Heavy Multi-Axle)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                 </div>
 
@@ -733,34 +781,31 @@ export default function HaulageFeesForm({
                   <div className="space-y-1">
                     <Label className="text-xs">Assigned Driver Name *</Label>
                     <Input
-                      value={v.driverName}
-                      onChange={(e) =>
-                        updateVehicle(idx, "driverName", e.target.value)
-                      }
+                      {...register(`vehicles.${idx}.driverName`)}
                       placeholder="Driver Full Name"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
+                    {errors.vehicles?.[idx]?.driverName && (
+                      <p className="text-xs text-red-500">{errors.vehicles[idx]?.driverName?.message}</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Driver's Licence No</Label>
                     <Input
-                      value={v.driverLicence}
-                      onChange={(e) =>
-                        updateVehicle(idx, "driverLicence", e.target.value)
-                      }
+                      {...register(`vehicles.${idx}.driverLicence`)}
                       placeholder="FRSC Licence No"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Driver Phone</Label>
                     <Input
-                      value={v.driverPhone}
-                      onChange={(e) =>
-                        updateVehicle(idx, "driverPhone", e.target.value)
-                      }
+                      {...register(`vehicles.${idx}.driverPhone`)}
                       placeholder="Driver Phone No"
                       className="h-8 text-xs"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
