@@ -69,9 +69,9 @@ const onboardingSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Valid phone number is required"),
   address: z.string().min(1, "Residential address is required"),
-  town: z.string().min(1, "Town or community is required"),
-  ward: z.string().min(1, "Ward selection is required"),
-  emergencyContact: z.string().min(5, "Emergency contact phone or name is required"),
+  // town: z.string().min(1, "Town or community is required"),
+  // ward: z.string().min(1, "Ward selection is required"),
+  emergencyContact: z.string().optional(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Gender selection is required"),
   avatarUrl: z.string().optional(),
@@ -118,8 +118,8 @@ export function OnboardingModal({ isOpen, onClose, onCompleted }: OnboardingModa
       email: "",
       phone: "",
       address: "",
-      town: "",
-      ward: "",
+      // town: "",
+      // ward: "",
       emergencyContact: "",
       dateOfBirth: "",
       gender: "",
@@ -144,8 +144,8 @@ export function OnboardingModal({ isOpen, onClose, onCompleted }: OnboardingModa
       setValue("email", u.email || "");
       setValue("phone", u.phone || "");
       setValue("address", u.address || "");
-      setValue("town", u.town || "");
-      setValue("ward", u.ward || "");
+      // setValue("town", u.town || "");
+      // setValue("ward", u.ward || "");
       setValue("emergencyContact", u.emergencyContact || "");
       setValue(
         "dateOfBirth",
@@ -207,8 +207,8 @@ export function OnboardingModal({ isOpen, onClose, onCompleted }: OnboardingModa
         lastName: data.lastName,
         phone: data.phone,
         address: data.address,
-        town: data.town,
-        ward: data.ward,
+        // town: data.town,
+        // ward: data.ward,
         emergencyContact: data.emergencyContact,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString() : undefined,
         gender: data.gender,
@@ -353,7 +353,7 @@ export function OnboardingModal({ isOpen, onClose, onCompleted }: OnboardingModa
 
             <div>
               <Label htmlFor="emergencyContact" className="text-xs font-semibold">
-                Emergency Contact <span className="text-destructive">*</span>
+                Emergency Contact
               </Label>
               <Controller
                 name="emergencyContact"
@@ -376,7 +376,7 @@ export function OnboardingModal({ isOpen, onClose, onCompleted }: OnboardingModa
           </div>
 
           {/* Location & Ward */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/40">
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/40">
             <div>
               <Label htmlFor="ward" className="text-xs font-semibold">
                 Odeda Ward <span className="text-destructive">*</span>
@@ -440,7 +440,7 @@ export function OnboardingModal({ isOpen, onClose, onCompleted }: OnboardingModa
                 <p className="text-xs text-destructive mt-1">{errors.address.message}</p>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Demographic Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/40">

@@ -21,7 +21,7 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   const path = usePathname();
-  const crumbs = path.split("/").filter(Boolean);
+  const crumbs = path?.split("/").filter(Boolean);
    const { unreadCount, isLoading } = useNotifications({ limit: 1 });
 
   return (
@@ -33,7 +33,7 @@ export default function AuthenticatedLayout({
             <header className="sticky top-0 z-30 h-14 flex items-center gap-3 border-b border-border/60 bg-background/80 backdrop-blur px-4">
               <SidebarTrigger />
               <nav className="hidden md:flex items-center text-sm text-muted-foreground gap-1.5">
-                {crumbs.map((c, i) => (
+                {crumbs?.map((c, i) => (
                   <span key={c + i} className="flex items-center gap-1.5">
                     {i > 0 && <span className="opacity-50">/</span>}
                     <span

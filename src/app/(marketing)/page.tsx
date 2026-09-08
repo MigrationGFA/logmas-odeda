@@ -43,7 +43,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import { SiteHeader, SiteFooter } from "@/components/site-chrome";
+import { SiteHeader, SiteFooter, NAVBAR_SERVICES } from "@/components/site-chrome";
 import { useServices } from "@/hooks/queries/useServices";
 import { ODEDA_SERVICES } from "@/config/odedaServices";
 import { SITE_CONTACT } from "@/config/siteContact";
@@ -86,8 +86,8 @@ function HomePage() {
     <>
       <Helmet>
         <title>
-          Welcome to the Official Website of Odeda Local Government Area,
-          Ogun State, Nigeria.
+          Welcome to the Official Website of Odeda Local Government Area, Ogun
+          State, Nigeria.
         </title>
         <link rel="canonical" href="https://www.odeda.lg.gov.ng/" />
       </Helmet>
@@ -166,6 +166,7 @@ One Future.
       alt: "Bustling Odeda market with traders and produce",
     },
   ];
+
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [current, setCurrent] = useState(0);
   useEffect(() => {
@@ -334,39 +335,30 @@ const SERVICE_ICON_MAP: Record<string, any> = {
 };
 
 function ServicesSection() {
-  const { data: dbServices, isLoading } = useServices();
+  
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
 
-  // Merge database services with fallback ODEDA_SERVICES
-  const displayServices = useMemo(() => {
-    if (Array.isArray(dbServices) && dbServices.length > 0) {
-      return dbServices.map((srv: any) => {
-        const fallback = ODEDA_SERVICES.find(
-          (o) => o.id === srv.id || o.name?.toLowerCase() === srv.name?.toLowerCase()
-        );
-        return {
-          ...fallback,
-          ...srv,
-          id: srv.id || fallback?.id,
-          name: srv.name || fallback?.name,
-          category: srv.category || fallback?.category || "Statutory Service",
-          description: srv.description || fallback?.description || "Council service and statutory regulation.",
-          processingTime: srv.processingTime || fallback?.processingTime || "1 - 3 Business Days",
-          fee: srv.feeConfig?.amount
-            ? `₦${Number(srv.feeConfig.amount).toLocaleString()}`
-            : fallback?.defaultFee
-            ? `₦${Number(fallback.defaultFee).toLocaleString()}`
-            : "Statutory Rate",
-        };
-      });
-    }
-    return ODEDA_SERVICES.map((o) => ({
-      ...o,
-      fee: o.defaultFee ? `₦${Number(o.defaultFee).toLocaleString()}` : "Statutory Rate",
-    }));
-  }, [dbServices]);
+    const { services: servicesData, isLoading } = useServices();
+  
+    const displayServices = useMemo(() => {
+      const list = Array.isArray(servicesData)
+        ? servicesData
+        : (servicesData as any)?.data || [];
+      if (list && list.length > 0) {
+        // i want to add icons to the list
+        return list.map((s) => {
+          const navService = NAVBAR_SERVICES.find((ns) => ns.id === s.code);
+          return {
+            ...s,
+            icon: navService?.icon || Building2,
+          };
+        });
+      }
+      return [];
+    }, [servicesData]);
+
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -389,14 +381,19 @@ function ServicesSection() {
         {/* Section Header with Controls */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
           <div className="max-w-2xl">
-            <Badge variant="outline" className="mb-3 bg-primary/10 text-primary border-primary/20">
+            <Badge
+              variant="outline"
+              className="mb-3 bg-primary/10 text-primary border-primary/20"
+            >
               <Sparkles className="h-3 w-3 mr-1.5" /> Statutory Council Services
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
               Everything your council does — online
             </h2>
             <p className="mt-2.5 text-muted-foreground text-sm sm:text-base leading-relaxed">
-              Explore all active local government statutory services. Apply, view required documents, pay official fees and track issuance in real time.
+              Explore all active local government statutory services. Apply,
+              view required documents, pay official fees and track issuance in
+              real time.
             </p>
           </div>
 
@@ -421,7 +418,12 @@ function ServicesSection() {
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button asChild size="sm" variant="default" className="ml-2 gap-1.5 shadow-sm">
+            <Button
+              asChild
+              size="sm"
+              variant="default"
+              className="ml-2 gap-1.5 shadow-sm"
+            >
               <Link href="/services">
                 All Services <ArrowRight className="h-3.5 w-3.5" />
               </Link>
@@ -449,6 +451,12 @@ function ServicesSection() {
           <CarouselContent className="-ml-3 sm:-ml-4">
             {displayServices.map((s) => {
               const Icon = SERVICE_ICON_MAP[s.id] || FileBadge;
+
+               const processingTime =
+                s.processingTime || (s.estimatedDays ? `${s.estimatedDays} Business Days` : "1 - 3 Business Days");
+                  const fee = Number(
+                                s.feeConfig?.amount ?? 0
+                              );
               return (
                 <CarouselItem
                   key={s.id}
@@ -487,15 +495,16 @@ function ServicesSection() {
                         <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5 text-primary/70" />
-                            {s.processingTime}
+                            {processingTime}
                           </span>
                           <span className="font-semibold text-foreground">
-                            {s.fee}
+                            {fee > 0 ? `₦${fee.toLocaleString()}` : s.feeDescription || "Variable Tariff"}
                           </span>
                         </div>
 
                         <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary group-hover:translate-x-1 transition-transform">
-                          Apply & View Guide <ArrowRight className="h-3.5 w-3.5" />
+                          Apply & View Guide{" "}
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </div>
                       </div>
                     </Card>
@@ -512,17 +521,27 @@ function ServicesSection() {
 
 function QuickServicePaymentSection() {
   return (
-    <section id="first-timer-apply" className="bg-muted/20 border-y border-border/40 py-16 md:py-20">
+    <section
+      id="first-timer-apply"
+      className="bg-muted/20 border-y border-border/40 py-16 md:py-20"
+    >
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="text-center max-w-3xl mx-auto mb-10">
-          <Badge variant="outline" className="mb-3 bg-primary/10 text-primary border-primary/20">
-            <Sparkles className="h-3 w-3 mr-1" /> First-Timer Fast Application & Payment
+          <Badge
+            variant="outline"
+            className="mb-3 bg-primary/10 text-primary border-primary/20"
+          >
+            <Sparkles className="h-3 w-3 mr-1" /> First-Timer Fast Application &
+            Payment
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             Apply & Pay for Any Council Service Online
           </h2>
           <p className="mt-3 text-muted-foreground text-sm">
-            First-time applicants: Select your required statutory service, enter your details, see the fee, and make payment online. Your citizen portal account will be automatically created with login credentials sent to your email to continue your application on the dashboard.
+            First-time applicants: Select your required statutory service, enter
+            your details, see the fee, and make payment online. Your citizen
+            portal account will be automatically created with login credentials
+            sent to your email to continue your application on the dashboard.
           </p>
         </div>
 
@@ -772,31 +791,50 @@ function ChairmanSection() {
             <Quote className="h-7 w-7 text-gold" />
             <div className="mt-3 space-y-4 text-sm md:text-base leading-relaxed text-foreground/90">
               <p>
-                Dear citizens, residents, farmers, investors and friends of Odeda
-                Local Government Area,
+                Dear citizens, residents, farmers, investors and friends of
+                Odeda Local Government Area,
               </p>
               <p>
-                It is with profound humility and gratitude to Almighty God
-                that I welcome you to the official digital home of Odeda Local Government Area, Ogun State.
+                It is with profound humility and gratitude to Almighty God that
+                I welcome you to the official digital home of Odeda Local
+                Government Area, Ogun State.
               </p>
               <p>
-                Our administration is committed to building an Odeda where every community across our ten wards feels the impact of purposeful, people-centred governance. We remain focused on improving infrastructure, supporting our farmers, traders and youths, strengthening grassroots development and making government more accessible to all.
+                Our administration is committed to building an Odeda where every
+                community across our ten wards feels the impact of purposeful,
+                people-centred governance. We remain focused on improving
+                infrastructure, supporting our farmers, traders and youths,
+                strengthening grassroots development and making government more
+                accessible to all.
               </p>
               <p>
-                This platform is part of our commitment to open, transparent and accessible governance. Here, you can learn about who we are, what we do, our leadership, communities, programmes and projects, while also accessing essential Local Government services such as Certificate of Origin, Business Permit, Haulage Pass, Building-related services, Demand Notices, payments, official receipts, complaints and other services.
+                This platform is part of our commitment to open, transparent and
+                accessible governance. Here, you can learn about who we are,
+                what we do, our leadership, communities, programmes and
+                projects, while also accessing essential Local Government
+                services such as Certificate of Origin, Business Permit, Haulage
+                Pass, Building-related services, Demand Notices, payments,
+                official receipts, complaints and other services.
               </p>
               <p>
-                Through technology and initiatives like this platform, we are bringing government services closer to you—making them easier to access, more transparent and more convenient.
+                Through technology and initiatives like this platform, we are
+                bringing government services closer to you—making them easier to
+                access, more transparent and more convenient.
               </p>
               <p>
-                I invite you to explore this portal, stay informed, access our services, engage with us and join us in building a greater Odeda.
+                I invite you to explore this portal, stay informed, access our
+                services, engage with us and join us in building a greater
+                Odeda.
               </p>
               <p>
-                Together, with God&apos;s guidance and your support, Odeda Local Government will continue to rise.
+                Together, with God&apos;s guidance and your support, Odeda Local
+                Government will continue to rise.
               </p>
             </div>
             <div className="mt-6 pt-5 border-t border-border/40">
-              <div className="font-semibold">Hon. Dr. Waliat Folasade Adeyemo</div>
+              <div className="font-semibold">
+                Hon. Dr. Waliat Folasade Adeyemo
+              </div>
               <div className="text-xs text-muted-foreground">
                 Executive Chairman, Odeda Local Government Area · Ogun State
               </div>
@@ -828,7 +866,8 @@ function InvestSection() {
               Invest in Odeda LGA
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              High-yield opportunities in Solid Minerals, Agro-processing & Real Estate
+              High-yield opportunities in Solid Minerals, Agro-processing & Real
+              Estate
             </h2>
           </div>
           <Button asChild className="bg-gradient-hero shadow-elegant">
@@ -970,7 +1009,8 @@ function WardsMap() {
             Explore Odeda Local Government Area
           </h2>
           <p className="mt-3 text-muted-foreground">
-            A council of ten unique wards — each with its own agricultural, mineral, educational and cultural assets. Tap a ward to learn more.
+            A council of ten unique wards — each with its own agricultural,
+            mineral, educational and cultural assets. Tap a ward to learn more.
           </p>
         </div>
 

@@ -16,11 +16,11 @@ export const SITE_CONTACT = {
   emergencyPhone: "112",
 
   // Email Addresses
-  email: "info@odeda.lg.gov.ng",
-  emailMailto: "mailto:info@odeda.lg.gov.ng",
-  supportEmail: "support@odeda.lg.gov.ng",
+  email: "info@odedalga.com",
+  emailMailto: "mailto:info@odedalga.com",
+  supportEmail: "support@odedalga.com",
   chairmanEmail: "chairman@odedalga.com",
-  revenueEmail: "revenue@odeda.lg.gov.ng",
+  revenueEmail: "revenue@odedalga.com",
 
   // Physical Location & Secretariat
   councilName: "Odeda Local Government",
@@ -36,7 +36,7 @@ export const SITE_CONTACT = {
   weekendHours: "Closed (Emergency & online services active 24/7)",
 
   // Online & Portal
-  portalUrl: "https://www.odeda.lg.gov.ng",
+  portalUrl: "https://www.odedalga.com",
   helpdeskTitle: "Odeda Council Citizens Helpdesk",
 
   // Social Channels

@@ -16,6 +16,7 @@ export function OnboardingIndicator() {
   const isCitizenOrBusiness =
     user?.role === "citizen" || user?.role === "business_owner";
   const needsOnboarding = isCitizenOrBusiness && !user?.onboardingCompleted;
+  console.log("needsOnboarding", needsOnboarding, user?.onboardingCompleted, user?.role);
 
   useEffect(() => {
     if (user && needsOnboarding) {
