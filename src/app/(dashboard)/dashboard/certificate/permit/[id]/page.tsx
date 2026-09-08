@@ -215,17 +215,17 @@ const issuedDate = cert.updatedAt
               </div>
               <h1
                 className="mt-1 text-[32px] leading-tight font-bold text-[#1E2A54]"
-                style={{ fontFamily: "'Spectral', Georgia, serif" }}
+                style={{ fontFamily: "'Cinzel', 'Trajan Pro', serif" }}
               >
                 Odeda Local Government
               </h1>
-              <div className="text-sm text-[#6B6558] italic">Office of the Local Government Chairman — Ogun State</div>
+              <div className="text-sm text-[#6B6558] italic" style={{ fontFamily: "'EB Garamond', serif" }}>Office of the Local Government Chairman — Ogun State</div>
 
               <div className="mt-4 flex items-center gap-3">
                 <span className="h-px w-10 bg-[#AE8A2E]" />
                 <h2
                   className="text-xl font-bold tracking-[0.22em] text-[#8C3E23]"
-                  style={{ fontFamily: "'Spectral', Georgia, serif" }}
+                  style={{ fontFamily: "'Cinzel', 'Trajan Pro', serif" }}
                 >
                   TRADE PERMIT CERTIFICATE
                 </h2>
@@ -235,25 +235,25 @@ const issuedDate = cert.updatedAt
 
             {/* Body */}
             <div className="flex-1 mt-6 text-center">
-              <p className="text-[15px] text-[#6B6558]" style={{ fontFamily: "'Spectral', Georgia, serif" }}>
+              <p className="text-[15px] text-[#6B6558]" style={{ fontFamily: "'EB Garamond', serif" }}>
                 This is to certify that
               </p>
 
               <p
                 className="mt-3 text-[38px] font-bold uppercase tracking-wide text-[#1E2A54] leading-tight"
-                style={{ fontFamily: "'Spectral', Georgia, serif" }}
+                style={{ fontFamily: "'Cinzel', 'Trajan Pro', serif" }}
               >
                 {cert.business.businessName}
               </p>
               <div className="mx-auto mt-1 h-[3px] w-24 bg-[#AE8A2E] rounded-full" />
 
-              <p className="mt-3 text-[15px] text-[#4A453B]">
+              <p className="mt-3 text-[15px] text-[#4A453B]" style={{ fontFamily: "'EB Garamond', serif" }}>
                 Owned by <span className="font-semibold text-[#221D17]">{cert.business.owner.firstName} {cert.business.owner.lastName}</span>
               </p>
 
               <div
-                className="mt-5 max-w-2xl mx-auto text-[14px] leading-relaxed text-[#3D382E]"
-                style={{ fontFamily: "'Spectral', Georgia, serif" }}
+                className="mt-5 max-w-2xl mx-auto text-[15px] leading-relaxed text-[#3D382E]"
+                style={{ fontFamily: "'EB Garamond', serif" }}
               >
                 <p>
                   is a registered business operating in <span className="font-semibold">{cert.business.ward?.name || "Odeda"}</span>{" "}
@@ -281,14 +281,14 @@ const issuedDate = cert.updatedAt
             <div className="mt-auto grid grid-cols-3 gap-6 items-end pt-5">
               <div className="text-center">
                 <div className="border-t-2 border-[#1E2A54] pt-2">
-                  <div className="font-semibold text-[13px]" style={{ fontFamily: "'Spectral', Georgia, serif" }}>
+                  <div className="font-semibold text-[13px]" style={{ fontFamily: "'Libertinus Serif', serif" }}>
                     Hon. Local Government Chairman
                   </div>
-                  <div className="text-[11px] text-[#6B6558] italic">Odeda LGA</div>
+                  <div className="text-[11px] text-[#6B6558] italic" style={{ fontFamily: "'EB Garamond', serif" }}>Odeda LGA</div>
                 </div>
               </div>
 
-              <div className="text-center text-[10px] text-[#6B6558]" style={{ fontFamily: "'Spectral', Georgia, serif" }}>
+              <div className="text-center text-[10.5px] text-[#6B6558]" style={{ fontFamily: "'Arimo', sans-serif" }}>
                 <span className="italic">
                   This certificate is electronically issued and remains the property of Odeda LGA Council.
                 </span>

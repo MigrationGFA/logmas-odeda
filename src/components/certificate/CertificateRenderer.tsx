@@ -104,12 +104,23 @@ export function CertificateRenderer({
                 color: fontColor,
                 textTransform: field.textTransform || "none",
                 fontStyle: field.fontStyle || "normal",
-                whiteSpace: field.maxLines && field.maxLines > 1 ? "normal" : "nowrap",
+                whiteSpace:
+                  field.whiteSpace ||
+                  (typeof value === "string" && value.includes("\n")
+                    ? "pre-line"
+                    : field.maxLines && field.maxLines > 1
+                    ? "normal"
+                    : "nowrap"),
                 wordBreak: "break-word",
                 textOverflow: "ellipsis",
               }}
             >
-              <span className="w-full select-text leading-tight">{value}</span>
+              <span
+                className="w-full select-text leading-tight"
+                style={{ whiteSpace: "inherit" }}
+              >
+                {value}
+              </span>
             </div>
           );
         })}

@@ -61,13 +61,22 @@ export function CertificateSignature({
       <div className="w-48 h-[1.5px] bg-[#14532D] my-1 opacity-70" />
 
       {/* Signer Info */}
-      <div className="text-[13px] font-serif font-bold text-[#14532D] tracking-wide">
+      <div
+        className="text-[14px] font-bold text-[#14532D] tracking-wide"
+        style={{ fontFamily: "'Libertinus Serif', 'Times New Roman', 'Liberation Serif', serif" }}
+      >
         {signerName}
       </div>
-      <div className="text-[11px] font-sans font-semibold text-slate-800 leading-tight">
+      <div
+        className="text-[12px] font-semibold text-slate-800 leading-tight"
+        style={{ fontFamily: "'EB Garamond', 'Garamond', 'Times New Roman', serif" }}
+      >
         {signerTitle}
       </div>
-      <div className="text-[10px] font-sans text-slate-600 italic leading-tight">
+      <div
+        className="text-[11px] text-slate-600 italic leading-tight"
+        style={{ fontFamily: "'EB Garamond', 'Garamond', 'Times New Roman', serif" }}
+      >
         {organization}
       </div>
     </div>
