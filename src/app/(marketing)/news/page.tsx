@@ -10,19 +10,19 @@ import { Calendar, ArrowRight, Search } from "lucide-react";
 
 const EXTENDED_NEWS = [
     ...NEWS,
-    { date: "25 Apr 2026", tag: "Project", title: "Atan Central Market Renovation enters Phase 2" },
-    {
-        date: "18 Apr 2026",
-        tag: "Empowerment",
-        title: "Chairman launches 2,000-youth digital skills program",
-    },
-    { date: "10 Apr 2026", tag: "Health", title: "Free maternal health outreach across 10 wards" },
-    { date: "02 Apr 2026", tag: "Culture", title: "Council confirms 2026 Ojude Oba support package" },
-    {
-        date: "28 Mar 2026",
-        tag: "Revenue",
-        title: "IGR crosses ₦1.8B milestone via LOGMAS digitization",
-    },
+    // { date: "25 Apr 2026", tag: "Project", title: "Atan Central Market Renovation enters Phase 2" },
+    // {
+    //     date: "18 Apr 2026",
+    //     tag: "Empowerment",
+    //     title: "Chairman launches 2,000-youth digital skills program",
+    // },
+    // { date: "10 Apr 2026", tag: "Health", title: "Free maternal health outreach across 10 wards" },
+    // { date: "02 Apr 2026", tag: "Culture", title: "Council confirms 2026 Ojude Oba support package" },
+    // {
+    //     date: "28 Mar 2026",
+    //     tag: "Revenue",
+    //     title: "IGR crosses ₦1.8B milestone via LOGMAS digitization",
+    // },
 ];
 
 export default function NewsPage() {

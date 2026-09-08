@@ -179,7 +179,7 @@ export default function LeadershipPage() {
                             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">{m.bio}</p>
                             <div className="mt-4 pt-4 border-t border-border/40 flex gap-4 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1.5">
-                                    <Mail className="h-3 w-3" /> office@odeda.lg.gov.ng
+                                    <Mail className="h-3 w-3" /> {m.email || "Not available"}
                                 </span>
                             </div>
                         </Card>
@@ -187,7 +187,7 @@ export default function LeadershipPage() {
                 </div>
             </section>
 
-            <section className="bg-secondary/40 py-14">
+            {/* <section className="bg-secondary/40 py-14">
                 <div className="container mx-auto px-4">
                     <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6">Ward Councillors</h2>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -207,7 +207,7 @@ export default function LeadershipPage() {
                         ))}
                     </div>
                 </div>
-            </section>
+            </section> */}
         </PageShell>
     );
 }

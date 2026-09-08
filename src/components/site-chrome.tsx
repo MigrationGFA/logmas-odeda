@@ -32,8 +32,6 @@ const NAV: (NavItem | NavGroup)[] = [
     items: [
       { to: "/services", label: "All Services", desc: "Browse every digital service" },
       // { to: "/digital-services", label: "Digital Services", desc: "E-government portal" },
-      { to: "/verify", label: "Verify Certificate", desc: "Authenticate documents" },
-      { to: "/complaints", label: "Complaints & Support", desc: "Raise an issue" },
     ],
   },
   {
@@ -48,14 +46,24 @@ const NAV: (NavItem | NavGroup)[] = [
     label: "Resources",
     items: [
       { to: "/news", label: "News & Events", desc: "Updates from the council" },
+      { to: "/verify", label: "Verify Certificate", desc: "Authenticate documents" },
       // { to: "/gallery", label: "Media Gallery", desc: "Photos & moments" },
       // { to: "/downloads", label: "Downloads", desc: "Official documents" },
       // { to: "/procurement", label: "Procurement", desc: "Open tenders & bids" },
-      { to: "/careers", label: "Careers", desc: "Work with the LGA" },
+      // { to: "/careers", label: "Careers", desc: "Work with the LGA" },
       { to: "/faq", label: "FAQ", desc: "Common questions" },
     ],
   },
-  { to: "/contact", label: "Contact" } as NavItem,
+  {
+    label: "Contact",
+    items: [
+      { to: "/contact", label: "Contact Us", desc: "Get in touch with the council" },
+      { to: "/complaints", label: "Complaints & Support", desc: "Raise an issue" },
+      // { to: "/gallery", label: "Media Gallery", desc: "Photos & moments" },
+      // { to: "/downloads", label: "Downloads", desc: "Official documents" },
+      // { to: "/procurement", label: "Procurement", desc: "Open tenders & bids" },
+    ],
+  },
 ];
 
 export function SiteHeader() {
@@ -229,7 +237,7 @@ export function SiteFooter() {
               <MapPin className="h-3.5 w-3.5" /> LGA Secretariat, Odeda, Ogun State
             </div>
             <div className="flex items-center gap-2">
-              <Phone className="h-3.5 w-3.5" /> +234 803 373 3155
+              <Phone className="h-3.5 w-3.5" /> +234 80 333 789 71
             </div>
             <div className="flex items-center gap-2">
               <Mail className="h-3.5 w-3.5" /> info@odeda.lg.gov.ng

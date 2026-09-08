@@ -33,9 +33,9 @@ export default function FAQPage() {
                     <Accordion type="single" collapsible className="w-full">
                         {FAQS.map((f, i) => (
                             <AccordionItem key={i} value={`item-${i}`} className="px-4">
-                                <AccordionTrigger className="text-left font-semibold">{f.q}</AccordionTrigger>
+                                <AccordionTrigger className="text-left font-semibold">{f.question}</AccordionTrigger>
                                 <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                                    {f.a}
+                                    {f.answer}
                                 </AccordionContent>
                             </AccordionItem>
                         ))}

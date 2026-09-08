@@ -84,12 +84,12 @@ export const NEWS = [
     tag: "Announcement",
     title: "Odeda LOGMAS Service Expansion Portal Goes Live Across All 10 Wards",
   },
-  {
-    date: "08 May 2026",
-    tag: "Event",
-    title: "Stakeholder Engagement on Quarry & Tenement Rates — Odeda Council Hall",
-  },
-  { date: "01 May 2026", tag: "Update", title: "New Digital QR Verification System Activated for Certificates" },
+  // {
+  //   date: "08 May 2026",
+  //   tag: "Event",
+  //   title: "Stakeholder Engagement on Quarry & Tenement Rates — Odeda Council Hall",
+  // },
+  // { date: "01 May 2026", tag: "Update", title: "New Digital QR Verification System Activated for Certificates" },
 ];
 
 export const INVOICES = [
@@ -239,6 +239,7 @@ export const LEADERSHIP = [
     accent: "primary",
     image: chairmanPhoto,
     party: "All Progressives Congress (APC)",
+    email:"chairman@odedalga.com"
   },
   {
     name: "Hon. Vice Chairman",
@@ -246,6 +247,7 @@ export const LEADERSHIP = [
     bio: "Overseeing social development, health, and women empowerment initiatives in Odeda LGA.",
     initials: "VC",
     accent: "gold",
+    email:"vicechairman@odedalga.com"
   },
   {
     name: "Secretary to Local Government",
@@ -253,6 +255,7 @@ export const LEADERSHIP = [
     bio: "Coordinates council administration and inter-departmental policy implementation.",
     initials: "SLG",
     accent: "info",
+    email:"secretary@odedalga.com"
   },
   {
     name: "Head of Local Government Administration",
@@ -260,6 +263,7 @@ export const LEADERSHIP = [
     bio: "Directs civil service operations and public administration in Odeda LGA.",
     initials: "HL",
     accent: "success",
+    email:"holga@odedalga.com"
   },
   {
     name: "Council Treasurer",
@@ -267,6 +271,7 @@ export const LEADERSHIP = [
     bio: "Manages public finance, revenue heads, and fiscal compliance.",
     initials: "CT",
     accent: "warning",
+    email:"treasurer@odedalga.com"
   },
 ];
 

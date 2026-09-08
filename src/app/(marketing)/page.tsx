@@ -88,13 +88,12 @@ function HomePage() {
           <HeroBanner />
           <ChairmanSection />
           <StatsSection />
-          <WardsMap />
           <ServicesSection />
-          <QuickServicePaymentSection />
+          <WardsMap />
+          {/* <QuickServicePaymentSection /> */}
 
           <FeaturedServices />
           <InvestSection />
-          <CultureSection />
           {/* <LeadershipPreview /> */}
           <NewsSection />
           {/* <Testimonials /> */}
@@ -408,7 +407,7 @@ function FeaturedServices() {
             variant="secondary"
             className="mt-6 bg-gold text-gold-foreground hover:bg-gold/90"
           >
-            <Link href="/login">
+            <Link href="/services">
               Apply now <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
@@ -429,7 +428,7 @@ function FeaturedServices() {
             asChild
             className="mt-6 bg-foreground text-background hover:bg-foreground/90"
           >
-            <Link href="/register">
+            <Link href="/services">
               Register your business <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
@@ -984,9 +983,9 @@ function WardsMap() {
                 <Button asChild size="sm" variant="outline">
                   <Link href="/leadership">Ward leadership</Link>
                 </Button>
-                <Button asChild size="sm" variant="outline">
+                {/* <Button asChild size="sm" variant="outline">
                   <Link href="/projects">Projects here</Link>
-                </Button>
+                </Button> */}
               </div>
             </Card>
 

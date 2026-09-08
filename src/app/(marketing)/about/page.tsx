@@ -92,7 +92,7 @@ export default function AboutPage() {
               Odeda Local Government Area was created in <b>1976</b> with its administrative headquarters in <b>Odeda</b> town along the strategic Abeokuta–Ibadan expressway. The LGA spans <b>10 political wards</b> and is home to a warm, industrious population.
             </p>
             <p>
-              The LGA's economy is anchored by vast agricultural production (cassava, maize, poultry, cocoa), extensive granite quarrying and solid mineral processing, haulage corridors, tertiary education institutions, and a fast-growing digital SME ecosystem powered by LOGMAS.
+              The LGA's economy is anchored by vast agricultural production (cassava, maize, poultry, cocoa), extensive granite quarrying and solid mineral processing, haulage corridors, tertiary education institutions, and a fast-growing digital SME ecosystem.
             </p>
             <p>
               Traditional institutions and royal obas remain strong pillars of community life, working hand-in-hand with the elected council to foster peace, security, and sustainable municipal development.
@@ -107,15 +107,15 @@ export default function AboutPage() {
             <div>
               <div className="font-semibold">Vision</div>
               <p className="opacity-90">
-                To be Ogun State's flagship digital local government — transparent, prosperous, and powered by agricultural and industrial excellence.
+                To create a better Odeda where every citizen has access to quality public services, economic opportunities and an enabling environment to live, work and prosper.
               </p>
             </div>
-            <div>
+            {/* <div>
               <div className="font-semibold">Mission</div>
               <p className="opacity-90">
                 Deliver every public service with dignity, speed and accountability — empowering citizens, farmers, businesses and investors to thrive across Odeda LGA.
               </p>
-            </div>
+            </div> */}
             <div className="grid grid-cols-2 gap-3 pt-2">
               {[
                 { i: Award, t: "Integrity" },
@@ -135,7 +135,7 @@ export default function AboutPage() {
         </Card>
       </section>
 
-      <section className="bg-secondary/40 py-14">
+      {/* <section className="bg-secondary/40 py-14">
         <div className="container mx-auto px-4">
           <Badge variant="outline">Timeline</Badge>
           <h2 className="mt-3 text-2xl md:text-3xl font-bold tracking-tight mb-8">
@@ -154,7 +154,7 @@ export default function AboutPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       <section className="container mx-auto px-4 py-14">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6">

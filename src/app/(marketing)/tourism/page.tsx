@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,6 @@ import { PageShell, PageHero } from "@/components/page-shell";
 import { TOURISM } from "@/lib/mock-data";
 import { Calendar, MapPin, Camera } from "lucide-react";
 import Link from "next/link";
-
 
 export default function TourismPage() {
   const palette = ["primary", "gold", "info", "success", "warning", "primary"];
@@ -20,28 +19,38 @@ export default function TourismPage() {
 
       <section className="container mx-auto px-4 py-14">
         <Card className="overflow-hidden border-border/40 bg-gradient-hero text-primary-foreground p-10 md:p-14 mb-12">
-          <Badge className="bg-gold/20 text-gold border-gold/30">Heritage & Nature</Badge>
+          <Badge className="bg-gold/20 text-gold border-gold/30">
+            Heritage & Nature
+          </Badge>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold">
-            Arakanga Forest Reserve & Cultural Heritage — A celebration of Egba identity
+            Arakanga Forest Reserve & Cultural Heritage — A celebration of Egba
+            identity
           </h2>
           <p className="mt-3 opacity-90 max-w-2xl">
-            Home to historic reserves, granite formations, traditional craftsmanship and serene agrarian landscapes across Odeda's 10 wards.
+            Home to historic reserves, granite formations, traditional
+            craftsmanship and serene agrarian landscapes across Odeda's 10
+            wards.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild className="bg-gold text-gold-foreground hover:bg-gold/90">
+            <Button
+              asChild
+              className="bg-gold text-gold-foreground hover:bg-gold/90"
+            >
               <Link href="/news">Festival calendar</Link>
             </Button>
-            <Button
+            {/* <Button
               asChild
               variant="outline"
               className="bg-white/10 border-white/30 text-white hover:bg-white/20"
             >
               <Link href="/gallery">Photo gallery</Link>
-            </Button>
+            </Button> */}
           </div>
         </Card>
 
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6">Places to visit</h2>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6">
+          Places to visit
+        </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {TOURISM.map((t, i) => (
             <Card
@@ -82,7 +91,9 @@ export default function TourismPage() {
             {
               icon: Camera,
               title: "Storied palaces",
-              desc: "Royal courts of Atan, Ososa and Itele welcome respectful visitors.",
+              desc: `Oluwo of Osiele / Osiele Royal Court 
+Olu of Orile-Ilawo / Ilawo Traditional Kingdom, 
+Olugbo Traditional/Chieftaincy Heritage`,
             },
           ].map((c) => (
             <Card key={c.title} className="p-6 bg-background border-border/40">

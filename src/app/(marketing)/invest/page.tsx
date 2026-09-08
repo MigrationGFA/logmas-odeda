@@ -24,8 +24,8 @@ export default function InvestPage() {
         <PageShell>
             <PageHero
                 eyebrow="Investment Opportunities"
-                title="A strategic gateway between Lagos and Ogun"
-                subtitle="Located on the Lagos–Benin economic corridor with fertile land, vibrant markets, modern digital governance and a young, skilled workforce."
+                title="Strategically positioned along the Abeokuta–Ibadan axis"
+                subtitle="Odeda LGA is connected to the wider Lagos–Ogun–Benin economic corridor and well placed to become a hub for agriculture, commerce, logistics, investment and regional economic development."
             >
                 <div className="flex flex-wrap gap-3">
                     <Button asChild className="bg-gradient-hero shadow-elegant">
@@ -33,11 +33,11 @@ export default function InvestPage() {
                             Contact Investment Desk <ArrowRight className="ml-1.5 h-4 w-4" />
                         </Link>
                     </Button>
-                    <Button asChild variant="outline">
+                    {/* <Button asChild variant="outline">
                         <Link href="/downloads">
                             Download Investment Guide <Download className="ml-1.5 h-4 w-4" />
                         </Link>
-                    </Button>
+                    </Button> */}
                 </div>
             </PageHero>
 
