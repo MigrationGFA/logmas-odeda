@@ -608,7 +608,7 @@ function ChairmanSection() {
                 fill
               />
             )}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 text-white">
+            {/* <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 text-white">
               <div className="flex items-center gap-2">
                 <Crown className="h-4 w-4 text-gold" />
                 <span className="text-xs uppercase tracking-wider opacity-90">
@@ -618,7 +618,7 @@ function ChairmanSection() {
               <div className="mt-1 font-bold text-lg leading-tight">
                 {c.name}
               </div>
-            </div>
+            </div> */}
           </div>
           <div className="md:col-span-3 p-8 md:p-10">
             <Quote className="h-7 w-7 text-gold" />
