@@ -96,7 +96,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const isReady = !isLoadingUser && isUserDataFresh;
 
   let redirectTarget: string | null = null;
-  let redirectToastMessage: string | null = null;
+  const redirectToastMessage: string | null = null;
   let shouldClearSession = false;
 
   if (!isLoadingUser && !token) {
@@ -107,10 +107,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       // or they'll just get bounced straight back here from /login.
       redirectTarget = `/login?reason=unverified&email=${encodeURIComponent(user.email)}`;
       shouldClearSession = true;
-    } else if (needsOnboarding && !isOnboardingRoute && !isPublicRoute) {
-      redirectTarget = "/onboarding";
-      redirectToastMessage = "Please complete your profile to continue.";
-    } else if (isOnboardingRoute && !needsOnboarding) {
+    } else if (isOnboardingRoute) {
+      // Onboarding route is no longer a blocking page; redirect to dashboard where modal indicator is available
       redirectTarget = "/dashboard";
     } else if (isPublicRoute) {
       redirectTarget = "/dashboard";

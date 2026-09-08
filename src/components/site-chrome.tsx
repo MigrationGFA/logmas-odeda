@@ -7,11 +7,112 @@ import {
   Phone,
   Mail,
   MapPin,
+  FileBadge,
+  Users,
+  Building2,
+  Sprout,
+  Home,
+  Truck,
+  Beer,
+  Tv,
+  Pickaxe,
+  Store,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 import Link from "next/link";
 import { tokenManager } from "@/services/apiAuth";
+import { SITE_CONTACT } from "@/config/siteContact";
+
+export const NAVBAR_SERVICES = [
+  {
+    id: "certificate_of_origin",
+    name: "Certificate of Origin",
+    desc: "Indigene certificate for Odeda LGA descendants",
+    icon: FileBadge,
+    category: "Certificates",
+  },
+  {
+    id: "club_registration",
+    name: "Club Registration",
+    desc: "Statutory certificate for social clubs & orgs",
+    icon: Users,
+    category: "Certificates",
+  },
+  {
+    id: "cda_registration",
+    name: "CDA Registration",
+    desc: "Community Development Association recognition",
+    icon: Building2,
+    category: "Community",
+  },
+  {
+    id: "farmers_registration",
+    name: "Farmers Registration",
+    desc: "Agricultural registry for LGA farmers",
+    icon: Sprout,
+    category: "Agriculture",
+  },
+  {
+    id: "environmental_sanitation",
+    name: "Sanitation Compliance",
+    desc: "Commercial & residential hygiene audit",
+    icon: ShieldCheck,
+    category: "Certificates",
+  },
+  {
+    id: "tenement_rate",
+    name: "Tenement Rate",
+    desc: "Property tax and annual rating assessment",
+    icon: Home,
+    category: "Rates & Levies",
+  },
+  {
+    id: "haulage_fees",
+    name: "Haulage Fees",
+    desc: "Commercial transport & vehicle permits",
+    icon: Truck,
+    category: "Rates & Levies",
+  },
+  {
+    id: "liquor_licence",
+    name: "Liquor Licence",
+    desc: "Alcohol dispensing statutory permit",
+    icon: Beer,
+    category: "Licences",
+  },
+  {
+    id: "viewing_centre_licence",
+    name: "Viewing Centre Licence",
+    desc: "Commercial entertainment & video permit",
+    icon: Tv,
+    category: "Licences",
+  },
+  {
+    id: "quarry_permit",
+    name: "Quarry Fees & Permits",
+    desc: "Mining, stone and granite extraction",
+    icon: Pickaxe,
+    category: "Permits",
+  },
+  {
+    id: "street_naming",
+    name: "Street Naming & Numbering",
+    desc: "Official road naming & address registry",
+    icon: MapPin,
+    category: "Urban Dev",
+  },
+  {
+    id: "kiosk_licence",
+    name: "Kiosk Licence",
+    desc: "Temporary retail kiosk and booth permits",
+    icon: Store,
+    category: "Licences",
+  },
+];
 
 type NavItem = { to: string; label: string; desc?: string };
 type NavGroup = { label: string; items: NavItem[] };
@@ -70,26 +171,29 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
 
-  const isAuthenticated = !!tokenManager.getAccessToken()
+  const isAuthenticated = !!tokenManager.getAccessToken();
 
   return (
     <>
       <div className="hidden md:block bg-primary text-primary-foreground text-xs">
         <div className="container mx-auto px-4 py-1.5 flex items-center justify-between">
           <div className="flex items-center gap-5 opacity-90">
-            <span className="flex items-center gap-1.5">
-              <Phone className="h-3 w-3" /> +234 803 373 3155
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Mail className="h-3 w-3" /> info@odeda.lg.gov.ng
-            </span>
+            <a
+              href={SITE_CONTACT.phoneTel}
+              className="flex items-center gap-1.5 hover:underline transition-all"
+            >
+              <Phone className="h-3 w-3" /> {SITE_CONTACT.phone}
+            </a>
+            <a
+              href={SITE_CONTACT.emailMailto}
+              className="flex items-center gap-1.5 hover:underline transition-all"
+            >
+              <Mail className="h-3 w-3" /> {SITE_CONTACT.email}
+            </a>
           </div>
-          {/* <div className="flex items-center gap-3 opacity-90">
-            <FaFacebookF className="h-3 w-3" />
-            <FaTwitter className="h-3 w-3" />
-            <FaInstagram className="h-3 w-3" />
-            <FaYoutube className="h-3 w-3" />
-          </div> */}
+          <div className="text-[11px] opacity-80">
+            {SITE_CONTACT.operatingDays}
+          </div>
         </div>
       </div>
 
@@ -116,26 +220,99 @@ export function SiteHeader() {
                     href={n.to}
                     onMouseEnter={() => setHovered(null)}
                     className="px-3 py-2 text-sm font-medium text-foreground/70 hover:text-primary transition-smooth rounded-md"
-                    // active={{ className: "text-primary font-semibold" }}
-                    // activeOptions={{ exact: n.to === "/" }}
                   >
                     {n.label}
                   </Link>
                 );
               }
+
               const isOpen = hovered === n.label;
+              const isServices = n.label === "Services";
+
               return (
                 <div key={n.label} className="relative" onMouseEnter={() => setHovered(n.label)}>
                   <button
-                    className={`px-3 py-2 text-sm font-medium rounded-md inline-flex items-center gap-1 transition-smooth ${isOpen ? "text-primary" : "text-foreground/70 hover:text-primary"}`}
+                    className={`px-3 py-2 text-sm font-medium rounded-md inline-flex items-center gap-1 transition-smooth ${
+                      isOpen ? "text-primary font-semibold" : "text-foreground/70 hover:text-primary"
+                    }`}
                   >
                     {n.label}{" "}
                     <ChevronDown
                       className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
                     />
                   </button>
-                  {isOpen && (
-                    <div className="absolute left-0 top-full pt-2 w-[420px] animate-fade-in">
+
+                  {/* Services 2-Column Mega Dropdown */}
+                  {isOpen && isServices && (
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[680px] xl:w-[720px] animate-fade-in z-50">
+                      <div className="rounded-2xl border border-border/70 bg-background/95 backdrop-blur-md shadow-2xl p-4 overflow-hidden">
+                        <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/50 px-1">
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                              Statutory Council Services
+                            </span>
+                            <p className="text-xs text-muted-foreground">
+                              Select any LGA service to view requirements, fees, and apply online
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[11px] font-normal">
+                            12 Services
+                          </Badge>
+                        </div>
+
+                        {/* 2-Column List of Services */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {NAVBAR_SERVICES.map((s) => {
+                            const Icon = s.icon;
+                            return (
+                              <Link
+                                key={s.id}
+                                href={`/services/${s.id}`}
+                                onClick={() => setHovered(null)}
+                                className="group flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted/80 border border-transparent hover:border-border/60 transition-all"
+                              >
+                                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                  <Icon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                                      {s.name}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                                    {s.desc}
+                                  </p>
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+
+                        {/* Dropdown Footer Action Bar */}
+                        <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between px-2 text-xs">
+                          <Link
+                            href="/services"
+                            onClick={() => setHovered(null)}
+                            className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+                          >
+                            Browse All Services Directory <ArrowRight className="h-3 w-3" />
+                          </Link>
+                          <Link
+                            href="/verify"
+                            onClick={() => setHovered(null)}
+                            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                          >
+                            <ShieldCheck className="h-3 w-3 text-primary" /> Verify Certificate
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Standard Dropdown for other groups */}
+                  {isOpen && !isServices && (
+                    <div className="absolute left-0 top-full pt-2 w-[340px] animate-fade-in z-50">
                       <div className="rounded-xl border border-border/60 bg-background shadow-elegant p-2 grid">
                         {n.items.map((it) => (
                           <Link
@@ -234,14 +411,14 @@ export function SiteFooter() {
           </p>
           <div className="mt-5 space-y-2 text-sm opacity-80">
             <div className="flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5" /> LGA Secretariat, Odeda, Ogun State
+              <MapPin className="h-3.5 w-3.5" /> {SITE_CONTACT.shortAddress}
             </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-3.5 w-3.5" /> +234 80 333 789 71
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-3.5 w-3.5" /> info@odeda.lg.gov.ng
-            </div>
+            <a href={SITE_CONTACT.phoneTel} className="flex items-center gap-2 hover:underline">
+              <Phone className="h-3.5 w-3.5" /> {SITE_CONTACT.phone}
+            </a>
+            <a href={SITE_CONTACT.emailMailto} className="flex items-center gap-2 hover:underline">
+              <Mail className="h-3.5 w-3.5" /> {SITE_CONTACT.email}
+            </a>
           </div>
           {/* <div className="mt-5 flex gap-3 opacity-80">
             <FaFacebookF className="h-4 w-4" />

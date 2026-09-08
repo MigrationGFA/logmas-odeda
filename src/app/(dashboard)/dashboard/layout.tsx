@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useNotifications } from "@/hooks/queries/useNotifications";
+import { OnboardingIndicator } from "@/components/dashboard/OnboardingIndicator";
 
 export default function AuthenticatedLayout({
   children,
@@ -75,6 +76,7 @@ export default function AuthenticatedLayout({
                 </Button>
               </div>
             </header>
+            <OnboardingIndicator />
             <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
           </SidebarInset>
         </div>

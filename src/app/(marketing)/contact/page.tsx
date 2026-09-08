@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, Clock } from "lucide-react";
+import { SITE_CONTACT } from "@/config/siteContact";
 
 export default function ContactPage() {
     const [sending, setSending] = useState(false);
@@ -18,7 +19,7 @@ export default function ContactPage() {
         setSending(true);
         setTimeout(() => {
             setSending(false);
-            toast.success("Message sent. We&apos;ll respond within 1 business day.");
+            toast.success("Message sent. We'll respond within 1 business day.");
             (e.target as HTMLFormElement).reset();
         }, 600);
     };
@@ -44,10 +45,18 @@ export default function ContactPage() {
                             {
                                 icon: MapPin,
                                 title: "Office",
-                                lines: ["Odeda LGA Secretariat Complex", "Odeda Town, Ogun State"],
+                                lines: [SITE_CONTACT.secretariatAddress],
                             },
-                            { icon: Phone, title: "Phone", lines: ["+234 803 373 3155"] },
-                            { icon: Mail, title: "Email", lines: ["info@odeda.lg.gov.ng"] },
+                            {
+                                icon: Phone,
+                                title: "Phone",
+                                lines: [SITE_CONTACT.phone, SITE_CONTACT.operatingDays],
+                            },
+                            {
+                                icon: Mail,
+                                title: "Email",
+                                lines: [SITE_CONTACT.email, SITE_CONTACT.supportEmail],
+                            },
                         ].map((c) => (
                             <Card key={c.title} className="p-5 bg-gradient-card border-border/40">
                                 <div className="flex items-start gap-3">

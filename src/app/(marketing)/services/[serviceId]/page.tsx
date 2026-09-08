@@ -5,6 +5,7 @@ import { getOdedaServiceById, ODEDA_SERVICES, ServiceType, getConfiguredFeeForSe
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { ServiceApplicationGuideSteps } from "@/components/services/ServiceApplicationGuideSteps";
 import { PublicServiceApplyWidget } from "@/components/services/PublicServiceApplyWidget";
+import { SITE_CONTACT } from "@/config/siteContact";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -353,17 +354,17 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
                 </p>
 
                 <div className="mt-4 space-y-2.5 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2">
+                  <a href={SITE_CONTACT.phoneTel} className="flex items-center gap-2 hover:text-foreground transition-colors">
                     <Phone className="h-3.5 w-3.5 text-primary" />
-                    <span>+234 803 373 3155</span>
-                  </div>
-                  <div className="flex items-center gap-2">
+                    <span>{SITE_CONTACT.phone}</span>
+                  </a>
+                  <a href={SITE_CONTACT.emailMailto} className="flex items-center gap-2 hover:text-foreground transition-colors">
                     <Mail className="h-3.5 w-3.5 text-primary" />
-                    <span>info@odeda.lg.gov.ng</span>
-                  </div>
+                    <span>{SITE_CONTACT.email}</span>
+                  </a>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-3.5 w-3.5 text-primary" />
-                    <span>Secretariat Complex, Odeda, Ogun State</span>
+                    <span>{SITE_CONTACT.shortAddress}</span>
                   </div>
                 </div>
 

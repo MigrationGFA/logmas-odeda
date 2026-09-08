@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react/no-unescaped-entities */
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Autoplay from "embla-carousel-autoplay";
 import {
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   FileBadge,
   Store,
   Truck,
@@ -26,6 +28,10 @@ import {
   Camera,
   Home,
   Pickaxe,
+  Clock,
+  ShieldCheck,
+  Beer,
+  Tv,
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +44,9 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
+import { useServices } from "@/hooks/queries/useServices";
+import { ODEDA_SERVICES } from "@/config/odedaServices";
+import { SITE_CONTACT } from "@/config/siteContact";
 import {
   STATS,
   SERVICES,
@@ -309,53 +318,193 @@ function StatsSection() {
   );
 }
 
+const SERVICE_ICON_MAP: Record<string, any> = {
+  certificate_of_origin: FileBadge,
+  club_registration: Users,
+  cda_registration: Building2,
+  farmers_registration: Sprout,
+  environmental_sanitation: ShieldCheck,
+  tenement_rate: Home,
+  haulage_fees: Truck,
+  liquor_licence: Beer,
+  viewing_centre_licence: Tv,
+  quarry_permit: Pickaxe,
+  street_naming: MapPin,
+  kiosk_licence: Store,
+};
+
 function ServicesSection() {
+  const { data: dbServices, isLoading } = useServices();
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Merge database services with fallback ODEDA_SERVICES
+  const displayServices = useMemo(() => {
+    if (Array.isArray(dbServices) && dbServices.length > 0) {
+      return dbServices.map((srv: any) => {
+        const fallback = ODEDA_SERVICES.find(
+          (o) => o.id === srv.id || o.name?.toLowerCase() === srv.name?.toLowerCase()
+        );
+        return {
+          ...fallback,
+          ...srv,
+          id: srv.id || fallback?.id,
+          name: srv.name || fallback?.name,
+          category: srv.category || fallback?.category || "Statutory Service",
+          description: srv.description || fallback?.description || "Council service and statutory regulation.",
+          processingTime: srv.processingTime || fallback?.processingTime || "1 - 3 Business Days",
+          fee: srv.feeConfig?.amount
+            ? `₦${Number(srv.feeConfig.amount).toLocaleString()}`
+            : fallback?.defaultFee
+            ? `₦${Number(fallback.defaultFee).toLocaleString()}`
+            : "Statutory Rate",
+        };
+      });
+    }
+    return ODEDA_SERVICES.map((o) => ({
+      ...o,
+      fee: o.defaultFee ? `₦${Number(o.defaultFee).toLocaleString()}` : "Statutory Rate",
+    }));
+  }, [dbServices]);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+    const onSelect = () => {
+      setCanScrollPrev(carouselApi.canScrollPrev());
+      setCanScrollNext(carouselApi.canScrollNext());
+    };
+    onSelect();
+    carouselApi.on("select", onSelect);
+    carouselApi.on("reInit", onSelect);
+    return () => {
+      carouselApi.off("select", onSelect);
+      carouselApi.off("reInit", onSelect);
+    };
+  }, [carouselApi]);
+
   return (
-    <section className="container mx-auto px-4 py-16 md:py-20">
-      <div className="text-center max-w-2xl mx-auto mb-12">
-        <Badge variant="outline" className="mb-3">
-          Our Services
-        </Badge>
-        <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-          Everything your council does — online
-        </h2>
-        <p className="mt-3 text-muted-foreground">
-          From certificates to levies, every workflow is seamless, traceable and
-          verifiable.
-        </p>
-      </div>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {SERVICES.map((s) => {
-          const Icon = ICONS[s.icon] || FileBadge;
-          return (
-            <Card
-              key={s.title}
-              className="group p-6 bg-gradient-card border-border/40 hover:shadow-elegant hover:-translate-y-1 transition-smooth"
+    <section className="py-16 md:py-24 bg-gradient-to-b from-background via-muted/20 to-background border-b border-border/40 overflow-hidden">
+      <div className="container mx-auto px-4">
+        {/* Section Header with Controls */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+          <div className="max-w-2xl">
+            <Badge variant="outline" className="mb-3 bg-primary/10 text-primary border-primary/20">
+              <Sparkles className="h-3 w-3 mr-1.5" /> Statutory Council Services
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Everything your council does — online
+            </h2>
+            <p className="mt-2.5 text-muted-foreground text-sm sm:text-base leading-relaxed">
+              Explore all active local government statutory services. Apply, view required documents, pay official fees and track issuance in real time.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start md:self-end shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              disabled={!canScrollPrev}
+              onClick={() => carouselApi?.scrollPrev()}
+              aria-label="Previous services"
             >
-              <div
-                className={`h-12 w-12 rounded-xl flex items-center justify-center mb-4 bg-${s.color}/10 text-${s.color === "gold" ? "gold-foreground" : s.color}`}
-                style={{
-                  backgroundColor: `color-mix(in oklab, var(--${s.color}) 12%, transparent)`,
-                }}
-              >
-                <Icon
-                  className="h-6 w-6"
-                  style={{ color: `var(--${s.color})` }}
-                />
-              </div>
-              <h3 className="font-semibold text-lg">{s.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                {s.desc}
-              </p>
-              <Link
-                href="/login"
-                className="mt-4 inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 gap-1 transition-all"
-              >
-                Access service <ArrowRight className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              disabled={!canScrollNext}
+              onClick={() => carouselApi?.scrollNext()}
+              aria-label="Next services"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button asChild size="sm" variant="default" className="ml-2 gap-1.5 shadow-sm">
+              <Link href="/services">
+                All Services <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-            </Card>
-          );
-        })}
+            </Button>
+          </div>
+        </div>
+
+        {/* Carousel / Marquee Track */}
+        <Carousel
+          setApi={setCarouselApi}
+          opts={{
+            align: "start",
+            loop: true,
+            dragFree: true,
+          }}
+          plugins={[
+            Autoplay({
+              delay: 3200,
+              stopOnInteraction: false,
+              stopOnMouseEnter: true,
+            }),
+          ]}
+          className="w-full"
+        >
+          <CarouselContent className="-ml-3 sm:-ml-4">
+            {displayServices.map((s) => {
+              const Icon = SERVICE_ICON_MAP[s.id] || FileBadge;
+              return (
+                <CarouselItem
+                  key={s.id}
+                  className="pl-3 sm:pl-4 basis-[280px] sm:basis-[320px] lg:basis-[360px]"
+                >
+                  <Link
+                    href={`/services/${s.id}`}
+                    className="block h-full group"
+                  >
+                    <Card className="h-full flex flex-col justify-between p-5 sm:p-6 bg-card hover:bg-card/90 border-border/60 hover:border-primary/50 shadow-xs hover:shadow-elegant transition-all duration-300 rounded-2xl group-hover:-translate-y-1">
+                      <div>
+                        {/* Header: Icon & Category */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-xs">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className="text-[11px] font-medium bg-muted text-muted-foreground group-hover:text-foreground"
+                          >
+                            {s.category}
+                          </Badge>
+                        </div>
+
+                        {/* Title & Description */}
+                        <h3 className="font-bold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                          {s.name}
+                        </h3>
+                        <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                          {s.description}
+                        </p>
+                      </div>
+
+                      {/* Footer: Timeline & Nav */}
+                      <div className="mt-6 pt-4 border-t border-border/50">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5 text-primary/70" />
+                            {s.processingTime}
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {s.fee}
+                          </span>
+                        </div>
+
+                        <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary group-hover:translate-x-1 transition-transform">
+                          Apply & View Guide <ArrowRight className="h-3.5 w-3.5" />
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                </CarouselItem>
+              );
+            })}
+          </CarouselContent>
+        </Carousel>
       </div>
     </section>
   );
@@ -553,17 +702,17 @@ function ContactSection() {
           {
             icon: MapPin,
             title: "Visit us",
-            lines: ["Odeda LGA Secretariat Complex", "Odeda Town, Ogun State"],
+            lines: [SITE_CONTACT.secretariatAddress],
           },
           {
             icon: Phone,
             title: "Call us",
-            lines: ["+234 803 373 3155", "Mon – Fri, 8am – 5pm"],
+            lines: [SITE_CONTACT.phone, SITE_CONTACT.operatingDays],
           },
           {
             icon: Mail,
             title: "Email us",
-            lines: ["info@odeda.lg.gov.ng"],
+            lines: [SITE_CONTACT.email, SITE_CONTACT.supportEmail],
           },
         ].map((c) => (
           <Card key={c.title} className="p-6 bg-gradient-card border-border/40">
