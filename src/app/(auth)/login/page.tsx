@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/queries/useAuth";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FullPageLoader } from "@/components/ProtectedRoute";
+import logo from "@/assets/logo.png";
+import Image from "next/image";
 
 export default function Page() {
   return (
@@ -43,10 +45,10 @@ function LoginPage() {
   };
 
   const searchParams = useSearchParams();
-  const reason = searchParams.get("reason");
-  const registered = searchParams.get("registered");
-  const emailParam = searchParams.get("email");
-  const verified = searchParams.get("verified");
+  const reason = searchParams?.get("reason");
+  const registered = searchParams?.get("registered");
+  const emailParam = searchParams?.get("email");
+  const verified = searchParams?.get("verified");
 
   useEffect(() => {
     if (reason === "suspended") {
@@ -67,8 +69,8 @@ function LoginPage() {
     // Check for registration or email verification messages
     if (registered === "true" && !verified) {
       const message = emailParam
-        ? `A verification link has been sent to ${emailParam}. Please verify your email to access your account.`
-        : "Please verify your email address to access your account. A verification link has been sent to your email.";
+        ? `A verification link has been sent to ${emailParam}. Please verify your email to access your account. If you do not see it in your inbox, please check your spam/junk folder.`
+        : "Please verify your email address to access your account. A verification link has been sent to your email. If you do not see it in your inbox, please check your spam/junk folder.";
       setVerificationMessage(message);
 
       // Auto-fill email if provided
@@ -77,7 +79,7 @@ function LoginPage() {
       }
 
       // Show toast notification
-      toast.info("Verification email sent! Please check your inbox.");
+      toast.info("Verification email sent! Please check your inbox and spam folder.");
 
       // Clear the URL parameters after displaying the message
       const url = new URL(window.location.href);
@@ -143,15 +145,10 @@ function LoginPage() {
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       <div className="hidden lg:flex relative overflow-hidden bg-gradient-hero text-primary-foreground p-12 flex-col justify-between">
         <div className="absolute inset-0 bg-gradient-mesh opacity-30" />
-        <Link href="/" className="relative flex items-center gap-2.5">
-          <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="font-bold">LOGMAS</div>
-            <div className="text-[10px] uppercase tracking-wider opacity-70">
-              Odeda LGA
-            </div>
+        <Link href="/" className="relative flex flex-col items-center gap-2.5 w-fit">
+          <Image src={logo} alt="LOGMAS" className="h-12 w-12" />
+          <div className="text-[10px] uppercase font-bold tracking-wider text-muted-background">
+            Odeda LGA
           </div>
         </Link>
         <div className="relative space-y-6">

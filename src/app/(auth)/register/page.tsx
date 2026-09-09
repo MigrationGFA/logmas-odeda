@@ -1,7 +1,14 @@
 "use client";
 
 import { toast } from "sonner";
-import { ShieldCheck, Loader2, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ShieldCheck,
+  Loader2,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,7 +34,9 @@ import { ROLE_LABELS, type Role } from "@/lib/auth";
 import { useAuth } from "@/hooks/queries/useAuth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import logo from "@/assets/logo.png";
 import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
+import Image from "next/image";
 
 // Form schema with validation including confirm password
 const registerSchema = z
@@ -92,7 +101,12 @@ export default function RegisterPage() {
     if (!step1Ref.current || !step2Ref.current || !containerRef.current) return;
 
     // Both steps are stacked absolutely so we can crossfade/slide without a layout jump
-    gsap.set(step2Ref.current, { autoAlpha: 0, x: 40, position: "absolute", inset: 0 });
+    gsap.set(step2Ref.current, {
+      autoAlpha: 0,
+      x: 40,
+      position: "absolute",
+      inset: 0,
+    });
     gsap.set(step1Ref.current, { autoAlpha: 1, x: 0, position: "relative" });
 
     // Lock the container to step 1's natural height, then let it animate from there
@@ -121,7 +135,13 @@ export default function RegisterPage() {
       gsap.fromTo(
         activeDot,
         { scale: 1 },
-        { scale: 1.15, duration: 0.2, ease: "power2.out", yoyo: true, repeat: 1 },
+        {
+          scale: 1.15,
+          duration: 0.2,
+          ease: "power2.out",
+          yoyo: true,
+          repeat: 1,
+        },
       );
     }
   };
@@ -137,7 +157,13 @@ export default function RegisterPage() {
     const direction = toStep > fromStep ? 1 : -1;
 
     // Measure target height before it's visible so the container can grow/shrink smoothly
-    gsap.set(toEl, { position: "absolute", inset: 0, autoAlpha: 0, x: direction * 40, scale: 0.99 });
+    gsap.set(toEl, {
+      position: "absolute",
+      inset: 0,
+      autoAlpha: 0,
+      x: direction * 40,
+      scale: 0.99,
+    });
     const targetHeight = toEl.scrollHeight;
 
     const tl = gsap.timeline({
@@ -187,7 +213,13 @@ export default function RegisterPage() {
       tl.fromTo(
         fields,
         { autoAlpha: 0, y: 10 },
-        { autoAlpha: 1, y: 0, duration: 0.35, ease: "power2.out", stagger: 0.06 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.35,
+          ease: "power2.out",
+          stagger: 0.06,
+        },
         0.2,
       );
     }
@@ -233,7 +265,9 @@ export default function RegisterPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Account created successfully! Please verify your email.");
+          toast.success(
+            "Account created successfully! Please verify your email.",
+          );
           navigate.push(
             `/login?registered=true&email=${encodeURIComponent(data.email)}`,
           );
@@ -248,7 +282,7 @@ export default function RegisterPage() {
   // Helper component for error tooltip
   const ErrorTooltip = ({ error }: { error?: { message?: string } }) => {
     if (!error?.message) return null;
-    
+
     return (
       <TooltipProvider delayDuration={0}>
         <Tooltip>
@@ -257,8 +291,8 @@ export default function RegisterPage() {
               <AlertCircle className="h-4 w-4 text-destructive" />
             </div>
           </TooltipTrigger>
-          <TooltipContent 
-            side="right" 
+          <TooltipContent
+            side="right"
             align="center"
             className="max-w-[200px] bg-destructive text-destructive-foreground border-destructive"
           >
@@ -272,15 +306,13 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-mesh p-6">
       <div className="w-full max-w-md space-y-6">
-        <Link href="/" className="flex items-center justify-center gap-2 mb-2">
-          <div className="h-10 w-10 rounded-xl bg-gradient-hero flex items-center justify-center shadow-elegant">
-            <ShieldCheck className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div>
-            <div className="font-bold">LOGMAS</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Odeda LGA
-            </div>
+        <Link
+          href="/"
+          className="flex flex-col items-center justify-center gap-2 mb-2"
+        >
+          <Image src={logo} alt="LOGMAS" className="h-12 w-12" />
+          <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+            Odeda LGA
           </div>
         </Link>
 
@@ -295,7 +327,9 @@ export default function RegisterPage() {
                 <div
                   ref={dot1Ref}
                   className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors duration-300 ${
-                    step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    step >= 1
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
                   1
@@ -310,7 +344,9 @@ export default function RegisterPage() {
                 <div
                   ref={dot2Ref}
                   className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors duration-300 ${
-                    step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    step >= 2
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
                   2
@@ -394,7 +430,7 @@ export default function RegisterPage() {
                         setValue("role", v as RegisterFormData["role"])
                       }
                     >
-                      <SelectTrigger 
+                      <SelectTrigger
                         className={`${errors.role ? "border-destructive" : ""}`}
                       >
                         <SelectValue placeholder="Select your role" />
@@ -402,7 +438,8 @@ export default function RegisterPage() {
                       <SelectContent>
                         {(Object.keys(ROLE_LABELS) as Role[])
                           .filter(
-                            (ele) => ele === "citizen" || ele === "business_owner",
+                            (ele) =>
+                              ele === "citizen" || ele === "business_owner",
                           )
                           .map((r) => (
                             <SelectItem key={r} value={r}>
@@ -479,11 +516,13 @@ export default function RegisterPage() {
                     />
                     <ErrorTooltip error={errors.confirmPassword} />
                   </div>
-                  {confirmPassword && password && confirmPassword === password && (
-                    <p className="text-sm text-emerald-500 mt-1 flex items-center gap-1 animate-in fade-in duration-200">
-                      <CheckCircle2 className="h-3 w-3" /> Passwords match
-                    </p>
-                  )}
+                  {confirmPassword &&
+                    password &&
+                    confirmPassword === password && (
+                      <p className="text-sm text-emerald-500 mt-1 flex items-center gap-1 animate-in fade-in duration-200">
+                        <CheckCircle2 className="h-3 w-3" /> Passwords match
+                      </p>
+                    )}
                 </div>
 
                 <div data-field className="flex gap-3 pt-2">

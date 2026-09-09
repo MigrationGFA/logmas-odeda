@@ -66,6 +66,6 @@ export function formatOfficialDate(dateInput: string | Date | null | undefined):
  * Generate public certificate URL
  */
 export function getPublicCertificateUrl(tokenOrId: string): string {
-  const token = generatePublicToken(tokenOrId);
-  return `/certificate/${token}`;
+  // const token = generatePublicToken(tokenOrId);
+  return `/certificate/${tokenOrId}`;
 }

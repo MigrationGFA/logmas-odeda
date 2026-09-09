@@ -40,19 +40,7 @@ import {
 import { uploadsService } from "@/services/uploads";
 import Image from "next/image";
 
-// 10 Official Wards of Odeda LGA
-export const ODEDA_WARDS = [
-  "Odeda Ward 1",
-  "Odeda Ward 2",
-  "Odeda Ward 3",
-  "Odeda Ward 4",
-  "Odeda Ward 5",
-  "Odeda Ward 6",
-  "Odeda Ward 7",
-  "Odeda Ward 8",
-  "Odeda Ward 9",
-  "Odeda Ward 10",
-];
+
 
 const GENDER_OPTIONS = ["Male", "Female", "Other"];
 const IDENTIFICATION_TYPES = [

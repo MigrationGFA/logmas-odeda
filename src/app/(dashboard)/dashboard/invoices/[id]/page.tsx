@@ -239,11 +239,11 @@ export default function InvoiceDetail({
               <h3 className="font-semibold mb-4">Payment Options</h3>
               <Tabs defaultValue="transfer">
                 <TabsList className="mb-4">
-                  <TabsTrigger value="transfer">
-                    <Banknote className="h-4 w-4 mr-1.5" /> Bank Transfer
-                  </TabsTrigger>
                   <TabsTrigger value="online">
                     <Link2 className="h-4 w-4 mr-1.5" /> Online
+                  </TabsTrigger>
+                  <TabsTrigger value="transfer">
+                    <Banknote className="h-4 w-4 mr-1.5" /> Bank Transfer
                   </TabsTrigger>
                   {isOfficer && (
                     <>
@@ -449,7 +449,7 @@ export default function InvoiceDetail({
                       </span>
                     </div>
                     {payment.status === "pending" &&
-                    payment.method === "online_gateway" ? (
+                    payment.method === "online" ? (
                       <Button
                         size="sm"
                         variant="outline"
