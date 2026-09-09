@@ -148,7 +148,7 @@ export default function NewInvoicePage() {
     } else {
       setValue("levyConfigId", undefined);
     }
-  }, [selectedCategoryId, availableLevyConfigs]);
+  }, [selectedCategoryId, availableLevyConfigs, setValue]);
 
   const unitPrice = selectedLevyConfig ? Number(selectedLevyConfig.amount) : overrideAmt;
   const total = unitPrice * quantity;

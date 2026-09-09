@@ -63,11 +63,11 @@ export function AddContractorDialog({ onCreate, isCreating }: AddContractorDialo
   } = useForm<ContractorFormData>({
     resolver: zodResolver(contractorSchema),
     defaultValues: { 
-      companyName: "Lover", 
-      contactName: "kvknrvk", 
-      email: "kfnfk@nfkfr.rfmrf", 
-      phone: "1", 
-      address: "flfrfr", 
+      companyName: "", 
+      contactName: "", 
+      email: "", 
+      phone: "", 
+      address: "", 
       commission: 0,
       scopeIds: [],
       wardIds: [],

@@ -23,8 +23,6 @@ import {
 import { Plus, FileBadge, Loader2 } from "lucide-react";
 import { useCitizenStateOfOrigin } from "@/hooks/queries/useServices";
 import { useWards } from "@/hooks/queries/useWards";
-
-import { getTestData } from "@/services/_mock";
 import { useRouter } from "next/navigation";
 import { FileUpload } from "../FileUpload";
 
@@ -55,7 +53,6 @@ function NewApplicationDialog({ isCitizen }: { isCitizen: boolean }) {
   const { submitApplicationAsync, isSubmitting } =
     useCitizenStateOfOrigin(true);
   const navigate = useRouter();
-  const [testData] = useState(getTestData());
 
   const {
     register,
@@ -68,15 +65,14 @@ function NewApplicationDialog({ isCitizen }: { isCitizen: boolean }) {
     resolver: zodResolver(applicationSchema),
     defaultValues: {
       gender: "male",
-      // fullName: testData.fullName,
-      // dateOfBirth: testData.dateOfBirth,
-      // address: testData.address,
-      // phone: testData.phone,
-      // email: testData.email,
-      // // wardId: testData.wardId,
-      // purpose: testData.purpose,
-      // nin: testData.nin,
-      // passportUrl: "",
+      fullName: "",
+      dateOfBirth: "",
+      address: "",
+      phone: "",
+      email: "",
+      purpose: "",
+      nin: "",
+      passportUrl: "",
     },
   });
   // console.log(testData,"testData")

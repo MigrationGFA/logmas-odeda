@@ -89,7 +89,7 @@ function HomePage() {
           Welcome to the Official Website of Odeda Local Government Area, Ogun
           State, Nigeria.
         </title>
-        <link rel="canonical" href="https://www.odeda.lg.gov.ng/" />
+        <link rel="canonical" href="https://www.odedalga.com/" />
       </Helmet>
       <div className="min-h-screen flex flex-col">
         <SiteHeader />

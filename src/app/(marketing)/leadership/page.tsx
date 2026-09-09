@@ -14,61 +14,61 @@ const councillors = [
         ward: "Ward 1 (Odeda Secretariat)",
         name: "Hon. Osunnowo Azeez Olajide",
         phone: "07061088375",
-        email: "councillor.ward1@odeda.lg.gov.ng"
+        email: "councillor.ward1@odedalga.com"
     },
     {
         ward: "Ward 2 (Osiele Market)",
         name: "Hon. Odufuwa Tosin Victor",
         phone: "08080217611",
-        email: "councillor.ward2@odeda.lg.gov.ng"
+        email: "councillor.ward2@odedalga.com"
     },
     {
         ward: "Ward 3 (Obantoko Corridor)",
         name: "Hon. Adeiye Oriyomi Ajoke",
         phone: "08123100146",
-        email: "councillor.ward3@odeda.lg.gov.ng"
+        email: "councillor.ward3@odedalga.com"
     },
     {
         ward: "Ward 4 (Olugbo Community)",
         name: "Hon. Parakoyi Azeez Ayomide",
         phone: "08072703321",
-        email: "councillor.ward4@odeda.lg.gov.ng"
+        email: "councillor.ward4@odedalga.com"
     },
     {
         ward: "Ward 5 (Alagbagba Mining/Agro)",
         name: "Hon. Osibanjo Adeleke Solomon",
         phone: "08038355995",
-        email: "councillor.ward5@odeda.lg.gov.ng"
+        email: "councillor.ward5@odedalga.com"
     },
     {
         ward: "Ward 6 (Ilugun Ward)",
         name: "Hon. Jagunna Olufunmilayo Janet",
         phone: "07064317581",
-        email: "councillor.ward6@odeda.lg.gov.ng"
+        email: "councillor.ward6@odedalga.com"
     },
     {
         ward: "Ward 7 (Itesi / Camp)",
         name: "Hon. Adekogbe Ayodele Samson",
         phone: "08100973778",
-        email: "councillor.ward7@odeda.lg.gov.ng"
+        email: "councillor.ward7@odedalga.com"
     },
     {
         ward: "Ward 8 (Opeji Community)",
         name: "Hon. Okulaja Emmanuel Abiodun",
         phone: "07033726911",
-        email: "councillor.ward8@odeda.lg.gov.ng"
+        email: "councillor.ward8@odedalga.com"
     },
     {
         ward: "Ward 9 (Koto / Balogun)",
         name: "Hon. Ogunmosu Olabode Clement",
         phone: "08038556949",
-        email: "councillor.ward9@odeda.lg.gov.ng"
+        email: "councillor.ward9@odedalga.com"
     },
     {
         ward: "Ward 10 (FUNAAB / Obantoko South)",
         name: "Hon. Falujo Adeola Onabode",
         phone: "08033313041",
-        email: "councillor.ward10@odeda.lg.gov.ng"
+        email: "councillor.ward10@odedalga.com"
     }
 ];
 

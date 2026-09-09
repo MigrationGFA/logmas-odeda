@@ -131,9 +131,9 @@ export default function NewPermitPage() {
     },
   });
 
-  useEffect(()=>{
+  useEffect(() => {
     setValue("businessId", isBusinessOwner && business ? business.id : "");
-  },[isBusinessOwner, business])
+  }, [isBusinessOwner, business, setValue]);
 
   // Business registration form
   const {
@@ -144,13 +144,13 @@ export default function NewPermitPage() {
     setValue: setRegisterValue,
   } = useForm<BusinessRegistrationData>({
     resolver: zodResolver(businessRegistrationSchema),
-    defaultValues:{
-      // businessName: "Test Business",
-      // ownerName: "John Doe",
-      // address: "123 Main St",
-      // phone: "08012345678",
-      // email: "dev@joemarineng.com",
-      // category: "Retail",
+    defaultValues: {
+      businessName: "",
+      ownerName: "",
+      address: "",
+      phone: "",
+      email: "",
+      category: "",
     }
   });
 

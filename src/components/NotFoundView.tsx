@@ -3,10 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Home, ArrowLeft, Search, LayoutDashboard, HelpCircle } from "lucide-react";
+import { Home, ArrowLeft, Search, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function NotFound() {
+export function NotFoundView() {
   const router = useRouter();
 
   return (
@@ -86,4 +86,4 @@ export function NotFound() {
   );
 }
 
-export default NotFound;
+export default NotFoundView;

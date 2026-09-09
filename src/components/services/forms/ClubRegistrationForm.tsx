@@ -221,11 +221,11 @@ export default function ClubRegistrationForm({
       communityProjects: "",
       meetingFrequency: "Monthly",
       meetingVenue: "",
-      membershipCriteria: "Open to indigenes and residents above 18 years with good moral standing.",
-      annualDuesAmount: 12000,
+      membershipCriteria: "",
+      annualDuesAmount: undefined,
       bankName: "",
       accountNumber: "",
-      accountSignatories: "President and Treasurer mandatory",
+      accountSignatories: "",
       officers: [
         {
           role: "President / Chairman",
@@ -256,8 +256,7 @@ export default function ClubRegistrationForm({
         },
       ],
       members: [
-        { fullName: "", phone: "", address: "", membershipNo: "001", joinedYear: "2024" },
-        { fullName: "", phone: "", address: "", membershipNo: "002", joinedYear: "2024" },
+        { fullName: "", phone: "", address: "", membershipNo: "", joinedYear: "" },
       ],
     },
     mode: "onChange",

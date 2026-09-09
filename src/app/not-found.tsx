@@ -1,4 +1,4 @@
-import { NotFound } from "@/pages/NotFound";
+import { NotFoundView } from "@/components/NotFoundView";
 
 export const metadata = {
   title: "404 - Page Not Found | LOGMAS Odeda",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function GlobalNotFound() {
-  return <NotFound />;
+  return <NotFoundView />;
 }

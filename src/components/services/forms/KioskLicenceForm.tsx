@@ -186,39 +186,29 @@ export default function KioskLicenceForm({
       email: initialApplicant?.email || "",
       residentialAddress: initialApplicant?.address || "",
       ward: initialApplicant?.ward || WARDS[0] || "Odeda",
-      nin: initialApplicant?.nin || "12345678901",
-      proposedLocation: "Opposite Community Primary School Gate, Odeda",
+      nin: initialApplicant?.nin || "",
+      proposedLocation: "",
       structureType: "Fabricated Metal Container (8ft x 10ft)",
-      dimensions: "8ft x 10ft (Footprint 7.4 sqm)",
-      setbackFromRoad: "3.5 Metres from Road Kerb / Drainage",
-      powerSource: "Rechargeable Solar LED Light & Small 1.5kVA Generator",
-      wasteManagement:
-        "Dedicated Covered Waste Bin & Municipal PSP Collection",
+      dimensions: "",
+      setbackFromRoad: "",
+      powerSource: "",
+      wasteManagement: "",
       productLines: [
         {
-          itemCategory: "Packaged Foodstuff, Beverages & Soft Drinks",
-          stockValue: "₦150,000",
-          sourceSupplier: "Abeokuta Major Wholesale Depot",
-        },
-        {
-          itemCategory: "Toiletries, Confectioneries & Snacks",
-          stockValue: "₦80,000",
-          sourceSupplier: "Direct FMCG Distributors",
+          itemCategory: "",
+          stockValue: "",
+          sourceSupplier: "",
         },
       ],
       attendants: [
         {
-          fullName: "Bose Adeyemi",
-          role: "Sales Attendant / Cashier",
-          phone: "08033399911",
+          fullName: "",
+          role: "Sales Attendant",
+          phone: "",
         },
       ],
       fixtures: [
-        { fixtureType: "2kg Dry Powder Fire Extinguisher", quantity: "1" },
-        {
-          fixtureType: "Reinforced Steel Padlocks & Iron Grille",
-          quantity: "3",
-        },
+        { fixtureType: "", quantity: "1" },
       ],
     },
   });
