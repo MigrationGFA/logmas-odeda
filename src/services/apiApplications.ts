@@ -305,14 +305,9 @@ export const apiApplications = {
         },
       );
       return normalizeApplication(res);
-    } catch {
-      const res2 = await api.post<any>(
-        `/applications/admin/${id}/under-review`,
-        {
-          notes,
-        },
-      );
-      return normalizeApplication(res2);
+    } catch (error) {
+      console.error("Failed to move application to under review:", error);
+      throw error;
     }
   },
 

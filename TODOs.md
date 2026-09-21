@@ -2,7 +2,6 @@
 
 
 
-- the lga admin dhould only see completely filled forms and paid one only
-- official odeda logo
+- put pagination in place that need t
 -- reapply after appplication rejection
 

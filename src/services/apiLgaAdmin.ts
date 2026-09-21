@@ -145,8 +145,9 @@ export interface AdminOverviewResponse {
   };
   recentApplications: Array<{
     id: string;
+    applicationNumber: string;
     applicant: string;
-    ward: string;
+    service: any;
     status: ApplicationStatus;
   }>;
 }

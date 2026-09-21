@@ -69,6 +69,7 @@ export interface AuditLogsResponse {
 export interface GetAuditLogsParams {
   action?: AuditAction;
   userId?: string;
+  role?: string;
   entity?: string;
   search?: string;
   from?: string;

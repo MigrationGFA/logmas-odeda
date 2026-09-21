@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { notificationsService, Notification } from "@/services/apiNotifications";
+import { tokenManager } from "@/services/apiAuth";
 
 export const notificationKeys = {
   all: ["notifications"] as const,
@@ -24,6 +25,7 @@ export function useNotifications(params?: { page?: number; limit?: number }) {
     queryKey: notificationKeys.list(params),
     queryFn: () => notificationsService.getMyNotifications(params),
     staleTime: 30 * 1000, // 30 seconds
+    enabled: tokenManager.getUser()?.notifyByInApp
   });
 
   const notifications = notificationsData?.items || [];

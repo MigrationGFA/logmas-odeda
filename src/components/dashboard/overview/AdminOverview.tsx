@@ -84,18 +84,18 @@ function AdminOverview() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                {/* <TableHead>ID</TableHead> */}
                 <TableHead>Applicant</TableHead>
-                <TableHead>Ward</TableHead>
+                <TableHead>Service</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {recentApplications?.map((a) => (
                 <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.id}</TableCell>
+                  {/* <TableCell className="font-medium">{a.applicationNumber}</TableCell> */}
                   <TableCell>{a.applicant}</TableCell>
-                  <TableCell>{a.ward}</TableCell>
+                  <TableCell>{a.service.name}</TableCell>
                   <TableCell>
                     <StatusBadge status={a.status} />
                   </TableCell>

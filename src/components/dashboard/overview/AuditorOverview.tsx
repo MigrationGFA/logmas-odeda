@@ -95,7 +95,7 @@ function AuditorOverview({ role }: AuditorOverviewProps) {
           icon={TrendingUp}
           trend={`${collectionRate}% of billed`}
           color="success"
-        />
+          />
         <StatCard
           label="Outstanding"
           value={formatCurrency(metrics.outstanding)}
@@ -112,6 +112,7 @@ function AuditorOverview({ role }: AuditorOverviewProps) {
           label="Audit Events"
           value={String(metrics.auditEvents)}
           icon={AlertTriangle}
+          trend={`This Month`}
           color="warning"
         />
       </div>
@@ -151,9 +152,9 @@ function AuditorOverview({ role }: AuditorOverviewProps) {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate uppercase">
                       {audit.action}{" "}
-                      <span className="text-muted-foreground font-normal">
-                        â†’ {audit.target}
-                      </span>
+                      {/* <span className="text-muted-foreground font-normal">
+                        at {audit.target}
+                      </span> */}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {audit.actor} •{" "}
