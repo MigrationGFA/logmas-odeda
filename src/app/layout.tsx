@@ -6,6 +6,7 @@ import { Providers } from "./provider";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LGA_CONFIG } from "@/config/lga.config";
+import { GoogleTranslateScript } from "@/components/GoogleTranslateScript";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <GoogleTranslateScript />
         <TooltipProvider delayDuration={200}>
           <Providers>{children}</Providers>
           <Toaster />

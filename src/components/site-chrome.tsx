@@ -30,6 +30,7 @@ import { LGA_CONFIG } from "@/config/lga.config";
 import logo from "@/assets/logo.png";
 import { useServices } from "@/hooks/queries/useServices";
 import Image from "next/image";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const NAVBAR_SERVICES = [
   {
@@ -241,8 +242,11 @@ export function SiteHeader() {
               <Mail className="h-3 w-3" /> {SITE_CONTACT.email}
             </a>
           </div>
-          <div className="text-[11px] opacity-80">
-            {SITE_CONTACT.operatingDays}
+          <div className="flex items-center gap-3">
+            <div className="text-[11px] opacity-80">
+              {SITE_CONTACT.operatingDays}
+            </div>
+            <LanguageSwitcher variant="compact" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground" />
           </div>
         </div>
       </div>
@@ -422,6 +426,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="hidden md:flex items-center gap-2">
+            <LanguageSwitcher variant="default" />
             {isAuthenticated ? (
               <Button asChild variant="ghost" size="sm">
                 <Link href="/dashboard">Dashboard</Link>
@@ -452,6 +457,10 @@ export function SiteHeader() {
         {open && (
           <div className="lg:hidden border-t border-border/40 bg-background max-h-[80vh] overflow-y-auto">
             <div className="container mx-auto flex flex-col gap-1 p-4">
+              <div className="flex items-center justify-between pb-3 mb-2 border-b border-border/40">
+                <span className="text-xs font-semibold text-muted-foreground">Select Language / Yan Èdè</span>
+                <LanguageSwitcher variant="compact" />
+              </div>
               {NAV.flatMap((n) => ("to" in n ? [n] : n.items)).map((l) => (
                 <Link
                   key={l.to}
