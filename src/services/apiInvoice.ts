@@ -1,5 +1,6 @@
 import { api } from "../lib/api";
 import { ApiResponse } from "./apiAuth";
+import type { PaymentProvider } from "@/config/paymentGateway";
 
 // Types based on your controller
 export type InvoiceStatus = "sent" | "paid" | "partially_paid" | "overdue" | "cancelled" | "pending";
@@ -143,6 +144,14 @@ export interface OnlinePaymentInitResponse {
   reference: string;
   message: string;
   // authorizationUrl: string;
+
+  // ── GPay additions (POST /payments/gpay/initialize/:invoiceNumber) ──
+  // `gateway` is only ever set by the GPay controller, so its absence means Paystack.
+  gateway?: string;
+  amount?: number;
+  invoiceNumber?: string;
+  flow?: string;
+  isFullPayment?: boolean;
 }
 
 export interface PublicPaymentInitRequest {
@@ -157,6 +166,13 @@ export interface PublicPaymentInitResponse {
   reference: string;
   accessCode?: string;
   message?: string;
+
+  // ── GPay additions (POST /payments/gpay/public/initialize) ──
+  gateway?: string;
+  amount?: number;
+  invoiceNumber?: string;
+  serviceId?: string;
+  flow?: string;
 }
 
 // Matches sendPaymentLinkToBusiness's response
@@ -176,6 +192,21 @@ export interface VerifyPaymentResponse {
   application?: any;
   user?: any;
   data?: any;
+
+  // ── Shared by both gateways ──
+  reference?: string;
+  /** "new_application" | "invoice_online" */
+  flow?: "new_application" | "invoice_online" | string;
+  isFullPayment?: boolean;
+  /** Idempotency flag: the settlement had already been recorded earlier. */
+  alreadyProcessed?: boolean;
+  alreadyConfirmed?: boolean;
+
+  // ── GPay only: returned when the intent was already settled before ──
+  /** Raw gateway status, e.g. "APPROVED", "REVERSED". */
+  rawStatus?: string;
+  /** Raw MPGS payload, kept for debugging. */
+  mpgsResult?: unknown;
 }
 
 // Service functions
@@ -216,7 +247,7 @@ export const invoicesService = {
   },
 
   
-  // Public payment initialization for citizen apply flow
+  // Public payment initialization for citizen apply flow (Paystack)
   initializePublicPayment: async (
     data: PublicPaymentInitRequest
   ): Promise<PublicPaymentInitResponse> => {
@@ -230,6 +261,84 @@ export const invoicesService = {
       }
     );
   },
+
+  /**
+   * GPay invoice payment. NOTE: the route takes the invoice NUMBER, not the id —
+   * POST /payments/gpay/initialize/:invoiceNumber
+   */
+  initializeOnlinePaymentGpay: async (
+    invoiceNumber: string
+  ): Promise<OnlinePaymentInitResponse> => {
+    return await api.post<OnlinePaymentInitResponse>(
+      `/payments/gpay/initialize/${encodeURIComponent(invoiceNumber)}`,
+      {},
+    );
+  },
+
+  /** Authenticated invoice payment on the configured gateway. */
+  initializeOnlinePaymentFor: async (
+    id: string,
+    invoiceNumber: string | undefined,
+    provider: PaymentProvider
+  ): Promise<OnlinePaymentInitResponse> => {
+    if (provider === "gpay") {
+      if (!invoiceNumber) {
+        throw new Error("Cannot start a GPay payment without an invoice number.");
+      }
+      return await invoicesService.initializeOnlinePaymentGpay(invoiceNumber);
+    }
+    return await invoicesService.initializeOnlinePayment(id);
+  },
+
+  /** GPay (Mastercard MPGS) verification — GET /payments/gpay/verify/:reference */
+  verifyGpayPayment: async (
+    reference: string
+  ): Promise<VerifyPaymentResponse> => {
+    return await api.get<VerifyPaymentResponse>(
+      `/payments/gpay/verify/${encodeURIComponent(reference)}`,
+    );
+  },
+
+  /**
+   * Verify a payment against the gateway that created it. Both gateways mint a
+   * "PAY-..." reference, so the provider must be known — see
+   * `resolvePaymentProvider` in @/config/paymentGateway.
+   */
+  verifyPaymentByProvider: async (
+    reference: string,
+    provider: PaymentProvider
+  ): Promise<VerifyPaymentResponse> => {
+    return provider === "gpay"
+      ? await invoicesService.verifyGpayPayment(reference)
+      : await invoicesService.verifyPayment(reference);
+  },
+
+
+  // Public payment initialization for citizen apply flow (GPay / Mastercard MPGS)
+  initializePublicPaymentGpay: async (
+    data: PublicPaymentInitRequest
+  ): Promise<PublicPaymentInitResponse> => {
+    return await api.post<PublicPaymentInitResponse>(
+      "/payments/gpay/public/initialize",
+      data,
+      {
+        headers: {
+          "skip-auth": "true",
+        },
+      }
+    );
+  },
+
+  /** Public "apply & pay" initialization on the configured gateway. */
+  initializePublicPaymentFor: async (
+    data: PublicPaymentInitRequest,
+    provider: PaymentProvider
+  ): Promise<PublicPaymentInitResponse> => {
+    return provider === "gpay"
+      ? await invoicesService.initializePublicPaymentGpay(data)
+      : await invoicesService.initializePublicPayment(data);
+  },
+
 
   initializeOnlinePayment: async (id: string): Promise<OnlinePaymentInitResponse> => {
   return await api.post<OnlinePaymentInitResponse>(`/invoices/${id}/pay-online`, {});

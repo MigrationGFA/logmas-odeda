@@ -44,6 +44,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { DetailSkeleton } from "@/components/ui/LoadingSkeleton";
+import { readPendingPayment, resolvePaymentProvider } from "@/config/paymentGateway";
 
 export default function InvoiceDetail({
   params,
@@ -71,13 +72,13 @@ export default function InvoiceDetail({
     isSendingPaymentLink,
     verifyPayment,
     isVerifyingPayment,
-  } = useInvoicePayment(invoiceId);
+  } = useInvoicePayment(invoiceId, invoice?.invoiceNumber);
 
-  // Auto-verify if we're landing back from a Paystack redirect
+  // Auto-verify if we're landing back from a gateway redirect. The provider was
   React.useEffect(() => {
-    const pendingRef = sessionStorage.getItem("pendingPaymentReference");
-    if (pendingRef) {
-      verifyPayment(pendingRef);
+    const pending = readPendingPayment();
+    if (pending) {
+      verifyPayment({ reference: pending.reference, provider: pending.provider });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -453,7 +454,12 @@ export default function InvoiceDetail({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => verifyPayment(payment.reference)}
+                        onClick={() =>
+                          verifyPayment({
+                            reference: payment.reference,
+                            provider: resolvePaymentProvider(payment.reference),
+                          })
+                        }
                         disabled={isVerifyingPayment}
                       >
                         {isVerifyingPayment ? (

@@ -36,6 +36,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatAndValidateNigerianPhoneNumber } from "@/lib/helper";
+import {
+  getActivePaymentProvider,
+  getCheckoutUrl,
+  isGpayInitResponse,
+  PAYMENT_PROVIDER_LABELS,
+  stashPendingPayment,
+  type PaymentProvider,
+} from "@/config/paymentGateway";
+
 
 export interface PublicServiceApplyWidgetProps {
   initialServiceId?: string;
@@ -196,44 +205,73 @@ function PublicServiceApplyWidgetInner({
 
     setIsProcessing(true);
 
+    // Gateway for this payment. GPay by default; override with
+    // NEXT_PUBLIC_PAYMENT_PROVIDER=paystack.
+    const configuredProvider = getActivePaymentProvider();
+
     try {
-      const response = await invoicesService.initializePublicPayment({
-        serviceId: selectedService.id,
-        fullName: fullName.trim(),
-        email: email.trim(),
-        phone: phoneValidation.formattedNumber,
-      });
+      const response = await invoicesService.initializePublicPaymentFor(
+        {
+          serviceId: selectedService.id,
+          fullName: fullName.trim(),
+          email: email.trim(),
+          phone: phoneValidation.formattedNumber,
+        },
+        configuredProvider,
+      );
 
-      const paymentUrl =
-        (response as any)?.paymentUrl ||
-        (response as any)?.data?.paymentUrl ||
-        (response as any)?.authorizationUrl ||
-        (response as any)?.data?.authorizationUrl;
+      // `gateway: "gpay"` is only ever returned by the GPay controller, so the
+      // response is authoritative over the configured default.
+      const provider: PaymentProvider = isGpayInitResponse(response)
+        ? "gpay"
+        : configuredProvider;
 
-      const reference =
-        (response as any)?.reference || (response as any)?.data?.reference;
+      // api.ts already unwraps the { status, data } envelope, so the payload is
+      // read directly off the response.
+      const paymentUrl = response?.paymentUrl;
+      const reference = response?.reference;
 
       if (!paymentUrl) {
         throw new Error(
-          (response as any)?.message ||
+          response?.message ||
             "Payment gateway URL was not returned. Please check service status and try again.",
         );
       }
 
       // Preserve the returned payment reference so it can be used when the applicant returns
       if (reference) {
-        sessionStorage.setItem("pendingPaymentReference", reference);
+        // The provider is stashed alongside it: Paystack and GPay references are
+        // both "PAY-...", so /payment/result cannot infer which gateway to
+        // verify against.
+        stashPendingPayment(reference, provider);
         sessionStorage.setItem("publicPaymentServiceId", selectedService.id);
-        localStorage.setItem("pendingPaymentReference", reference);
       }
 
-      toast.success("Redirecting to Paystack secure checkout...");
+      toast.success(
+        `Redirecting to ${PAYMENT_PROVIDER_LABELS[provider]} secure checkout...`,
+      );
 
-      // Redirect applicant to the returned Paystack checkout URL
-      window.location.href = paymentUrl;
+      // GPay: navigate to the COMPLETE MPGS checkout URL verbatim.
+      // Paystack: "/payment/verify" is appended to the base URL.
+      window.location.href = getCheckoutUrl(response, provider);
     } catch (err: any) {
       console.error("Public payment initialization failed:", err);
+      // The backend validates the payload (zod) and returns field-level errors,
+      // e.g. { email: { _errors: ["Invalid email address"] } }. Show those
+      // instead of the generic "Data validation processing failed" message.
+      const fieldErrors =
+        err?.backendCode === "VALIDATION_ERROR" && err?.backendDetails
+          ? Object.entries(err.backendDetails as Record<string, any>)
+              .map(([field, detail]) =>
+                Array.isArray(detail?._errors) && detail._errors[0]
+                  ? `${field}: ${detail._errors[0]}`
+                  : null,
+              )
+              .filter(Boolean)
+              .join(" - ")
+          : "";
       const errorMessage =
+        fieldErrors ||
         err?.message ||
         err?.response?.data?.message ||
         err?.response?.data?.error ||

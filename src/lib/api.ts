@@ -10,11 +10,31 @@ const REFRESH_TOKEN_KEY = "logmas.auth.refreshToken";
 export class ApiError extends Error {
   status: number;
   code?: string;
-  constructor(message: string, status = 0, code?: string) {
+  /**
+   * Application error code sent by the backend, e.g. "NOT_FOUND",
+   * "AMOUNT_MISMATCH", "VALIDATION_ERROR". `code` keeps carrying the axios
+   * code ("ERR_BAD_REQUEST"), so this is the field to branch on for business
+   * logic.
+   */
+  backendCode?: string;
+  /**
+   * Field-level validation details when the backend rejects a payload, e.g.
+   * { email: { _errors: ["Invalid email address"] } }.
+   */
+  backendDetails?: unknown;
+  constructor(
+    message: string,
+    status = 0,
+    code?: string,
+    backendCode?: string,
+    backendDetails?: unknown,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.backendCode = backendCode;
+    this.backendDetails = backendDetails;
   }
 }
 
@@ -192,7 +212,17 @@ function unwrap<T>(envelope: ApiEnvelope<T> | T): T {
         errorMessage = (env.error as any).message || JSON.stringify(env.error);
       }
 
-      throw new ApiError(errorMessage, 400);
+      throw new ApiError(
+        errorMessage,
+        400,
+        undefined,
+        env.error && typeof env.error === "object"
+          ? (env.error as any).code
+          : undefined,
+        env.error && typeof env.error === "object"
+          ? (env.error as any).details
+          : undefined,
+      );
     }
     return env.data;
   }
@@ -240,7 +270,17 @@ function toApiError(err: unknown): ApiError {
       msg = err.message || msg;
     }
 
-    return new ApiError(msg, err.response?.status ?? 0, err.code);
+    return new ApiError(
+      msg,
+      err.response?.status ?? 0,
+      err.code,
+      env?.error && typeof env.error === "object"
+        ? (env.error as any).code
+        : undefined,
+      env?.error && typeof env.error === "object"
+        ? (env.error as any).details
+        : undefined,
+    );
   }
   if (err instanceof ApiError) return err;
   if (err instanceof Error) return new ApiError(err.message);

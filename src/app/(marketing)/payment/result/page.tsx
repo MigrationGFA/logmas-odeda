@@ -2,7 +2,7 @@
 // app/payment/result/page.tsx
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,13 @@ import { invoicesService } from "@/services/apiInvoice";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import Link from "next/link";
 import { FullPageLoader } from "@/components/ProtectedRoute";
+import {
+  clearPendingPayment,
+  PAYMENT_PROVIDER_KEY,
+  PAYMENT_REFERENCE_KEY,
+  resolvePaymentProvider,
+  type PaymentProvider,
+} from "@/config/paymentGateway";
 
 type ResultState = "verifying" | "confirmed" | "pending" | "failed" | "error";
 
@@ -35,14 +42,30 @@ function PaymentResultPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Paystack sends both of these on redirect  -  reference is the modern name,
-  // trxref is kept for older integrations. Also check session storage.
-  const reference =
-    searchParams.get("reference") ??
-    searchParams.get("trxref") ??
-    (typeof window !== "undefined"
-      ? sessionStorage.getItem("pendingPaymentReference")
-      : null);
+  // Paystack returns to us with ?reference= (or the legacy ?trxref=). GPay's
+  // return_url carries NO query params at all, so we fall back to the reference
+  // stashed in sessionStorage before the redirect. That stash is only cleared
+  // once a payment reaches a terminal state.
+  const storedReference =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(PAYMENT_REFERENCE_KEY)
+      : null;
+  const storedProvider =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(PAYMENT_PROVIDER_KEY)
+      : null;
+
+  const urlReference =
+    searchParams.get("reference") ?? searchParams.get("trxref");
+  const reference = urlReference ?? storedReference;
+
+  // Both gateways mint "PAY-..." references, so the provider is read from the
+  // stash written at init time. Falls back to the reference shape, then to
+  // Paystack so pre-GPay sessions keep working.
+  const paymentProvider: PaymentProvider = resolvePaymentProvider(
+    reference,
+    storedProvider,
+  );
 
   const [state, setState] = useState<ResultState>("verifying");
   const [invoiceNumber, setInvoiceNumber] = useState<string | null>(null);
@@ -51,6 +74,9 @@ function PaymentResultPage() {
   const [serviceName, setServiceName] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
   const [isNormalFlow, setIsNormalFlow] = useState<boolean>(false);
+  const [wasAlreadySettled, setWasAlreadySettled] = useState<boolean>(false);
+  // Guards the one-shot mirror of the reference into the URL (see below).
+  const mirroredToUrlRef = useRef(false);
 
   useEffect(() => {
     if (!reference) {
@@ -61,49 +87,60 @@ function PaymentResultPage() {
       return;
     }
 
+    let cancelled = false;
+
+    // GPay redirects back to /payment/result with no query params, so mirror the
+    // reference into the URL once we have one. Without this, a refresh on the
+    // result page has nothing left to verify (the session stash is cleared on
+    // success) and shows "No payment reference found".
+    const mirrorReferenceToUrl = () => {
+      if (!reference || mirroredToUrlRef.current) return;
+      mirroredToUrlRef.current = true;
+      router.replace(
+        `/payment/result?reference=${encodeURIComponent(reference)}`,
+      );
+    };
+
     invoicesService
-      .verifyPayment(reference)
+      // GPay and Paystack expose separate verify routes, and a GPay reference
+      // is unknown to /payments/verify/:reference (and vice versa).
+      .verifyPaymentByProvider(reference, paymentProvider)
       .then((res: any) => {
-        const invNum =
-          res?.invoice?.invoiceNumber ??
-          res?.data?.invoice?.invoiceNumber ??
-          null;
-        const rcpNum =
-          res?.receipt?.receiptNumber ??
-          res?.data?.receipt?.receiptNumber ??
-          null;
+        if (cancelled) return;
+
+        const invNum = res?.invoice?.invoiceNumber ?? null;
+        const rcpNum = res?.receipt?.receiptNumber ?? null;
         const appId =
           res?.application?.id ??
-          res?.data?.application?.id ??
           res?.invoice?.applicationId ??
-          res?.data?.invoice?.applicationId ??
           res?.applicationId ??
-          res?.data?.applicationId ??
           null;
         const sName =
+          res?.application?.serviceName ??
           res?.application?.service?.name ??
-          res?.data?.application?.service?.name ??
           res?.service?.name ??
-          res?.data?.service?.name ??
           null;
+        const flow = res?.flow ?? res?.data?.flow ?? null;
+
         setInvoiceNumber(invNum);
         setReceiptNumber(rcpNum);
         setApplicationId(appId);
         setServiceName(sName);
-        setIsNormalFlow(res.flow === "new_application" || res.data?.flow === "new_application");
+        setIsNormalFlow(flow === "new_application");
+
+        // GPay returns alreadyConfirmed when the intent was settled by the
+        // webhook before this page ever loaded, and carries no invoice/receipt.
+        const alreadySettled =
+          res?.alreadyConfirmed === true || res?.alreadyProcessed === true;
+        setWasAlreadySettled(alreadySettled);
 
         const isSuccess =
           res?.status === "confirmed" ||
           res?.status === "success" ||
-          res?.data?.status === "confirmed" ||
-          res?.data?.status === "success" ||
           res?.success === true;
 
         const isFailed =
-          res?.status === "failed" ||
-          res?.status === "abandoned" ||
-          res?.data?.status === "failed" ||
-          res?.data?.status === "abandoned";
+          res?.status === "failed" || res?.status === "abandoned";
 
         if (isSuccess) {
           setState("confirmed");
@@ -111,37 +148,61 @@ function PaymentResultPage() {
             res?.message ||
               "Your statutory fee payment was verified and processed successfully.",
           );
+          // Terminal state: safe to drop the stash.
+          clearPendingPayment();
+          mirrorReferenceToUrl();
         } else if (isFailed) {
           setState("failed");
           setMessage(
             res?.message ||
-              "This payment transaction was not completed or was cancelled.",
+              `This payment transaction was not completed or was cancelled${
+                res?.rawStatus ? ` (gateway status: ${res.rawStatus})` : ""
+              }.`,
           );
         } else {
-          // Transaction still in progress
+          // Still processing. The stash is deliberately kept so that reloading
+          // this page - the "Re-check Payment Status" button does exactly that -
+          // re-verifies the same reference. GPay's return has no query param to
+          // fall back on.
           setState("pending");
           setMessage(
             res?.message ||
               "Your payment is still being processed. This can take a few seconds.",
           );
+          mirrorReferenceToUrl();
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
+        if (cancelled) return;
+
+        const notFound = err?.backendCode === "NOT_FOUND" || err?.status === 404;
+        const amountMismatch =
+          err?.backendCode === "AMOUNT_MISMATCH" || err?.status === 409;
+
         setState("error");
-        setMessage(
-          err?.message ??
-            "Could not verify payment status with payment gateway.",
-        );
-      })
-      .finally(() => {
-        // Clear the stashed reference after verification attempt
-        try {
-          sessionStorage.removeItem("pendingPaymentReference");
-        } catch {
-          // ignore
+
+        if (notFound) {
+          // Nothing to retry: drop the stash so a later visit is not stuck.
+          clearPendingPayment();
+          setMessage(
+            "We could not find this payment reference. It may belong to a different payment gateway, or the payment was never started on this device.",
+          );
+        } else if (amountMismatch) {
+          setMessage(
+            "The amount received does not match the statutory fee due. This payment has been flagged for review by the LGA treasury. Please contact the LGA help desk with your reference.",
+          );
+        } else {
+          setMessage(
+            err?.message ??
+              "Could not verify payment status with the payment gateway.",
+          );
         }
       });
-  }, [reference]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reference, paymentProvider, router]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -186,6 +247,14 @@ function PaymentResultPage() {
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">
                   Payment Confirmed!
                 </h2>
+                {wasAlreadySettled && (
+                  <p className="text-xs text-muted-foreground bg-muted/40 border border-border/60 rounded-lg px-3 py-2 mt-2">
+                    This payment was already confirmed earlier, so no new
+                    invoice or receipt was generated. Your payment history is
+                    unchanged. Open the portal to view the receipt.
+                  </p>
+                )}
+
                 <p className="text-sm text-muted-foreground">{message}</p>
               </div>
 
@@ -235,7 +304,7 @@ function PaymentResultPage() {
               )}
 
               <div className="pt-2 space-y-2">
-                {isNormalFlow ? (
+                {isNormalFlow && applicationId ? (
                   <Button
                     asChild
                     className="w-full bg-gradient-hero text-primary-foreground font-semibold h-11 shadow-sm"

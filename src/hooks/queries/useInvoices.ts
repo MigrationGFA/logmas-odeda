@@ -8,6 +8,15 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  clearPendingPayment,
+  getActivePaymentProvider,
+  getCheckoutUrl,
+  isGpayInitResponse,
+  stashPendingPayment,
+  type PaymentProvider,
+} from "@/config/paymentGateway";
+
 
 export const invoicesKeys = {
   all: ["invoices"] as const,
@@ -83,9 +92,15 @@ export function useInvoiceDetails(invoiceId: string) {
 }
 
 // Hook for invoice payments
-export function useInvoicePayment(invoiceId: string) {
+export function useInvoicePayment(
+  invoiceId: string,
+  invoiceNumber?: string,
+) {
   const queryClient = useQueryClient();
-  const [paystackUrl, setPaystackUrl] = useState<string | null>(null);
+  // Gateway for newly started payments. GPay by default; override with
+  // NEXT_PUBLIC_PAYMENT_PROVIDER=paystack.
+  const paymentProvider = getActivePaymentProvider();
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   // Record cash/POS payment (field officer only)
   const recordPaymentMutation = useMutation({
@@ -107,16 +122,35 @@ export function useInvoicePayment(invoiceId: string) {
     },
   });
 
-  // Initialize online payment  -  real Paystack now, always redirects on success.
+  // Initialize online payment — Paystack or GPay depending on config, and
+  // whichever one actually answered the init call.
   const initializeOnlinePaymentMutation = useMutation({
-    mutationFn: () => invoicesService.initializeOnlinePayment(invoiceId),
+    mutationFn: () =>
+      invoicesService.initializeOnlinePaymentFor(
+        invoiceId,
+        invoiceNumber,
+        paymentProvider,
+      ),
     onSuccess: (response) => {
-      // Stash the reference so the page can verify on return from Paystack's redirect.
-      sessionStorage.setItem("pendingPaymentReference", response.reference);
+      // `gateway: "gpay"` only ever appears on GPay init responses, so trust the
+      // response over the configured default.
+      const provider: PaymentProvider = isGpayInitResponse(response)
+        ? "gpay"
+        : paymentProvider;
 
-      console.log(response.paymentUrl,"paymentUrl")
+      // Stash reference + provider so the page knows which gateway to verify.
+      stashPendingPayment(response.reference, provider);
 
-      window.location.href = `${response.paymentUrl}/payment/verify`;
+      // GPay hands back a COMPLETE MPGS checkout URL; Paystack returns a base
+      // URL that must be extended with "/payment/verify".
+      const url = getCheckoutUrl(response, provider);
+      if (!url) {
+        toast.error("The payment gateway did not return a checkout link.");
+        return;
+      }
+
+      console.log("Initializing payment via", provider, response.reference);
+      window.location.href = url;
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to initialize payment");
@@ -139,14 +173,25 @@ export function useInvoicePayment(invoiceId: string) {
     },
   });
 
-  // Verify payment directly against Paystack  -  call on mount if a reference is
-  // pending (e.g. after redirect back), or manually via a "Refresh status" button.
+  // Verify a payment against the gateway that created it — call on mount if a
+  // reference is pending (e.g. after the redirect back), or manually via a
+  // "Refresh status" button.
   const verifyPaymentMutation = useMutation({
-    mutationFn: (reference: string) => invoicesService.verifyPayment(reference),
+    mutationFn: ({
+      reference,
+      provider,
+    }: {
+      reference: string;
+      provider?: PaymentProvider;
+    }) =>
+      invoicesService.verifyPaymentByProvider(
+        reference,
+        provider ?? paymentProvider,
+      ),
     onSuccess: (response) => {
       if (response.status === "confirmed") {
         toast.success("Payment confirmed!");
-        sessionStorage.removeItem("pendingPaymentReference");
+        clearPendingPayment();
       }
       queryClient.invalidateQueries({
         queryKey: invoicesKeys.detail(invoiceId),
@@ -174,7 +219,7 @@ export function useInvoicePayment(invoiceId: string) {
   });
 
   return {
-    paystackUrl,
+    checkoutUrl,
     recordPayment: recordPaymentMutation.mutate,
     recordPaymentAsync: recordPaymentMutation.mutateAsync,
     isRecordingPayment: recordPaymentMutation.isPending,
