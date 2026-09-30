@@ -38,6 +38,8 @@ import {
   useInvoiceDetails,
   useInvoicePayment,
 } from "@/hooks/queries/useInvoices";
+import { invoicesService } from "@/services/apiInvoice";
+import { ApiError } from "@/lib/api";
 
 import { tokenManager } from "@/services/apiAuth";
 import { useRouter } from "next/navigation";
@@ -89,6 +91,50 @@ export default function InvoiceDetail({
     navigator.clipboard?.writeText(v);
     toast.success(`${label} copied`);
   };
+
+  const [transferAccount, setTransferAccount] = React.useState<{
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    reference: string;
+    expectedAmount: number;
+    amount: number;
+    invoiceNumber: string;
+  } | null>(null);
+  const [transferError, setTransferError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const invoiceNumber = invoice?.invoiceNumber;
+    if (!invoiceNumber) return;
+    let cancelled = false;
+    invoicesService
+      .getInvoiceVirtualAccount(invoiceNumber)
+      .then((va) => {
+        if (!cancelled) {
+          setTransferAccount(va);
+          setTransferError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setTransferAccount(null);
+        const code =
+          err instanceof ApiError
+            ? (err.backendCode ?? String(err.status))
+            : "UNKNOWN";
+        setTransferError(
+          code === "BAD_REQUEST"
+            ? "This invoice is already settled."
+            : err instanceof Error
+              ? err.message
+              : "Transfer unavailable",
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice?.invoiceNumber]);
 
   const fullPaymentUrl =
     typeof window !== "undefined"
@@ -263,16 +309,17 @@ export default function InvoiceDetail({
                     <div className="text-xs uppercase tracking-wider text-muted-foreground">
                       Dynamic Virtual Account
                     </div>
-                    {invoice.virtualAccountNumber ? (
+                    {(transferAccount?.accountNumber || invoice.virtualAccountNumber) ? (
                       <>
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <div className="text-2xl font-mono font-bold">
-                              {invoice.virtualAccountNumber}
+                              {transferAccount?.accountNumber || invoice.virtualAccountNumber}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {invoice.virtualBankName ||
-                                "Zenith Bank / the LGA Treasury"}{" "}
+                              {transferAccount?.bankName ||
+                                invoice.virtualBankName ||
+                                "Providus Bank"}{" "}
                               •
                               {invoice.application?.formData?.fullName ||
                                 "Applicant"}
@@ -283,7 +330,8 @@ export default function InvoiceDetail({
                             size="sm"
                             onClick={() =>
                               copy(
-                                invoice.virtualAccountNumber!,
+                                transferAccount?.accountNumber ||
+                                  invoice.virtualAccountNumber!,
                                 "Account number",
                               )
                             }
@@ -291,9 +339,40 @@ export default function InvoiceDetail({
                             <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
                           </Button>
                         </div>
+                        {transferAccount && (
+                          <>
+                            <div className="text-xs text-muted-foreground">
+                              {transferAccount.accountName}
+                            </div>
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="text-muted-foreground">
+                                Transfer reference
+                              </span>
+                              <span className="flex items-center gap-2">
+                                <span className="font-mono font-semibold">
+                                  {transferAccount.reference}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    copy(
+                                      transferAccount.reference,
+                                      "Transfer reference",
+                                    )
+                                  }
+                                >
+                                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+                                </Button>
+                              </span>
+                            </div>
+                          </>
+                        )}
                         <div className="text-xs text-muted-foreground">
                           Transfer ₦{balanceDue.toLocaleString()} to this
-                          account. Payment auto-confirms within 2 mins.
+                          account and quote your reference in the narration.
+                          An LGA treasurer confirms the payment and your
+                          receipt follows.
                         </div>
                       </>
                     ) : (

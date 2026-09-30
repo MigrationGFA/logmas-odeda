@@ -35,6 +35,23 @@ export interface VirtualAccount {
   bankName: string;
   accountName: string;
   reference: string;
+  /** Quoted transfer amount in naira. Route A sends this as `expectedAmount`; route B also sends `amount`. */
+  expectedAmount: number;
+  amount?: number;
+  invoiceNumber?: string | null;
+}
+
+export interface ServiceVirtualAccount {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  reference: string;
+  expectedAmount: number;
+}
+
+export interface InvoiceVirtualAccount extends ServiceVirtualAccount {
+  amount: number;
+  invoiceNumber: string;
 }
 
 export interface InvoiceDetails {
@@ -244,6 +261,41 @@ export const invoicesService = {
    
       return await api.post<PaymentResponse>(`/invoices/${id}/pay`, data);
 
+  },
+
+
+  /**
+   * PUBLIC bank-transfer account for a service (no invoice yet).
+   * GET /payments/gpay/virtual-account?serviceId=<service UUID>. Send the
+   * `skip-auth` header so the interceptor strips auth. `api` auto-unwraps the
+   * envelope, so fields are read directly. 404 VIRTUAL_ACCOUNT_UNAVAILABLE
+   * means "unmapped service / inactive / upstream failure" — render the
+   * online-only fallback, it is not a crash.
+   */
+  getVirtualAccountForService: async (
+    serviceId: string,
+  ): Promise<ServiceVirtualAccount> => {
+    return await api.get<ServiceVirtualAccount>(
+      `/payments/gpay/virtual-account?serviceId=${encodeURIComponent(serviceId)}`,
+      {
+        headers: {
+          "skip-auth": "true",
+        },
+      },
+    );
+  },
+
+  /**
+   * Authenticated bank-transfer account for an existing invoice.
+   * GET /invoices/:invoiceNumber/virtual-account (canonical mount).
+   * Paid/non-pending invoices return 400 BAD_REQUEST.
+   */
+  getInvoiceVirtualAccount: async (
+    invoiceNumber: string,
+  ): Promise<InvoiceVirtualAccount> => {
+    return await api.get<InvoiceVirtualAccount>(
+      `/invoices/${encodeURIComponent(invoiceNumber)}/virtual-account`,
+    );
   },
 
   

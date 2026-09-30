@@ -16,7 +16,6 @@ import { ServiceApplicationGuideSteps } from "./ServiceApplicationGuideSteps";
 import { invoicesService } from "@/services/apiInvoice";
 import { toast } from "sonner";
 import {
-  CreditCard,
   User,
   Mail,
   Phone,
@@ -25,13 +24,8 @@ import {
   ArrowRight,
   Sparkles,
   ShieldCheck,
-  Building,
-  Key,
-  Copy,
-  ExternalLink,
   RefreshCw,
   FileCheck2,
-  LogIn,
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -44,6 +38,8 @@ import {
   stashPendingPayment,
   type PaymentProvider,
 } from "@/config/paymentGateway";
+import { PaymentReviewDialog } from "./PaymentReviewDialog";
+import { isValidEmailShape, suggestEmailDomain } from "@/lib/emailTypo";
 
 
 export interface PublicServiceApplyWidgetProps {
@@ -82,9 +78,14 @@ function PublicServiceApplyWidgetInner({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isPaidSuccess, setIsPaidSuccess] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
+  const [virtualAccount, setVirtualAccount] = useState<
+    import("@/components/services/PaymentReviewDialog").VirtualAccountDetails | null
+  >(null);
+  const [virtualAccountError, setVirtualAccountError] = useState("");
   const [formError, setFormError] = useState("");
+  // Applicant details are reviewed in a dialog before any checkout session is
+  // created, so nothing is charged until they confirm there.
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   // Sync state when URL serviceId or initialServiceId changes
   useEffect(() => {
@@ -122,6 +123,43 @@ function PublicServiceApplyWidgetInner({
     return Number(selectedService.defaultFee ?? selectedService.amount ?? 0);
   }, [selectedService]);
 
+  // Bank-transfer account for the review dialog. Fetched ONCE per dialog-open
+  // (route A is rate-limited, and the backend re-quotes the same reference
+  // within a 60-min reuse window). serviceId MUST be the service UUID from
+  // useServices() — a code string (e.g. "certificate_of_origin") returns
+  // NOT_FOUND. Any 404/400 lands on the online-only fallback, never a crash.
+  useEffect(() => {
+    if (!isReviewOpen || !selectedService?.id) return;
+    let cancelled = false;
+    setVirtualAccountError("");
+    invoicesService
+      .getVirtualAccountForService(selectedService.id)
+      .then((va) => {
+        if (cancelled) return;
+        setVirtualAccount({
+          accountNumber: va.accountNumber,
+          bankName: va.bankName,
+          accountName: va.accountName,
+          reference: va.reference,
+          amount: va.expectedAmount,
+          expectedAmount: va.expectedAmount,
+          invoiceNumber: null,
+        });
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setVirtualAccount(null);
+        if (err?.status === 404 || err?.status === 400) {
+          setVirtualAccountError(err?.message || "Bank transfer unavailable");
+        } else {
+          setVirtualAccountError(err?.message || "Bank transfer unavailable");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isReviewOpen, selectedService?.id]);
+
   // Calculate required documents
   const requiredDocuments: string[] = useMemo(() => {
     if (!selectedService) return [];
@@ -158,50 +196,74 @@ function PublicServiceApplyWidgetInner({
     }
   };
 
-  // Generated Result for UI
-  const [successDetails, setSuccessDetails] = useState<{
-    reference: string;
-    generatedPass: string;
-    paidAmount: number;
-    serviceName: string;
-    email: string;
-    phone: string;
-    fullName: string;
-  } | null>(null);
+  /**
+   * Non-blocking nudge for a mistyped domain (`gnail.com`). The applicant's
+   * credentials are emailed to whatever address they type, and a typo is still a
+   * syntactically valid address, so the backend cannot catch it.
+   */
+  const emailSuggestion = useMemo(() => suggestEmailDomain(email), [email]);
 
-  const handleSubmitPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError("");
-
-    if (!selectedService || !selectedService.id) {
-      const msg = "Please select a valid statutory service to continue.";
-      setFormError(msg);
-      toast.error(msg);
-      return;
+  /**
+   * Client-side gate for the review step, mirroring the backend zod rules so an
+   * obviously bad payload never reaches the gateway. Returns an error message,
+   * or "" alongside the normalised phone number.
+   */
+  const validateDetails = (): { error: string; phone: string } => {
+    if (!selectedService?.id) {
+      return {
+        error: "Please select a valid statutory service to continue.",
+        phone: "",
+      };
     }
     if (!fullName.trim()) {
-      const msg = "Please enter your full applicant name";
-      setFormError(msg);
-      toast.error(msg);
-      return;
+      return { error: "Please enter your full applicant name", phone: "" };
     }
-    if (!email.trim() || !email.includes("@")) {
-      const msg = "Please enter a valid email address";
-      setFormError(msg);
-      toast.error(msg);
-      return;
+    if (!isValidEmailShape(email)) {
+      return { error: "Please enter a valid email address", phone: "" };
     }
 
     const phoneValidation = formatAndValidateNigerianPhoneNumber(phone);
-    console.log(phoneValidation, "phoneValidation");
-
     if (!phoneValidation.isValid) {
-      const msg =
-        phoneValidation.error || "Please enter a valid Nigerian phone number";
-      setFormError(msg);
-      toast.error(msg);
+      return {
+        error:
+          phoneValidation.error ||
+          "Please enter a valid Nigerian phone number",
+        phone: "",
+      };
+    }
+    return { error: "", phone: phoneValidation.formattedNumber };
+  };
+
+  /**
+   * "Review ..." only opens the dialog. No checkout session is created until the
+   * applicant confirms their details and picks a payment method there.
+   */
+  const handleOpenReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+
+    const { error } = validateDetails();
+    if (error) {
+      setFormError(error);
+      toast.error(error);
       return;
     }
+    setIsReviewOpen(true);
+  };
+
+  /** Creates the checkout session and hands off to the gateway. */
+  const startCheckout = async () => {
+    setFormError("");
+
+    const { error, phone: formattedPhone } = validateDetails();
+    if (error) {
+      setFormError(error);
+      toast.error(error);
+      setIsReviewOpen(false);
+      return;
+    }
+
+    const serviceId = selectedService?.id || selectedServiceId;
 
     setIsProcessing(true);
 
@@ -212,10 +274,10 @@ function PublicServiceApplyWidgetInner({
     try {
       const response = await invoicesService.initializePublicPaymentFor(
         {
-          serviceId: selectedService.id,
+          serviceId,
           fullName: fullName.trim(),
           email: email.trim(),
-          phone: phoneValidation.formattedNumber,
+          phone: formattedPhone,
         },
         configuredProvider,
       );
@@ -244,7 +306,7 @@ function PublicServiceApplyWidgetInner({
         // both "PAY-...", so /payment/result cannot infer which gateway to
         // verify against.
         stashPendingPayment(reference, provider);
-        sessionStorage.setItem("publicPaymentServiceId", selectedService.id);
+        sessionStorage.setItem("publicPaymentServiceId", serviceId);
       }
 
       toast.success(
@@ -282,20 +344,6 @@ function PublicServiceApplyWidgetInner({
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
-  };
-
-  const handleReset = () => {
-    setIsPaidSuccess(false);
-    setSuccessDetails(null);
-    setFullName("");
-    setEmail("");
-    setPhone("");
-  };
-
   return (
     <div
       id="public-service-apply-container"
@@ -314,9 +362,8 @@ function PublicServiceApplyWidgetInner({
         id="service-payment-card"
         className="p-6 md:p-8 bg-card border-border/80 shadow-elegant"
       >
-        {!isPaidSuccess ? (
-          <div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/40 mb-6">
+        <div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/40 mb-6">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Badge
@@ -331,11 +378,12 @@ function PublicServiceApplyWidgetInner({
                   </Badge>
                 </div>
                 <h3 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
-                  Select Service & Make Online Payment
+                  Select Service & Review Your Payment
                 </h3>
                 <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                  Pay your statutory fee online to instantly generate your
-                  portal login credentials and proceed to the dashboard.
+                  Review your details, then pay your statutory fee online to
+                  instantly generate your portal login credentials and proceed
+                  to the dashboard.
                 </p>
               </div>
 
@@ -360,7 +408,7 @@ function PublicServiceApplyWidgetInner({
               </div>
             )}
 
-            <form onSubmit={handleSubmitPayment} className="space-y-6">
+            <form onSubmit={handleOpenReview} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Left Column: Service & Fee Details */}
                 <div className="space-y-4">
@@ -516,6 +564,18 @@ function PublicServiceApplyWidgetInner({
                       Step 3: Login credentials will be automatically generated
                       and sent to this email.
                     </p>
+
+                    {emailSuggestion && (
+                      <button
+                        type="button"
+                        onClick={() => setEmail(emailSuggestion)}
+                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:underline"
+                      >
+                        <AlertCircle className="h-3 w-3 shrink-0" />
+                        Did you mean{" "}
+                        <span className="underline">{emailSuggestion}</span>?
+                      </button>
+                    )}
                   </div>
 
                   <div>
@@ -550,236 +610,44 @@ function PublicServiceApplyWidgetInner({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Lock className="h-4 w-4 text-emerald-600 shrink-0" />
                   <span>
-                    Secured by 256-bit encryption. Card, Bank Transfer & USSD
-                    accepted.
+                    Secured by 256-bit encryption. You will be redirected to our
+                    secure checkout to complete payment.
                   </span>
                 </div>
 
                 <Button
                   id="pay-statutory-fee-button"
-                  type="submit"
+                  type="button"
+                  onClick={handleOpenReview}
                   disabled={isProcessing}
                   size="lg"
                   className="w-full md:w-auto min-w-[240px] bg-gradient-hero text-primary-foreground font-semibold shadow-elegant h-12"
                 >
-                  {isProcessing ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Processing Payment & Account...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Pay ₦{statutoryFee.toLocaleString()} & Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
+                  <FileCheck2 className="mr-2 h-4 w-4" />
+                  Review Payment Details
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </form>
-          </div>
-        ) : (
-          /* Payment Success & Account Auto-Created State */
-          <div
-            id="payment-success-container"
-            className="space-y-6 animate-in fade-in-50 duration-300"
-          >
-            <div className="text-center max-w-xl mx-auto py-2">
-              <div className="h-16 w-16 mx-auto rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3 shadow-inner">
-                <CheckCircle2 className="h-9 w-9" />
-              </div>
-              <Badge
-                variant="outline"
-                className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 mb-2 text-xs font-semibold"
-              >
-                Payment Confirmed & Account Provisioned
-              </Badge>
-              <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-                Payment Successful!
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Your statutory fee of{" "}
-                <strong className="text-foreground">
-                  ₦{successDetails?.paidAmount.toLocaleString()}
-                </strong>{" "}
-                for{" "}
-                <strong className="text-foreground">
-                  {successDetails?.serviceName}
-                </strong>{" "}
-                has been received.
-              </p>
-            </div>
-
-            {/* Generated Credentials & Instructions Card */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Credentials Box */}
-              <div className="p-5 rounded-2xl bg-secondary/50 border border-border/80 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Key className="h-4 w-4 text-primary" />
-                  <h4 className="font-semibold text-sm text-foreground">
-                    Your Auto-Created Account Details
-                  </h4>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  An account has been created for you automatically. Your login
-                  details have also been dispatched to{" "}
-                  <strong className="text-foreground">
-                    {successDetails?.email}
-                  </strong>
-                  .
-                </p>
-
-                <div className="space-y-2.5 text-xs bg-background p-4 rounded-xl border border-border/60">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">
-                      Payment Reference:
-                    </span>
-                    <span className="font-mono font-bold text-foreground">
-                      {successDetails?.reference}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Login Email:</span>
-                    <span className="font-medium text-foreground">
-                      {successDetails?.email}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-border/40">
-                    <span className="text-muted-foreground font-medium">
-                      Temporary Password:
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                        {successDetails?.generatedPass}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() =>
-                          copyToClipboard(successDetails?.generatedPass || "")
-                        }
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {copiedKey && (
-                  <div className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Password copied to
-                    clipboard!
-                  </div>
-                )}
-              </div>
-
-              {/* Mandatory Next Steps Check (Steps 3-6) */}
-              <div className="p-5 rounded-2xl bg-muted/40 border border-border/80 space-y-3.5">
-                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                  <FileCheck2 className="h-4 w-4 text-primary" />
-                  Next Mandatory Steps to Complete:
-                </h4>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
-                    <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[10px]">
-                      3
-                    </span>
-                    <div>
-                      <span className="font-semibold text-foreground">
-                        Check Your Email
-                      </span>
-                      <p className="text-[11px] text-muted-foreground">
-                        Verify your inbox for confirmation and login
-                        instructions.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
-                    <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[10px]">
-                      4
-                    </span>
-                    <div>
-                      <span className="font-semibold text-foreground">
-                        Get Your Documents Ready
-                      </span>
-                      <p className="text-[11px] text-muted-foreground">
-                        Prepare clear digital copies (PDF/JPG) of required
-                        statutory documents.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
-                    <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[10px]">
-                      5
-                    </span>
-                    <div>
-                      <span className="font-semibold text-foreground">
-                        Log In with Credentials
-                      </span>
-                      <p className="text-[11px] text-muted-foreground">
-                        Sign into your portal dashboard using your email &
-                        password.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 p-2 rounded-lg bg-background border border-border/40">
-                    <span className="h-5 w-5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold flex items-center justify-center shrink-0 text-[10px]">
-                      6
-                    </span>
-                    <div>
-                      <span className="font-semibold text-foreground">
-                        Fill Application & Upload Documents
-                      </span>
-                      <p className="text-[11px] text-muted-foreground">
-                        Complete your application form and submit files
-                        step-by-step.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="pt-4 border-t border-border/40 flex flex-wrap items-center justify-between gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                className="text-xs"
-              >
-                Apply for Another Service
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <Button asChild variant="outline" size="sm" className="text-xs">
-                  <Link href="/login">
-                    <LogIn className="mr-1.5 h-3.5 w-3.5" /> Go to Login Page
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className="bg-gradient-hero text-xs font-semibold shadow-elegant"
-                >
-                  <Link
-                    href={`/dashboard/services/${selectedService?.id || "certificate_of_origin"}`}
-                  >
-                    Continue Application on Dashboard{" "}
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </Card>
+
+      <PaymentReviewDialog
+        open={isReviewOpen}
+        onOpenChange={setIsReviewOpen}
+        serviceName={selectedService?.name || "Statutory Service"}
+        serviceCategory={selectedService?.category || "Statutory"}
+        fullName={fullName.trim()}
+        email={email.trim()}
+        phone={phone}
+        fee={statutoryFee}
+        provider={getActivePaymentProvider()}
+        isProcessing={isProcessing}
+        virtualAccount={virtualAccount}
+        onCheckout={startCheckout}
+        onEditDetails={() => setIsReviewOpen(false)}
+        onCheckTransferStatus={() => setIsReviewOpen(false)}
+      />
     </div>
   );
 }
