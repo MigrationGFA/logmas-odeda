@@ -50,6 +50,7 @@ export const SERVICES = [
   },
 ];
 
+
 export const TESTIMONIALS = LGA_CONFIG.content.testimonials;
 
 export const NEWS = LGA_CONFIG.content.news;
@@ -141,7 +142,7 @@ export const LEADERSHIP = [
     email: LGA_CONFIG.contact.email,
   },
   {
-    name: "Hon. Vice Chairman",
+    name: "Hon. Dr. Nosiru Yaya",
     role: "Vice Chairman",
     bio: `Overseeing social development, health, and women empowerment initiatives in ${LGA_CONFIG.identity.formalTitle}.`,
     initials: "VC",
@@ -149,7 +150,7 @@ export const LEADERSHIP = [
     email: `vicechairman@${LGA_CONFIG.contact.email.split("@")[1] || "lga.gov.ng"}`,
   },
   {
-    name: "Secretary to Local Government",
+    name: "Hon. Adebayo Oyekunle",
     role: "Secretary to Local Government",
     bio: "Coordinates council administration and inter-departmental policy implementation.",
     initials: "SLG",
@@ -164,13 +165,45 @@ export const LEADERSHIP = [
     accent: "success",
     email: `holga@${LGA_CONFIG.contact.email.split("@")[1] || "lga.gov.ng"}`,
   },
+
   {
-    name: "Council Treasurer",
-    role: "Treasurer",
-    bio: "Manages public finance, revenue heads, and fiscal compliance.",
-    initials: "CT",
+    //lets fo auditor
+    name: "Mrs. Modupe Adeyanju",
+    role: "Internal Auditor",
+    bio: `Oversees internal audit functions and ensures financial compliance in ${LGA_CONFIG.identity.formalTitle}.`,
+    initials: "IA",
+    accent: "danger",
+    email: `auditor@${LGA_CONFIG.contact.email.split("@")[1] || "lga.gov.ng"}`,
+  },
+
+  //next is dir of finance
+  {
+    name: "Mrs. Ganiyat Sanni",
+    role: "Director of Finance",
+    bio: `Oversees financial management and budgeting in ${LGA_CONFIG.identity.formalTitle}.`,
+    initials: "DF",
     accent: "warning",
-    email: `treasurer@${LGA_CONFIG.contact.email.split("@")[1] || "lga.gov.ng"}`,
+    email: `finance@${LGA_CONFIG.contact.email.split("@")[1] || "lga.gov.ng"}`,
+  },
+
+  //next is head general services and administration department
+  {
+    name: "Mrs Motunrayo Akpoduado",
+    role: "Head of General Services and Administration",
+    bio: `Leads the General Services and Administration department in ${LGA_CONFIG.identity.formalTitle}.`,
+    initials: "HGS",
+    accent: "info",
+    email: `generalservices@${LGA_CONFIG.contact.email.split("@")[1] || "lga.gov.ng"}`,
+  },
+
+  //Leader of the legislators
+  {
+    name: "Hon. Osunnowo Azeez",
+    role: "Leader of the Legislators",
+    bio: `Heads the legislative arm of ${LGA_CONFIG.identity.formalTitle}.`,
+    initials: "LL",
+    accent: "primary",
+    email: `legislators@${LGA_CONFIG.contact.email.split("@")[1] || "lga.gov.ng"}`,
   },
 ];
 
@@ -179,11 +212,15 @@ export const WARDS_INFO = LGA_CONFIG.content.wardsInfo;
 export const CAREERS = LGA_CONFIG.content.careers;
 
 export const DEPARTMENTS = [
-  { name: "Finance & Budget", head: "HOD Finance", icon: "Calculator", desc: "Oversees revenue, budget allocation, and tax administration." },
-  { name: "Works & Housing", head: "HOD Works", icon: "Building", desc: "Manages municipal infrastructure, roads, and public buildings." },
-  { name: "Agricultural Services", head: "HOD Agriculture", icon: "Sprout", desc: "Supports local farmers, livestock, and agro-processing." },
-  { name: "Health & Environment", head: "HOD Health", icon: "HeartPulse", desc: "Ensures sanitation, food safety, and primary healthcare." },
-  { name: "Education & Social Dev", head: "HOD Education", icon: "GraduationCap", desc: "Supervises primary education, youth, and community affairs." },
+  { name: "General Services and Administration", head: "HOD General Services", icon: "Building", desc: "Oversees general administration and municipal services." },
+  { name: "Finance and Supply", head: "HOD Finance", icon: "Calculator", desc: "Manages public finance, revenue, and procurement." },
+  { name: "Works", head: "HOD Works", icon: "Hammer", desc: "Responsible for infrastructure development and maintenance." },
+  { name: "Community Development, Social Welfare, Tourism and Youth", head: "HOD Community Development", icon: "People", desc: "Promotes social welfare, tourism, and youth engagement." },
+  { name: "Agriculture and Food Security", head: "HOD Agriculture", icon: "Sprout", desc: "Supports local farmers, livestock, and food security initiatives." },
+  { name: "Budget, Planning, Research and Statistics", head: "HOD Budget", icon: "ChartBar", desc: "Handles budget planning, research, and statistical analysis." },
+  { name: "Information, Public Relations, Education and Sports", head: "HOD Information", icon: "Newspaper", desc: "Manages public relations, education, and sports programs." },
+  { name: "Water Supply and Environmental Sanitation", head: "HOD Water Supply", icon: "Water", desc: "Ensures clean water supply and environmental sanitation." },
+  { name: "Primary Health Care", head: "HOD Health", icon: "HeartPulse", desc: "Provides primary healthcare services to the community." },
 ];
 
 export const DOWNLOADS = [

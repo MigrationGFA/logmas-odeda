@@ -251,6 +251,7 @@ export interface LgaConfiguration {
   content: LgaContentConfig;
 }
 
+
 /**
  * ACTIVE LOCAL GOVERNMENT CONFIGURATION (ODEDA LGA)
  */
@@ -286,15 +287,15 @@ export const LGA_CONFIG: LgaConfiguration = {
       fullTitle: "Executive Chairman\nOdeda Local Government",
       signatureImagePath: "/certificates/signatures/chairman-signature.png",
       portraitImagePath: "/assets/chairman.jpg",
-      officeEmail: "chairman@odedalga.com",
+      officeEmail: "wfadeyemo@gmail.com",
       tenureNote: "Executive Chairman, Odeda Local Government Area · Ogun State",
     },
     viceChairman: {
-      name: "Hon. Vice Chairman",
+      name: "Hon. Nosiru Yaya",
       title: "Vice Chairman",
     },
     secretary: {
-      name: "Council Secretary",
+      name: "Hon. Adebayo Oyekunle",
       title: "Secretary to the Local Government",
     },
     treasurer: {
@@ -302,7 +303,7 @@ export const LGA_CONFIG: LgaConfiguration = {
       title: "Council Treasurer",
     },
     headOfLocalGovAdmin: {
-      name: "Dr. K. A. Adebisi",
+      name: "Mr Oluwole Fateru",
       title: "Head of Local Government Administration (HOLGA)",
     },
     councillor: {
@@ -321,7 +322,7 @@ export const LGA_CONFIG: LgaConfiguration = {
     email: "info@odedalga.com",
     emailMailto: "mailto:info@odedalga.com",
     supportEmail: "support@odedalga.com",
-    chairmanEmail: "chairman@odedalga.com",
+    chairmanEmail: "wfadeyemo@gmail.com",
     revenueEmail: "revenue@odedalga.com",
     secretariatAddress: "LGA Secretariat, Abeokuta-Ibadan Expressway, Odeda, Ogun State",
     shortAddress: "LGA Secretariat, Odeda, Ogun State",
