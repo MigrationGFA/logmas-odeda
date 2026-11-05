@@ -114,7 +114,7 @@ export default function NewsPage() {
                                 <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
                                     {n.excerpt
                                         ? n.excerpt
-                                        : "Read the full update and discover how this development affects citizens, businesses and partners across the LGA."}
+                                        : "Read the full update and discover how this development affects citizens, businesses and partners across Odeda LGA."}
                                 </p>
                                 <Button asChild variant="ghost" size="sm" className="mt-3 px-0 text-primary">
                                     <a href={n.slug.startsWith("fallback-") ? "/news" : `/news/${n.slug}`}>

@@ -158,7 +158,7 @@ export function PostPaymentCompletionForm({
             Retrieving Statutory Application Context...
           </h3>
           <p className="text-xs text-muted-foreground">
-            Connecting payment verification with the LGA application registry.
+            Connecting payment verification with Odeda LGA application registry.
           </p>
         </div>
       </div>
@@ -230,7 +230,7 @@ export function PostPaymentCompletionForm({
               Application Details & Documents Submitted!
             </CardTitle>
             <CardDescription className="text-sm max-w-lg mx-auto">
-              Your official application for <strong>{sName}</strong> has been completed with paid statutory fees and submitted to the the LGA Executive Treasury & Processing Desk.
+              Your official application for <strong>{sName}</strong> has been completed with paid statutory fees and submitted to the Odeda LGA Executive Treasury & Processing Desk.
             </CardDescription>
           </CardHeader>
 

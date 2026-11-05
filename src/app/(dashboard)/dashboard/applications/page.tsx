@@ -741,7 +741,7 @@ export default function ApplicationsPage() {
               {selectedApp.declineReason && (
                 <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-4 space-y-1 text-xs text-red-900 dark:text-red-200">
                   <span className="font-bold flex items-center gap-1.5 text-red-700 dark:text-red-300">
-                    <XCircle className="h-4 w-4" /> Application Declined by the LGA Authority
+                    <XCircle className="h-4 w-4" /> Application Declined by Odeda LGA Authority
                   </span>
                   <p className="mt-1 leading-relaxed">{selectedApp.declineReason}</p>
                 </div>
@@ -892,7 +892,7 @@ export default function ApplicationsPage() {
                   required
                   value={declineReason}
                   onChange={(e) => setDeclineReason(e.target.value)}
-                  placeholder="Specify missing documentation, failed site inspection, invalid lineage claims, or non-compliance with the LGA bye-laws..."
+                  placeholder="Specify missing documentation, failed site inspection, invalid lineage claims, or non-compliance with Odeda LGA bye-laws..."
                 />
               </div>
 

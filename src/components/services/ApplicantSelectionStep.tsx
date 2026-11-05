@@ -61,7 +61,7 @@ export function ApplicantSelectionStep({
       fullName: applicant.name,
       phone: applicant.phone,
       email: applicant.email || "",
-      address: applicant.address || "the LGA, Ogun State",
+      address: applicant.address || "Odeda LGA, Ogun State",
       ward: applicant.ward || "Ward 7 (Itesi / Camp)",
       nin: applicant.nin || "",
       cacNumber: applicant.cacNumber || "",
@@ -110,7 +110,7 @@ export function ApplicantSelectionStep({
         </h4>
         <p className="text-xs text-muted-foreground mt-1">
           {isFieldOfficer
-            ? `Search for an existing registered citizen / business owner in the LGA or record a new unregistered applicant applying for ${serviceName || "this service"}.`
+            ? `Search for an existing registered citizen / business owner in Odeda LGA or record a new unregistered applicant applying for ${serviceName || "this service"}.`
             : "Review and confirm your statutory contact and residency details for this application."}
         </p>
       </div>
@@ -149,7 +149,7 @@ export function ApplicantSelectionStep({
               {isFetching && (
                 <div className="text-xs text-muted-foreground py-2 flex items-center gap-2">
                   <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  Searching the LGA citizen & business registry...
+                  Searching Odeda LGA citizen & business registry...
                 </div>
               )}
 
@@ -312,7 +312,7 @@ export function ApplicantSelectionStep({
 
             <div className="space-y-1.5">
               <Label htmlFor="applicant_ward">
-                Ward of Residence in the LGA <span className="text-red-500">*</span>
+                Ward of Residence in Odeda LGA <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={value.ward || "Ward 7 (Itesi / Camp)"}
@@ -333,7 +333,7 @@ export function ApplicantSelectionStep({
 
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="applicant_address">
-                Residential / Operational Address in the LGA <span className="text-red-500">*</span>
+                Residential / Operational Address in Odeda LGA <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="applicant_address"

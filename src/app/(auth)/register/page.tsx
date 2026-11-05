@@ -422,7 +422,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div data-field className="relative">
-                  <Label>I am registering as *</Label>
+                  <Label>Resident/Citizen *</Label>
                   <div className="relative mt-1.5">
                     <Select
                       value={selectedRole}

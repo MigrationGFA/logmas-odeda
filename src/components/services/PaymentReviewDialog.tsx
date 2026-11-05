@@ -72,7 +72,7 @@ import { QRCodeSVG } from "@/components/dashboard/qr-code";
  *
  * Every field is supplied by the backend. The browser never holds a GPay
  * merchant key, and no account number is ever hard-coded in the client,
- * because the reserved-accounts endpoint returns every account the LGA owns.
+ * because the reserved-accounts endpoint returns every account Odeda LGA owns.
  */
 export interface VirtualAccountDetails {
   accountNumber: string;

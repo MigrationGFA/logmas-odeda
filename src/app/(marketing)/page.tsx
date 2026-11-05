@@ -216,10 +216,10 @@ One Future.
                       {s.eyebrow}
                     </Badge>
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
-                      {/* {s.title.includes("the LGA") ? (
+                      {/* {s.title.includes("Odeda LGA") ? (
                         <>
                           Modern public services for{" "}
-                          <span className="text-gradient-primary">the LGA</span>
+                          <span className="text-gradient-primary">Odeda LGA</span>
                         </>
                       ) : (
                         s.title
@@ -871,7 +871,7 @@ function ChairmanSection() {
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/about">About the LGA</Link>
+                <Link href="/about">About Odeda LGA</Link>
               </Button>
             </div>
           </div>
@@ -942,7 +942,7 @@ function CultureSection() {
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
             From Arakanga Forest Reserve to traditional chieftaincy heritage,
-            historic landmarks and unforgettable Egba cuisine  -  the LGA
+            historic landmarks and unforgettable Egba cuisine  -  Odeda LGA
             invites you to experience Yoruba culture at its richest.
           </p>
           <div className="mt-6 flex gap-3">

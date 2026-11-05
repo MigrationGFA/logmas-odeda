@@ -122,7 +122,7 @@ const STEPS: FormStep[] = [
     title: "Review & Submit",
     shortTitle: "Review",
     description:
-      "Review street naming proposal and submit for the LGA Statutory Gazette approval.",
+      "Review street naming proposal and submit for Odeda LGA Statutory Gazette approval.",
   },
 ];
 
@@ -186,7 +186,7 @@ export default function StreetNamingForm({
       phone: initialApplicant?.phone || "",
       email: initialApplicant?.email || "",
       address: initialApplicant?.address || "",
-      ward: initialApplicant?.ward || WARDS[0] || "the LGA",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda LGA",
       proposedStreetName: "",
       alternativeStreetName: "",
       streetLength: "",
@@ -345,7 +345,7 @@ export default function StreetNamingForm({
         { label: "Contact Phone Number", value: formValues.phone },
         { label: "Email Address", value: formValues.email || "N/A" },
         { label: "Physical Address", value: formValues.address },
-        { label: "Ward in the LGA", value: formValues.ward },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
       ],
     },
     {
@@ -442,7 +442,7 @@ export default function StreetNamingForm({
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
               Enter sponsoring CDA, family council, or estate developer details
-              for statutory street naming in the LGA.
+              for statutory street naming in Odeda LGA.
             </p>
           </div>
 
@@ -540,7 +540,7 @@ export default function StreetNamingForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ward">Ward in the LGA *</Label>
+              <Label htmlFor="ward">Ward in Odeda LGA *</Label>
               <Controller
                 control={control}
                 name="ward"
@@ -572,7 +572,7 @@ export default function StreetNamingForm({
               <Input
                 id="address"
                 {...register("address")}
-                placeholder="Secretariat or residential address in the LGA"
+                placeholder="Secretariat or residential address in Odeda LGA"
               />
               {errors.address && (
                 <p className="text-xs text-red-500">{errors.address.message}</p>

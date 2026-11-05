@@ -94,7 +94,7 @@ const STEPS: FormStep[] = [
     title: "Viewing Centre & Operator Profile",
     shortTitle: "Centre Profile",
     description:
-      "Enter viewing hall enterprise name, operator identity, and physical location in the LGA.",
+      "Enter viewing hall enterprise name, operator identity, and physical location in Odeda LGA.",
   },
   {
     id: "hall_safety",
@@ -191,7 +191,7 @@ export default function ViewingCentreLicenceForm({
       phone: initialApplicant?.phone || "",
       email: initialApplicant?.email || "",
       physicalAddress: initialApplicant?.address || "",
-      ward: initialApplicant?.ward || WARDS[0] || "the LGA",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda LGA",
       cacNumber: "",
       seatingCapacity: "",
       standardFee: "",
@@ -349,7 +349,7 @@ export default function ViewingCentreLicenceForm({
         { label: "Contact Phone Number", value: formValues.phone },
         { label: "Email Address", value: formValues.email || "N/A" },
         { label: "Physical Location", value: formValues.physicalAddress },
-        { label: "Ward in the LGA", value: formValues.ward },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
         { label: "CAC Reg Number", value: formValues.cacNumber || "N/A" },
         { label: "Standard Admission Fee", value: formValues.standardFee || "N/A" },
       ],
@@ -440,7 +440,7 @@ export default function ViewingCentreLicenceForm({
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
               Enter sports viewing hall details and operator contact credentials
-              in the LGA.
+              in Odeda LGA.
             </p>
           </div>
 
@@ -500,7 +500,7 @@ export default function ViewingCentreLicenceForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ward">Ward in the LGA *</Label>
+              <Label htmlFor="ward">Ward in Odeda LGA *</Label>
               <Controller
                 control={control}
                 name="ward"
@@ -552,7 +552,7 @@ export default function ViewingCentreLicenceForm({
               <Input
                 id="physicalAddress"
                 {...register("physicalAddress")}
-                placeholder="Building No, Street name, Community in the LGA"
+                placeholder="Building No, Street name, Community in Odeda LGA"
               />
               {errors.physicalAddress && (
                 <p className="text-xs text-red-500">{errors.physicalAddress.message}</p>

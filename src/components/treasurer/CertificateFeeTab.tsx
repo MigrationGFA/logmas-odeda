@@ -158,7 +158,7 @@ export default function CertificateFeeTab() {
         <div>
           <h3 className="text-base font-bold flex items-center gap-2">
             <FileBadge className="h-5 w-5 text-primary" />
-            the LGA Certificate Fee Schedules
+            Odeda LGA Certificate Fee Schedules
           </h3>
           <p className="text-xs text-muted-foreground">
             Configure statutory fees, calculation rules, penalty rates, and billing cycles for all Certificate Services.

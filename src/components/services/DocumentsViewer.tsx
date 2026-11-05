@@ -129,7 +129,7 @@ export function DocumentsViewer({ documents, className = "" }: DocumentsViewerPr
       window.open(doc.url, "_blank");
     } else {
       // Create a dummy download
-      const blob = new Blob([`Official the LGA Statutory Document: ${doc.name}\nType: ${doc.documentType}\nUploaded: ${doc.uploadedAt || new Date().toISOString()}`], {
+      const blob = new Blob([`Official Odeda LGA Statutory Document: ${doc.name}\nType: ${doc.documentType}\nUploaded: ${doc.uploadedAt || new Date().toISOString()}`], {
         type: isImage(doc) ? "image/jpeg" : "application/pdf",
       });
       const link = document.createElement("a");

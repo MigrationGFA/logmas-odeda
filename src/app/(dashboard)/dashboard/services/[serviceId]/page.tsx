@@ -133,7 +133,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
       <div className="space-y-6 max-w-5xl mx-auto py-6 px-4">
         <PageHeader
           title="Service Not Found"
-          subtitle="The requested the LGA service could not be found."
+          subtitle="The requested Odeda LGA service could not be found."
         />
         <Button asChild variant="outline">
           <Link href="/dashboard/services">
@@ -462,7 +462,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     </span>
                     <span className="font-semibold text-foreground">
                       {submittedApp.invoice.virtualBankName ||
-                        "Zenith Bank / the LGA Treasury"}
+                        "Zenith Bank / Odeda LGA Treasury"}
                     </span>
                   </div>
                   <div>
@@ -484,7 +484,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
               </h5>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground leading-relaxed pl-1">
                 <li>
-                  the LGA Desk Officers will examine your documents against
+                  Odeda LGA Desk Officers will examine your documents against
                   traditional council and departmental records.
                 </li>
                 <li>
@@ -555,7 +555,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
                   <span className="font-medium text-foreground">
                     awaiting payment confirmation
                   </span>{" "}
-                  until the applicant transfers to the LGA account, you upload
+                  until the applicant transfers to Odeda LGA account, you upload
                   proof, and the treasurer confirms it.
                 </p>
               )}

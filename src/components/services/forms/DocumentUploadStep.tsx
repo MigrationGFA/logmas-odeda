@@ -165,7 +165,7 @@ export function DocumentUploadStep({
           <div>
             <span className="font-bold">All mandatory documents attached!</span>
             <p className="text-muted-foreground">
-              Your documentation is ready for statutory verification by the LGA reviewing officers.
+              Your documentation is ready for statutory verification by Odeda LGA reviewing officers.
             </p>
           </div>
         </div>

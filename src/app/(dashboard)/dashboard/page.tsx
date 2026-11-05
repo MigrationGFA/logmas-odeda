@@ -422,6 +422,7 @@ function ChairmanOverview({ role }: ChairmanOverviewProps) {
         {/* <MiniChart /> */}
         <QuickActions
           items={[
+            { icon: FileBadge, label: "State of Origin", to: "/dashboard/services/certificate_of_origin" },
             { icon: BarChart3, label: "Revenue Overview", to: "/dashboard/reports" },
             { icon: FileBadge, label: "Applications", to: "/dashboard/applications" },
             { icon: MessageSquare, label: "Complaints", to: "/dashboard/complaints" },

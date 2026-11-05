@@ -190,7 +190,7 @@ export default function TrackApplicationPage({ params }: TrackPageProps) {
             <p className="text-sm text-muted-foreground">{error}</p>
             <p className="text-xs text-muted-foreground">
               Check the number printed on your receipt or application form, or
-              contact the LGA help desk for assistance.
+              contact Odeda LGA help desk for assistance.
             </p>
           </Card>
         )}

@@ -25,7 +25,7 @@ export default function InvestPage() {
             <PageHero
                 eyebrow="Investment Opportunities"
                 title="Strategically positioned along the Abeokuta-Ibadan axis"
-                subtitle="the LGA is connected to the wider Lagos-Ogun-Benin economic corridor and well placed to become a hub for agriculture, commerce, logistics, investment and regional economic development."
+                subtitle="Odeda LGA is connected to the wider Lagos-Ogun-Benin economic corridor and well placed to become a hub for agriculture, commerce, logistics, investment and regional economic development."
             >
                 <div className="flex flex-wrap gap-3">
                     <Button asChild className="bg-gradient-hero shadow-elegant">
@@ -87,7 +87,7 @@ export default function InvestPage() {
                 <div className="container mx-auto px-4 grid md:grid-cols-2 gap-10 items-center">
                     <div>
                         <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                            Why investors choose the LGA
+                            Why investors choose Odeda LGA
                         </h2>
                         <ul className="mt-5 space-y-2.5 text-sm">
                             {[

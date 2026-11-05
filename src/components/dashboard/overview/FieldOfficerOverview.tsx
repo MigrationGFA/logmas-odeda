@@ -34,6 +34,7 @@ import {
   Building2,
   Phone,
   FileBadge,
+  Landmark,
 } from "lucide-react";
 import { QuickActions } from "@/components/dashboard/DashboardWidgets";
 import {
@@ -70,7 +71,7 @@ export default function FieldOfficerOverview() {
     return () => window.removeEventListener(APPLICATIONS_EVENT_KEY, handleStoreChange);
   }, []);
 
-  // Compute live metrics from the LGA applications
+  // Compute live metrics from Odeda LGA applications
   const metrics = useMemo(() => {
     const pendingInspection = applications.filter(
       (a) => a.status === "Inspection Required" || a.status === "Submitted"
@@ -155,13 +156,13 @@ export default function FieldOfficerOverview() {
         />
       </div>
 
-      {/* Main the LGA General Services Pending Inspection Queue */}
+      {/* Main Odeda LGA General Services Pending Inspection Queue */}
       <Card className="p-5 mb-6 bg-gradient-card border-border/40">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
             <h3 className="font-bold text-base flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-primary" />
-              the LGA Services  -  Pending Field Inspection Queue
+              Odeda LGA Services  -  Pending Field Inspection Queue
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Service requests (Tenement Rate, Quarry Permit, Liquor Licence, Kiosk Licence) requiring physical verification.
@@ -281,6 +282,7 @@ export default function FieldOfficerOverview() {
             { icon: Users, label: "Customers & Shops", to: "/dashboard/customers" },
             { icon: BarChart3, label: "Field Reports", to: "/dashboard/reports" },
             { icon: CreditCard, label: "Invoices & Demand", to: "/dashboard/invoices" },
+            { icon: Landmark, label: "Static Account / Bank Transfer", to: "/dashboard/services" },
           ]}
         />
       </div>

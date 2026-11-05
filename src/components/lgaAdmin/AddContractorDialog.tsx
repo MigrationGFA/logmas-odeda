@@ -121,7 +121,7 @@ export function AddContractorDialog({ onCreate, isCreating }: AddContractorDialo
           <DialogTitle>Onboard New Contractor</DialogTitle>
           <DialogDescription>
             Create a revenue collection contractor account. They will be able to deploy and manage
-            their own field agents under the LGA.
+            their own field agents under Odeda LGA.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

@@ -267,7 +267,7 @@ export default function PermitDetailPage({
 
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground max-w-md">
-              This certificate is the official trade permit of the LGA
+              This certificate is the official trade permit of Odeda LGA
               LGA. Verify authenticity by scanning the QR code or visiting the
               verification portal with the code above.
             </div>

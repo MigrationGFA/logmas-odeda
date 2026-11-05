@@ -83,7 +83,7 @@ const STEPS: FormStep[] = [
     title: "Property Ownership & Location",
     shortTitle: "Owner & Location",
     description:
-      "Enter property owner contact details and physical address in the LGA.",
+      "Enter property owner contact details and physical address in Odeda LGA.",
   },
   {
     id: "building_specs",
@@ -177,7 +177,7 @@ export default function TenementRateForm({
       email: initialApplicant?.email || "",
       ownerAddress: initialApplicant?.address || "",
       propertyAddress: initialApplicant?.address || "",
-      ward: initialApplicant?.ward || WARDS[0] || "the LGA",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda LGA",
       cadastralPlotNo: "",
       propertyType: "Multi-Flat Block / Storey Building",
       numberOfFloors: "",
@@ -324,7 +324,7 @@ export default function TenementRateForm({
         { label: "Owner Contact Phone", value: formValues.phone },
         { label: "Owner Email Address", value: formValues.email || "N/A" },
         { label: "Physical Property Address", value: formValues.propertyAddress },
-        { label: "Ward in the LGA", value: formValues.ward },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
         { label: "Cadastral / Plot Number", value: formValues.cadastralPlotNo || "N/A" },
         { label: "Owner Mailing Address", value: formValues.ownerAddress || "N/A" },
       ],
@@ -394,7 +394,7 @@ export default function TenementRateForm({
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
               Enter official property ownership records and physical address
-              within the LGA rating jurisdiction.
+              within Odeda LGA rating jurisdiction.
             </p>
           </div>
 
@@ -449,7 +449,7 @@ export default function TenementRateForm({
                 <Input
                   id="corporateName"
                   {...register("corporateName")}
-                  placeholder="e.g. the LGA Properties & Investments Ltd"
+                  placeholder="e.g. Odeda LGA Properties & Investments Ltd"
                 />
               </div>
             )}
@@ -481,7 +481,7 @@ export default function TenementRateForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ward">Ward in the LGA *</Label>
+              <Label htmlFor="ward">Ward in Odeda LGA *</Label>
               <Controller
                 control={control}
                 name="ward"
@@ -526,7 +526,7 @@ export default function TenementRateForm({
               <Input
                 id="propertyAddress"
                 {...register("propertyAddress")}
-                placeholder="House number, Street name, Community/Town in the LGA"
+                placeholder="House number, Street name, Community/Town in Odeda LGA"
               />
               {errors.propertyAddress && (
                 <p className="text-xs text-red-500">{errors.propertyAddress.message}</p>

@@ -846,9 +846,14 @@ export default function OnboardingPage() {
                       render={({ field }) => (
                         <Input
                           id="identificationNumber"
+                          type="tel"
+                          inputMode="numeric"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e.target.value.replace(/\D/g, ""));
+                          }}
                           className="mt-1.5"
-                          placeholder="Enter ID number"
+                          placeholder="Enter ID number (digits only)"
                           disabled={isSubmitting}
                         />
                       )}

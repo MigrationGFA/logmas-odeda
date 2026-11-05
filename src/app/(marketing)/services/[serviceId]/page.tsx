@@ -70,7 +70,7 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
   );
   const lookupKey = matchedFromList?.code || matchedFromList?.slug || serviceId;
   const { data: fetchedService } = useGetServiceBySlug(lookupKey);
-  const service: any = matchedFromList || fetchedService;
+  const service: any = matchedFromList || (fetchedService?.data || fetchedService);
 
   const [activeTab, setActiveTab] = useState<"apply" | "requirements" | "workflow" | "faq">("apply");
 
@@ -108,11 +108,11 @@ export default function PublicServiceDetailPage({ params }: PublicServicePagePro
   }
 
   const IconComponent = ICON_MAP[service.icon] || FileBadge;
-  const currentFee = service.feeConfig.amount;
+  const currentFee = service.feeConfig?.amount ?? getConfiguredFeeForService(service.id) ?? service.defaultFee ?? 0;
 
-  // Filter related services in same category or adjacent
+  // Filter related services in same category only
   const relatedServices = LGA_SERVICES.filter(
-    (s) => s.id !== service.id && (s.category === service.category || Math.random() > 0.5)
+    (s) => s.id !== service.id && s.category === service.category
   ).slice(0, 3);
 
   const scrollToApply = () => {

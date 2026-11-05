@@ -75,7 +75,7 @@ const STEPS: FormStep[] = [
     title: "Applicant & Identity Information",
     shortTitle: "Applicant Info",
     description:
-      "Provide personal contact details and the LGA ward residency details.",
+      "Provide personal contact details and Odeda LGA ward residency details.",
   },
   {
     id: "lineage_info",
@@ -119,7 +119,7 @@ const DOCUMENTS: DocumentSpec[] = [
     id: "proof_of_residency",
     label: "Proof of Residency",
     description:
-      "Utility bill, tenancy agreement, or official letter confirming residency in the LGA.",
+      "Utility bill, tenancy agreement, or official letter confirming residency in Odeda LGA.",
     required: true,
   },
 ];
@@ -153,7 +153,7 @@ export default function CertificateOfOriginForm({
       phone: initialApplicant?.phone || "",
       email: initialApplicant?.email || "",
       address: initialApplicant?.address || "",
-      ward: initialApplicant?.ward ?? WARDS[0] ?? "the LGA",
+      ward: initialApplicant?.ward ?? WARDS[0] ?? "Odeda LGA",
       nin: initialApplicant?.nin ?? "",
       cacNumber: initialApplicant?.cacNumber ?? "",
       dob: "",
@@ -352,7 +352,7 @@ export default function CertificateOfOriginForm({
         { label: "Phone Number", value: formValues.phone || "N/A" },
         { label: "Email Address", value: formValues.email || "N/A" },
         {
-          label: "Ward of Origin in the LGA",
+          label: "Ward of Origin in Odeda LGA",
           value: `${formValues.ward || "N/A"} Ward`,
         },
         { label: "Residential Address", value: formValues.address || "N/A" },
@@ -368,7 +368,7 @@ export default function CertificateOfOriginForm({
         },
         {
           label: "Father's Ancestral Village",
-          value: formValues.fatherVillage || "the LGA",
+          value: formValues.fatherVillage || "Odeda LGA",
         },
         {
           label: "Mother's Maiden Name",
@@ -380,7 +380,7 @@ export default function CertificateOfOriginForm({
         },
         {
           label: "Mother's Ancestral Village",
-          value: formValues.motherVillage || "the LGA",
+          value: formValues.motherVillage || "Odeda LGA",
         },
         {
           label: "Quarter Chief / Baale Title",
@@ -663,7 +663,7 @@ export default function CertificateOfOriginForm({
               Ancestral Lineage & Compounds
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              the LGA verification officers cross-examine parental compound
+              Odeda LGA verification officers cross-examine parental compound
               names with Traditional Council records.
             </p>
           </div>
@@ -703,7 +703,7 @@ export default function CertificateOfOriginForm({
                     {...register("fatherCompound", {
                       required: "Father's compound is required",
                     })}
-                    placeholder="e.g. Agbo Compound, the LGA"
+                    placeholder="e.g. Agbo Compound, Odeda LGA"
                     disabled={isSubmitting}
                   />
                   {errors.fatherCompound && (

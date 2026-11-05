@@ -15,7 +15,7 @@ const TIMELINE = [
   {
     year: "1976",
     title: "LGA Creation",
-    desc: "the LGA created as a distinct administrative hub, headquartered in the LGA town.",
+    desc: "Odeda LGA created as a distinct administrative hub, headquartered in Odeda LGA town.",
   },
   {
     year: "1992",
@@ -43,7 +43,7 @@ export default function AboutPage() {
   return (
     <PageShell>
       <PageHero
-        eyebrow="About the LGA"
+        eyebrow="About Odeda LGA"
         title="Rooted in agriculture & industry, building the future"
         subtitle={`${LGA_CONFIG.identity.fullName}  -  proudly headquartered in ${LGA_CONFIG.identity.headquarters}, ${LGA_CONFIG.identity.state}  -  combines rich cultural heritage with agricultural productivity, solid minerals, and modern digital public service.`}
       >
@@ -91,10 +91,10 @@ export default function AboutPage() {
           </h2>
           <div className="mt-4 space-y-4 text-sm md:text-base text-muted-foreground leading-relaxed">
             <p>
-              {LGA_CONFIG.identity.fullName} was created in <b>{LGA_CONFIG.identity.establishedYear}</b> with its administrative headquarters in <b>{LGA_CONFIG.identity.headquarters}</b>. The LGA spans <b>{LGA_CONFIG.wards.length} political wards</b> and is home to a warm, industrious population.
+              {LGA_CONFIG.identity.fullName} was created in <b>{LGA_CONFIG.identity.establishedYear}</b> with its administrative headquarters in <b>{LGA_CONFIG.identity.headquarters}</b>. Odeda LGA spans <b>{LGA_CONFIG.wards.length} political wards</b> and is home to a warm, industrious population.
             </p>
             <p>
-              The LGA's economy is anchored by vast agricultural production (cassava, maize, poultry, cocoa), extensive granite quarrying and solid mineral processing, haulage corridors, tertiary education institutions, and a fast-growing digital SME ecosystem.
+              Odeda LGA's economy is anchored by vast agricultural production (cassava, maize, poultry, cocoa), extensive granite quarrying and solid mineral processing, haulage corridors, tertiary education institutions, and a fast-growing digital SME ecosystem.
             </p>
             <p>
               Traditional institutions and royal obas remain strong pillars of community life, working hand-in-hand with the elected council to foster peace, security, and sustainable municipal development.
@@ -115,7 +115,7 @@ export default function AboutPage() {
             {/* <div>
               <div className="font-semibold">Mission</div>
               <p className="opacity-90">
-                Deliver every public service with dignity, speed and accountability  -  empowering citizens, farmers, businesses and investors to thrive across the LGA.
+                Deliver every public service with dignity, speed and accountability  -  empowering citizens, farmers, businesses and investors to thrive across Odeda LGA.
               </p>
             </div> */}
             <div className="grid grid-cols-2 gap-3 pt-2">

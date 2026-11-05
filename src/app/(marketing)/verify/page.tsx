@@ -124,7 +124,7 @@ function VerifyContent() {
           Document Verification
         </h1>
         <p className="mt-2 text-muted-foreground text-sm">
-          Verify the authenticity of the LGA Certificates of Origin, trade permits, and official receipts.
+          Verify the authenticity of Odeda LGA Certificates of Origin, trade permits, and official receipts.
         </p>
       </div>
 
@@ -286,7 +286,7 @@ function VerifyContent() {
       <div className="mt-8 text-center text-sm text-muted-foreground">
         Need help?{" "}
         <Link href="/contact" className="text-primary font-medium underline">
-          Contact the LGA
+          Contact Odeda LGA
         </Link>
       </div>
     </div>

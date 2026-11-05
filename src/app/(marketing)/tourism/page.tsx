@@ -14,7 +14,7 @@ export default function TourismPage() {
       <PageHero
         eyebrow="Tourism & Culture"
         title="Where Yoruba heritage meets modern hospitality"
-        subtitle="From Arakanga Forest Reserve to historic chieftaincy traditions and serene eco-tourism hubs  -  the LGA is a living gallery of Egba culture, agriculture and hospitality."
+        subtitle="From Arakanga Forest Reserve to historic chieftaincy traditions and serene eco-tourism hubs  -  Odeda LGA is a living gallery of Egba culture, agriculture and hospitality."
       />
 
       <section className="container mx-auto px-4 py-14">
@@ -28,7 +28,7 @@ export default function TourismPage() {
           </h2>
           <p className="mt-3 opacity-90 max-w-2xl">
             Home to historic reserves, granite formations, traditional
-            craftsmanship and serene agrarian landscapes across the LGA's 10
+            craftsmanship and serene agrarian landscapes across Odeda LGA's 10
             wards.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">

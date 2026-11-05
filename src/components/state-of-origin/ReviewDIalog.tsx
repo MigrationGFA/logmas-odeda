@@ -218,7 +218,7 @@ function ReviewDialog({ app, canDecide, councillor }: ReviewDialogProps) {
           <Field icon={User} label="Gender" value={app.gender} />
           <Field icon={Phone} label="Phone" value={app.phone} />
           <Field icon={Mail} label="Email" value={app.email || "N/A"} />
-          <Field icon={MapPin} label="LGA" value="the LGA" />
+          <Field icon={MapPin} label="LGA" value="Odeda LGA" />
           <Field icon={MapPin} label="Ward" value={app.ward?.name || "N/A"} />
           <div className="sm:col-span-2">
             <Field icon={MapPin} label="Address" value={app.address} />

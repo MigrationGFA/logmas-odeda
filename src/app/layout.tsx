@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${LGA_CONFIG.platform.name} ${LGA_CONFIG.identity.name}`,
+  title: "Welcome to the Official Website of Odeda Local Government, Ogun State, Nigeria",
   description: `${LGA_CONFIG.platform.fullName} for ${LGA_CONFIG.identity.fullName}`,
 };
 

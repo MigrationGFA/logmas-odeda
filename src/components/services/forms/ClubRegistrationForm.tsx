@@ -168,7 +168,7 @@ const DOCUMENTS: DocumentSpec[] = [
   {
     id: "secretariat_proof",
     label: "Secretariat Utility / Tenancy Proof",
-    description: "Proof of address for club physical meeting venue or registered secretariat in the LGA.",
+    description: "Proof of address for club physical meeting venue or registered secretariat in Odeda LGA.",
     required: false,
   },
 ];
@@ -213,7 +213,7 @@ export default function ClubRegistrationForm({
       category: "Social & Cultural Club",
       dateFounded: "",
       secretariatAddress: "",
-      ward: WARDS[0] || "the LGA",
+      ward: WARDS[0] || "Odeda LGA",
       phone: "",
       email: "",
       patronName: "",
@@ -436,7 +436,7 @@ export default function ClubRegistrationForm({
           membershipNo: m.membershipNo || "N/A",
           fullName: m.fullName,
           phone: m.phone || "N/A",
-          address: m.address || "the LGA",
+          address: m.address || "Odeda LGA",
           joinedYear: m.joinedYear || "2024",
         })),
     },
@@ -475,7 +475,7 @@ export default function ClubRegistrationForm({
               <Input
                 id="clubName"
                 {...register("clubName")}
-                placeholder="e.g. the LGA Dynamic Elite Club of Nigeria"
+                placeholder="e.g. Odeda LGA Dynamic Elite Club of Nigeria"
                 disabled={isSubmitting}
               />
               {errors.clubName && (
@@ -566,11 +566,11 @@ export default function ClubRegistrationForm({
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="secretariatAddress">Physical Secretariat Address in the LGA *</Label>
+              <Label htmlFor="secretariatAddress">Physical Secretariat Address in Odeda LGA *</Label>
               <Input
                 id="secretariatAddress"
                 {...register("secretariatAddress")}
-                placeholder="Suite / House No, Street name, Quarter, the LGA"
+                placeholder="Suite / House No, Street name, Quarter, Odeda LGA"
                 disabled={isSubmitting}
               />
               {errors.secretariatAddress && (
@@ -627,7 +627,7 @@ export default function ClubRegistrationForm({
                 id="primaryAims"
                 rows={3}
                 {...register("primaryAims")}
-                placeholder="State the core purposes of the association in the LGA..."
+                placeholder="State the core purposes of the association in Odeda LGA..."
                 disabled={isSubmitting}
               />
               {errors.primaryAims && (
@@ -641,7 +641,7 @@ export default function ClubRegistrationForm({
                 id="communityProjects"
                 rows={2}
                 {...register("communityProjects")}
-                placeholder="e.g. Annual scholarship for the LGA youth, grading of community link roads, health outreach..."
+                placeholder="e.g. Annual scholarship for Odeda LGA youth, grading of community link roads, health outreach..."
                 disabled={isSubmitting}
               />
             </div>
@@ -680,7 +680,7 @@ export default function ClubRegistrationForm({
                 <Input
                   id="meetingVenue"
                   {...register("meetingVenue")}
-                  placeholder="e.g. the LGA Town Hall or Club Secretariat"
+                  placeholder="e.g. Odeda LGA Town Hall or Club Secretariat"
                   disabled={isSubmitting}
                 />
                 {errors.meetingVenue && (
@@ -838,7 +838,7 @@ export default function ClubRegistrationForm({
                     </div>
 
                     <div className="space-y-1 sm:col-span-2 md:col-span-3">
-                      <Label>Residential Address in the LGA / Ogun State</Label>
+                      <Label>Residential Address in Odeda LGA / Ogun State</Label>
                       <Input
                         {...register(`officers.${index}.address`)}
                         placeholder="Residential address"

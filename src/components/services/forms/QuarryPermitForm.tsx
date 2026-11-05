@@ -106,7 +106,7 @@ const STEPS: FormStep[] = [
     id: "review",
     title: "Review & Submit",
     shortTitle: "Review",
-    description: "Review quarry operating permits and submit for the LGA Natural Resources assessment.",
+    description: "Review quarry operating permits and submit for Odeda LGA Natural Resources assessment.",
   },
 ];
 
@@ -167,7 +167,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
       phone: initialApplicant?.phone || "",
       email: initialApplicant?.email || "",
       siteLocation: initialApplicant?.address || "",
-      ward: initialApplicant?.ward || WARDS[0] || "the LGA",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda LGA",
       concessionAcreage: "",
       blastingFrequency: "",
       setbackDistance: "",
@@ -309,7 +309,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
         { label: "Contact Phone Number", value: formValues.phone },
         { label: "Email Address", value: formValues.email || "N/A" },
         { label: "Quarry Site Location", value: formValues.siteLocation },
-        { label: "Ward in the LGA", value: formValues.ward },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
         { label: "Total Concession Size", value: formValues.concessionAcreage },
       ],
     },
@@ -396,7 +396,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               Mining Operator & Cadastre Lease Profile
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Enter Federal Mining Cadastre Lease credentials, corporate directors, and physical quarry site in the LGA.
+              Enter Federal Mining Cadastre Lease credentials, corporate directors, and physical quarry site in Odeda LGA.
             </p>
           </div>
 
@@ -406,7 +406,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Input
                 id="companyName"
                 {...register("companyName")}
-                placeholder="e.g. the LGA Granite Quarries & Mining Nigeria Limited"
+                placeholder="e.g. Odeda LGA Granite Quarries & Mining Nigeria Limited"
               />
               {errors.companyName && (
                 <p className="text-xs text-red-500">{errors.companyName.message}</p>
@@ -483,7 +483,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ward">Ward in the LGA *</Label>
+              <Label htmlFor="ward">Ward in Odeda LGA *</Label>
               <Controller
                 control={control}
                 name="ward"
@@ -521,7 +521,7 @@ export default function QuarryPermitForm({ service, onSubmit, isSubmitting, init
               <Input
                 id="siteLocation"
                 {...register("siteLocation")}
-                placeholder="Ridge Name, Village Corridor, the LGA"
+                placeholder="Ridge Name, Village Corridor, Odeda LGA"
               />
               {errors.siteLocation && (
                 <p className="text-xs text-red-500">{errors.siteLocation.message}</p>

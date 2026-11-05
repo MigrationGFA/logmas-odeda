@@ -489,7 +489,7 @@ export function createLgaApplication(data: {
     phone: data.phone,
     email: data.email,
     address: data.address,
-    ward: data.ward || "the LGA",
+    ward: data.ward || "Odeda LGA",
     nin: data.nin,
     cacNumber: data.cacNumber,
     revenueHead: data.revenueHead,

@@ -23,7 +23,7 @@ interface PermitCertificatePageProps {
 
 // Repeating adire-inspired eyelet motif used as the top/bottom border band.
 // Adire is the indigo resist-dye cloth tradition native to Ogun State (Abeokuta),
-// so it grounds the "security border" in the LGA's own visual vocabulary
+// so it grounds the "security border" in Odeda LGA's own visual vocabulary
 // rather than a generic guilloche or rope border.
 function AdireBorder({ flip = false }: { flip?: boolean }) {
   return (

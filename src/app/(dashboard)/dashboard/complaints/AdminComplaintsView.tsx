@@ -96,7 +96,7 @@ function AdminComplaintsView({ readOnly }: { readOnly: boolean }) {
     <div>
       <PageHeader
         title={readOnly ? "Complaints Overview" : "Complaints Management"}
-        subtitle="All complaints across the LGA"
+        subtitle="All complaints across Odeda LGA"
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">

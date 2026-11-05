@@ -330,7 +330,7 @@ export default function ServiceFeeConfigurationTab() {
             {stats.totalServices} Services
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Universal the LGA service registry
+            Universal Odeda LGA service registry
           </p>
         </Card>
 
@@ -390,7 +390,7 @@ export default function ServiceFeeConfigurationTab() {
                 Fee Configuration & Management
               </CardTitle>
               <CardDescription>
-                Select a service to update fees, or create a new statutory service for the LGA.
+                Select a service to update fees, or create a new statutory service for Odeda LGA.
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto">

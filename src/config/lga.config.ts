@@ -75,6 +75,12 @@ export interface LgaExecutiveLeadership {
     name: string;
     title: string;
   };
+  councillors?: {
+    ward: string;
+    name: string;
+    phone?: string;
+    email?: string;
+  }[];
 }
 
 export interface LgaContactConfig {
@@ -310,6 +316,18 @@ export const LGA_CONFIG: LgaConfiguration = {
       name: "Hon. Osunnowo Azeez",
       title: "Ward Councillor",
     },
+    councillors: [
+      { ward: "Ward 1 (Odeda Secretariat)", name: "Councillor, Ward 1", phone: "", email: "" },
+      { ward: "Ward 2 (Osiele Market)", name: "Councillor, Ward 2", phone: "", email: "" },
+      { ward: "Ward 3 (Obantoko Corridor)", name: "Councillor, Ward 3", phone: "", email: "" },
+      { ward: "Ward 4 (Alagbagba)", name: "Councillor, Ward 4", phone: "", email: "" },
+      { ward: "Ward 5 (Ilugun)", name: "Councillor, Ward 5", phone: "", email: "" },
+      { ward: "Ward 6 (Opeji)", name: "Councillor, Ward 6", phone: "", email: "" },
+      { ward: "Ward 7 (Itesi / Camp)", name: "Councillor, Ward 7", phone: "", email: "" },
+      { ward: "Ward 8 (Kuto / Border)", name: "Councillor, Ward 8", phone: "", email: "" },
+      { ward: "Ward 9 (Boluwaji)", name: "Councillor, Ward 9", phone: "", email: "" },
+      { ward: "Ward 10 (Obete)", name: "Councillor, Ward 10", phone: "", email: "" },
+    ],
   },
 
   contact: {

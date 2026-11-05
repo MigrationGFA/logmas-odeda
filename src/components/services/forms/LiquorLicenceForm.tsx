@@ -94,7 +94,7 @@ const STEPS: FormStep[] = [
     title: "Licensee & Premises Identity",
     shortTitle: "Premises Profile",
     description:
-      "Enter licensee details, trading establishment name, and physical location in the LGA.",
+      "Enter licensee details, trading establishment name, and physical location in Odeda LGA.",
   },
   {
     id: "fire_zoning",
@@ -189,7 +189,7 @@ export default function LiquorLicenceForm({
       phone: initialApplicant?.phone || "",
       email: initialApplicant?.email || "",
       premisesAddress: initialApplicant?.address || "",
-      ward: initialApplicant?.ward || WARDS[0] || "the LGA",
+      ward: initialApplicant?.ward || WARDS[0] || "Odeda LGA",
       cacNumber: "",
       seatingCapacity: "",
       operatingHours: "",
@@ -351,7 +351,7 @@ export default function LiquorLicenceForm({
         { label: "Contact Phone Number", value: formValues.phone },
         { label: "Email Address", value: formValues.email || "N/A" },
         { label: "Premises Physical Address", value: formValues.premisesAddress },
-        { label: "Ward in the LGA", value: formValues.ward },
+        { label: "Ward in Odeda LGA", value: formValues.ward },
         { label: "CAC Registration", value: formValues.cacNumber || "N/A" },
         { label: "Total Seating Capacity", value: formValues.seatingCapacity },
         { label: "Operating Hours", value: formValues.operatingHours },
@@ -449,7 +449,7 @@ export default function LiquorLicenceForm({
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
               Enter bar operator details, licensed premises location, and
-              trading category in the LGA.
+              trading category in Odeda LGA.
             </p>
           </div>
 
@@ -547,7 +547,7 @@ export default function LiquorLicenceForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ward">Ward in the LGA *</Label>
+              <Label htmlFor="ward">Ward in Odeda LGA *</Label>
               <Controller
                 control={control}
                 name="ward"
@@ -587,7 +587,7 @@ export default function LiquorLicenceForm({
               <Input
                 id="premisesAddress"
                 {...register("premisesAddress")}
-                placeholder="Building No, Street name, Town in the LGA"
+                placeholder="Building No, Street name, Town in Odeda LGA"
               />
               {errors.premisesAddress && (
                 <p className="text-xs text-red-500">{errors.premisesAddress.message}</p>

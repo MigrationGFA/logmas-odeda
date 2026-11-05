@@ -123,7 +123,7 @@ const NAV: (NavItem | NavGroup)[] = [
     items: [
       {
         to: "/about",
-        label: "About the LGA",
+        label: "About Odeda LGA",
         desc: "History, wards, demographics",
       },
       { to: "/leadership", label: "Leadership", desc: "Chairman & council" },
@@ -176,7 +176,7 @@ const NAV: (NavItem | NavGroup)[] = [
       // { to: "/gallery", label: "Media Gallery", desc: "Photos & moments" },
       // { to: "/downloads", label: "Downloads", desc: "Official documents" },
       // { to: "/procurement", label: "Procurement", desc: "Open tenders & bids" },
-      // { to: "/careers", label: "Careers", desc: "Work with the LGA" },
+      // { to: "/careers", label: "Careers", desc: "Work with Odeda LGA" },
       { to: "/faq", label: "FAQ", desc: "Common questions" },
     ],
   },
@@ -597,7 +597,19 @@ export function SiteFooter() {
             Â© {new Date().getFullYear()} {LGA_CONFIG.identity.fullName},{" "}
             {LGA_CONFIG.identity.state}. All rights reserved.
           </span>
-          <span>Official Website · {LGA_CONFIG.identity.fullName}</span>
+          <span>
+            <a
+              href={SITE_CONTACT.portalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:underline"
+            >
+              Official Website{" "}
+              <Badge variant="outline" className="h-5 w-5 px-1.5 text-[10px]">
+                Coming soon
+              </Badge>
+            </a>
+          </span>
         </div>
       </div>
     </footer>

@@ -200,7 +200,7 @@ export default function CdaRegistrationForm({
     defaultValues: {
       cdaName: "",
       cdaAcronym: "",
-      ward: WARDS[0] || "the LGA",
+      ward: WARDS[0] || "Odeda LGA",
       hostVillage: "",
       baaleName: "",
       baalePhone: "",
@@ -596,8 +596,8 @@ export default function CdaRegistrationForm({
                       <SelectItem value="Ogun State So-Safe Corps / Local Hunters Vigilante">
                         Ogun State So-Safe Corps / Local Hunters Vigilante
                       </SelectItem>
-                      <SelectItem value="Nigeria Police Force (the LGA Div) & Community Patrol">
-                        Nigeria Police Force (the LGA Div) & Community Patrol
+                      <SelectItem value="Nigeria Police Force (Odeda LGA Div) & Community Patrol">
+                        Nigeria Police Force (Odeda LGA Div) & Community Patrol
                       </SelectItem>
                       <SelectItem value="Licensed Private Security Guards">
                         Licensed Private Security Guards
@@ -673,7 +673,7 @@ export default function CdaRegistrationForm({
                   <Shield className="w-4 h-4" /> CDA Executive Committee
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  CDA Chairman, Secretary, Treasurer, and CSO details are required by the LGA Community Dev Dept.
+                  CDA Chairman, Secretary, Treasurer, and CSO details are required by Odeda LGA Community Dev Dept.
                 </p>
               </div>
               <Button

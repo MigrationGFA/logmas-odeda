@@ -158,8 +158,8 @@ function PaymentResultPage() {
           if (res?.emailSent === false) {
             setEmailWarning(
               res?.emailFailReason
-                ? `Your payment is confirmed, but the confirmation email could not be sent (${res.emailFailReason}). Contact the LGA with your reference ${reference}.`
-                : `Your payment is confirmed, but the confirmation email could not be sent. Contact the LGA with your reference ${reference}.`,
+                ? `Your payment is confirmed, but the confirmation email could not be sent (${res.emailFailReason}). Contact Odeda LGA with your reference ${reference}.`
+                : `Your payment is confirmed, but the confirmation email could not be sent. Contact Odeda LGA with your reference ${reference}.`,
             );
           }
         } else if (isFailed) {
@@ -211,7 +211,7 @@ function PaymentResultPage() {
           );
           setEmailWarning(
             err?.message ||
-              "The confirmation email with your login credentials could not be sent. Contact the LGA help desk with your payment reference.",
+              "The confirmation email with your login credentials could not be sent. Contact Odeda LGA help desk with your payment reference.",
           );
           clearPendingPayment();
           mirrorReferenceToUrl();
@@ -228,7 +228,7 @@ function PaymentResultPage() {
           );
         } else if (amountMismatch) {
           setMessage(
-            "The amount received does not match the statutory fee due. This payment has been flagged for review by the LGA treasury. Please contact the LGA help desk with your reference.",
+            "The amount received does not match the statutory fee due. This payment has been flagged for review by Odeda LGA treasury. Please contact Odeda LGA help desk with your reference.",
           );
         } else {
           setMessage(
